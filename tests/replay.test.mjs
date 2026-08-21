@@ -35,7 +35,11 @@ function replayDatabase({ inserted = true, existingExpiresAt } = {}) {
     calls,
     db: {
       delete() {
-        return { where(condition) { calls.wheres.push(condition); return { async run() { calls.deletes += 1; } }; } };
+        return { where(condition) {
+          calls.wheres.push(condition);
+          const query = { async run() { calls.deletes += 1; }, then(resolve, reject) { return query.run().then(resolve, reject); } };
+          return query;
+        } };
       },
       insert() {
         return {
@@ -45,7 +49,11 @@ function replayDatabase({ inserted = true, existingExpiresAt } = {}) {
               onConflictDoNothing() {
                 return {
                   returning() {
-                    return { async get() { return inserted ? { key: values.key } : undefined; } };
+                    const query = {
+                      async get() { return inserted ? { key: values.key } : undefined; },
+                      then(resolve, reject) { return Promise.resolve(inserted ? [{ key: values.key }] : []).then(resolve, reject); },
+                    };
+                    return query;
                   },
                 };
               },
@@ -57,14 +65,19 @@ function replayDatabase({ inserted = true, existingExpiresAt } = {}) {
         return {
           set(values) {
             calls.completedValues = values;
-            return { where(condition) { calls.wheres.push(condition); return { async run() {} }; } };
+            return { where(condition) {
+              calls.wheres.push(condition);
+              const query = { async run() {}, then(resolve, reject) { return query.run().then(resolve, reject); } };
+              return query;
+            } };
           },
         };
       },
       select() {
-        return { from() { return { where() { return { async get() {
-          return existingExpiresAt ? { expiresAt: existingExpiresAt } : undefined;
-        } }; } }; } };
+        return { from() { return { where() { return {
+          limit() { return Promise.resolve(existingExpiresAt ? [{ expiresAt: existingExpiresAt }] : []); },
+          async get() { return existingExpiresAt ? { expiresAt: existingExpiresAt } : undefined; },
+        }; } }; } };
       },
     },
   };

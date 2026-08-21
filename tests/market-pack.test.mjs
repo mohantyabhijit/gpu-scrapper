@@ -28,18 +28,41 @@ function fakeDb({ failTable } = {}) {
     calls,
     rows,
     select() {
-      return { from(table) { return { where() { return { async get() {
-        const name = tableName(table);
-        return name ? rows[name].values().next().value : undefined;
-      } }; } }; } };
+      return {
+        from(table) {
+          return {
+            where() {
+              return {
+                limit() {
+                  const name = tableName(table);
+                  return Promise.resolve(name ? [...rows[name].values()] : []);
+                },
+                async get() {
+                  const name = tableName(table);
+                  return name ? rows[name].values().next().value : undefined;
+                },
+              };
+            },
+          };
+        },
+      };
     },
     insert(table) {
-      return { values(value) { calls.push(value); return { onConflictDoUpdate({ set }) { calls.push(set); return { execute: async () => {
-        const name = tableName(table);
-        if (!name) throw new Error("unknown fake table");
-        if (name === failTable) throw new Error(`forced ${name} failure`);
-        rows[name].set(value.slug, { ...value, ...set });
-      } }; } }; } };
+      return { values(value) {
+        calls.push(value);
+        let set = value;
+        const statement = {
+          onConflictDoUpdate(input) { set = input.set; calls.push(set); return statement; },
+          async execute() {
+            const name = tableName(table);
+            if (!name) throw new Error("unknown fake table");
+            if (name === failTable) throw new Error(`forced ${name} failure`);
+            rows[name].set(value.slug, { ...value, ...set });
+          },
+          then(resolve, reject) { return statement.execute().then(resolve, reject); },
+        };
+        return statement;
+      } };
     },
     async batch(statements) {
       calls.push(`batch:${statements.length}`);
@@ -47,6 +70,13 @@ function fakeDb({ failTable } = {}) {
       try {
         for (const statement of statements) await statement.execute();
       } catch (error) {
+        for (const [name, values] of Object.entries(snapshot)) rows[name] = values;
+        throw error;
+      }
+    },
+    async transaction(callback) {
+      const snapshot = Object.fromEntries(Object.entries(rows).map(([name, values]) => [name, new Map(values)]));
+      try { return await callback(this); } catch (error) {
         for (const [name, values] of Object.entries(snapshot)) rows[name] = values;
         throw error;
       }
@@ -107,8 +137,7 @@ test("upsert atomically admits the market and its server-resolved source", async
   const db = fakeDb();
   const result = await upsertMarketPack(db, valid, new Date("2026-08-21T00:00:00Z"));
   assert.deepEqual(result, { slug: "japan", countryCode: "JP", label: "Japan", currency: "JPY", locale: "ja-JP", symbol: "¥", sourceSlug: "example-japan", status: "pending" });
-  assert.equal(db.calls.at(-1), "batch:2");
-  assert.equal(db.calls[2].enabled, false);
+  assert.equal(db.calls[0].enabled, false);
   assert.equal(db.rows.marketPacks.get("japan").countryCode, "JP");
   assert.equal(db.rows.sources.get("example-japan").onboardingStatus, "pending");
 });

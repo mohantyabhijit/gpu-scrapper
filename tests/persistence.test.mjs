@@ -26,6 +26,9 @@ class FakeInsert {
   async execute() {
     this.db.write(this.table, this.valuesToWrite, this.conflict);
   }
+  then(resolve, reject) {
+    return this.execute().then(resolve, reject);
+  }
   async run() {
     return this.execute();
   }
@@ -49,6 +52,9 @@ class FakeUpdate {
   async execute() {
     this.db.applyUpdate(this.table, this.valuesToWrite, this.predicate);
   }
+  then(resolve, reject) {
+    return this.execute().then(resolve, reject);
+  }
   async run() {
     return this.execute();
   }
@@ -58,6 +64,7 @@ class FakeDb {
   constructor() {
     this.tables = new Map();
     this.batches = 0;
+    this.transactions = 0;
     this.failTable = undefined;
   }
   insert(table) {
@@ -72,6 +79,16 @@ class FakeDb {
     this.batches += 1;
     try {
       for (const query of queries) await query.execute();
+    } catch (error) {
+      this.tables = snapshot;
+      throw error;
+    }
+  }
+  async transaction(callback) {
+    this.transactions += 1;
+    const snapshot = structuredClone(this.tables);
+    try {
+      return await callback(this);
     } catch (error) {
       this.tables = snapshot;
       throw error;
@@ -151,7 +168,7 @@ test("persistence upserts valid state and quarantines invalid rows", async () =>
   const db = new FakeDb();
   const result = await persistIngestion(db, batch("run-1"), context);
   assert.equal(result.status, "degraded");
-  assert.equal(db.batches, 1);
+  assert.equal(db.transactions, 1);
   assert.equal(db.rows("sources").length, 1);
   assert.equal(db.rows("products").length, 1);
   assert.equal(db.rows("offers").length, 1);
