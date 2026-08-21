@@ -17,6 +17,16 @@ const APPROVED_STEP_ENV = Object.freeze({
   RASTER_REFRESH_SLICE: "${{ matrix.slice }}",
 });
 const normalizeWorkflowValue = (value) => typeof value === "string" ? value.trim() : value;
+const normalizeWorkflowExpression = (value) => normalizeWorkflowValue(value)?.replace(/\s+/g, " ");
+const EXPECTED_REFRESH_IF = "${{ github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}";
+
+function assertWorkflowExecutionPolicy(document) {
+  assert.ok(document.on && typeof document.on === "object" && !Array.isArray(document.on), "workflow triggers must be a mapping");
+  assert.deepEqual(Object.keys(document.on).sort(), ["schedule", "workflow_dispatch"], "workflow may trigger only on schedule or workflow_dispatch");
+  assert.ok(document.jobs?.refresh && typeof document.jobs.refresh === "object", "refresh job must exist");
+  assert.equal(document.jobs.refresh.environment, "raster-production", "refresh job must use the exact production environment");
+  assert.equal(normalizeWorkflowExpression(document.jobs.refresh.if), normalizeWorkflowExpression(EXPECTED_REFRESH_IF), "refresh job must require the trusted main schedule/manual condition");
+}
 
 function assertWorkflowPolicy(workflow) {
   const document = parseYaml(workflow);
@@ -103,23 +113,21 @@ test("workflow schedules every baseline market as an independently locked slice"
   for (const slice of ["us-central-computer", "uk-overclockers-uk", "in-md-computers", "sg-dynacore"]) {
     assert.match(workflow, new RegExp(slice));
   }
-  assert.match(workflow, /github\.event_name == 'schedule'/);
   assert.match(workflow, /group: raster-refresh-\$\{\{ matrix\.slice \}\}/);
   assert.ok(MAX_TIMEOUT_MS >= MAX_PROVIDER_RUN_MS + 60_000);
 });
 
 test("workflow gates production secrets and pins deterministic setup", async () => {
   const workflow = await readFile(new URL("../.github/workflows/collect.yml", import.meta.url), "utf8");
+  const document = parseYaml(workflow);
   assertWorkflowPolicy(workflow);
-  assert.match(workflow, /if: \$\{\{ github\.ref == 'refs\/heads\/main' && \(github\.event_name == 'schedule' \|\| github\.event_name == 'workflow_dispatch'\) \}\}/);
-  assert.match(workflow, /environment: raster-production/);
+  assertWorkflowExecutionPolicy(document);
   assert.match(workflow, /timeout-minutes: (?:1[0-9]|[2-9][0-9])/);
   assert.match(workflow, /fail-fast: false/);
   assert.match(workflow, /cancel-in-progress: false/);
   assert.match(workflow, /actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020/);
   assert.match(workflow, /node-version: 22\.13\.0/);
   assert.match(workflow, /npm ci --ignore-scripts/);
-  assert.doesNotMatch(workflow, /^\s+(?:pull_request|push):/m);
 
   const actionRefs = [...workflow.matchAll(/uses:\s+[^@]+@([^\s#]+)/g)].map((match) => match[1]);
   assert.ok(actionRefs.length > 0);
@@ -127,7 +135,17 @@ test("workflow gates production secrets and pins deterministic setup", async () 
 
   const summary = workflow.slice(workflow.indexOf("- name: Publish safe job summary"));
   assert.doesNotMatch(summary, /secrets\./);
-  assert.doesNotMatch(workflow, /\n{4}env:\n {6}RASTER_REFRESH_URL:/);
+});
+
+test("workflow execution policy rejects environment suffixes and weakened branch conditions", async () => {
+  const workflow = await readFile(new URL("../.github/workflows/collect.yml", import.meta.url), "utf8");
+  const environmentSuffix = workflow.replace("environment: raster-production", "environment: raster-production-preview");
+  assert.throws(() => assertWorkflowExecutionPolicy(parseYaml(environmentSuffix)), /exact production environment/);
+
+  const weakenedCondition = workflow.replace("github.ref == 'refs/heads/main'", "github.ref != 'refs/heads/main'");
+  assert.throws(() => assertWorkflowExecutionPolicy(parseYaml(weakenedCondition)), /trusted main/);
+  const pushTrigger = workflow.replace("on:\n  schedule:", "on:\n  push:\n  schedule:");
+  assert.throws(() => assertWorkflowExecutionPolicy(parseYaml(pushTrigger)), /only on schedule/);
 });
 
 test("workflow policy catches inline job env secrets and tolerates reordered step env mappings", async () => {
