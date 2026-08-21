@@ -7,17 +7,21 @@
 - [ ] At least one real create/run flow and stable Collector ID are recorded.
 - [ ] Same-ID heal is proven with sanitized before/preview/after evidence.
 - [ ] Scheduled/manual GitHub Action has completed and fed D1/storefront.
-- [ ] Search, filters, currency grouping, freshness, source attribution, and
-      outbound links pass browser and accessibility QA.
+- [x] Search, filters, currency grouping, freshness, source attribution, and
+      outbound links pass manual keyboard/browser QA at desktop and 390px.
+- [ ] Formal automated accessibility scan and retained responsive screenshot
+      are attached to the submission evidence.
 - [ ] Last-known-good behavior is visible for a failed/stale source.
-- [ ] README, architecture, evidence matrix, and demo script are current.
+- [x] README, architecture, evidence matrix, and demo script are current for
+      the explicitly fixture-backed baseline.
 
 ## Safety gate
 
 - [ ] Exposed setup credential revoked/rotated.
-- [ ] Secret scan passes working tree, history, build output, and evidence.
-- [ ] No login-walled, paywalled, personal, checkout, or arbitrary URL data.
-- [ ] No claims of checkout, reservation, guaranteed price, or compatibility
+- [x] Secret scan passes working tree, history, build output, and evidence.
+- [x] No login-walled, paywalled, personal, checkout, or arbitrary URL data is
+      present in the fixture-backed baseline; repeat the review for live sources.
+- [x] No claims of checkout, reservation, guaranteed price, or compatibility
       advice.
 
 ## Submission package

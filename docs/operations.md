@@ -18,10 +18,48 @@ issues, commits, logs, screenshots, or demo footage:
 The Bright Data API key belongs only in the deployed route’s secret store. It is
 not a GitHub Actions secret for this workflow.
 
+## Scraper Studio CLI preparation
+
+The organizer guide uses the official Bright Data CLI without a global install.
+The following command was verified against CLI `0.3.5` on 2026-08-21:
+
+```bash
+npx -y -p @brightdata/cli bdata --version
+```
+
+Authenticate with `bdata login`, which opens the provider login flow. Do not
+pass a key with `--api-key` in a recorded terminal, shell history, issue, or
+demo. The replacement credential must be stored through the provider login or
+another approved secret store, never copied into repository files.
+
+The live proof sequence is:
+
+```bash
+npx -y -p @brightdata/cli bdata scraper create \
+  'https://public-retailer.example/gpus' \
+  'Extract public GPU offers as the Raster contract fields.' \
+  --name raster-source --json
+
+npx -y -p @brightdata/cli bdata scraper run \
+  'c_REDACTED' 'https://public-retailer.example/gpus' --json
+
+npx -y -p @brightdata/cli bdata scraper heal \
+  'c_REDACTED' 'The required price field is missing after a controlled selector change.' \
+  --url 'https://public-retailer.example/gpus' --json
+
+npx -y -p @brightdata/cli bdata scraper approve \
+  'c_REDACTED' --url 'https://public-retailer.example/gpus' --json
+```
+
+The URLs, prompt, and Collector ID above are placeholders, not runnable source
+claims. During the real flow, send CLI JSON through the repository sanitizer
+before saving evidence; never commit raw provider output.
+
 ## Workflow behavior
 
 `.github/workflows/collect.yml` runs on a daily schedule and supports
-`workflow_dispatch`. Each run selects exactly one allowlisted slice:
+`workflow_dispatch`. The schedule expands into four independently locked jobs;
+manual dispatch selects exactly one allowlisted slice:
 
 | Slice | Market | Source |
 | --- | --- | --- |
@@ -30,10 +68,10 @@ not a GitHub Actions secret for this workflow.
 | `in-md-computers` | IN / INR | MDComputers |
 | `sg-dynacore` | SG / SGD | Dynacore Technologies |
 
-The default scheduled slice is `us-central-computer`. Run the other slices
-manually while source eligibility and Bright Data pre-built-library exclusion
-are still being verified. Concurrency is serialized, the job has an eight
-minute timeout, and permissions are read-only.
+Every scheduled slice remains safely `not_configured` until its source passes
+eligibility and receives a real role-keyed Collector ID. Concurrency is
+serialized per source slice, each job has an eight-minute timeout, and
+permissions are read-only.
 
 ## Onboarding another country
 
@@ -59,7 +97,7 @@ URL or Collector ID, and an admitted source binding is immutable.
 The signer sends this compact JSON body:
 
 ```json
-{"market":"US","source_slug":"central-computer"}
+{"sourceSlugs":["central-computer"],"role":"combined"}
 ```
 
 It adds:
