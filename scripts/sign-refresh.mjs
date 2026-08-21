@@ -31,6 +31,10 @@ export const MAX_TIMEOUT_MS = 435_000;
 // provider response to smuggle huge numbers into logs or downstream tooling.
 export const MAX_SUMMARY_INTEGER = 1_000_000_000;
 
+export function summaryListLength(value) {
+  return Array.isArray(value) ? Math.min(value.length, MAX_SUMMARY_INTEGER) : undefined;
+}
+
 export class RefreshResponseError extends Error {
   constructor(status, summary) {
     super(`refresh route returned HTTP ${status}`);
@@ -85,7 +89,6 @@ function safeResponseSummary(text) {
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
     return { response: "non_object" };
   }
-  const listLength = (value) => Array.isArray(value) ? value.length : undefined;
   const safeNonNegativeInteger = (value) => (
     Number.isSafeInteger(value) && value >= 0 && value <= MAX_SUMMARY_INTEGER ? value : undefined
   );
@@ -108,10 +111,10 @@ function safeResponseSummary(text) {
     }));
     return {
       status: failed.length > 0 ? "failed" : completed.length > 0 ? "completed" : notConfigured.length > 0 ? "not_configured" : "empty",
-      requested: listLength(parsed.requested),
-      completed: listLength(parsed.completed),
-      not_configured: listLength(parsed.notConfigured),
-      failed: listLength(parsed.failed),
+      requested: summaryListLength(parsed.requested),
+      completed: summaryListLength(parsed.completed),
+      not_configured: summaryListLength(parsed.notConfigured),
+      failed: summaryListLength(parsed.failed),
       rows: safeCompleted.reduce((total, item) => total + (item.rows ?? 0), 0),
       completed_sources: safeCompleted,
       failures: safeFailures,

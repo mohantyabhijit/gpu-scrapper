@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { load as parseYaml } from "js-yaml";
-import { createPayload, MAX_SUMMARY_INTEGER, MAX_TIMEOUT_MS, parseSlice, RefreshResponseError, runRefresh, signatureFor } from "../scripts/sign-refresh.mjs";
+import { createPayload, MAX_SUMMARY_INTEGER, MAX_TIMEOUT_MS, parseSlice, RefreshResponseError, runRefresh, signatureFor, summaryListLength } from "../scripts/sign-refresh.mjs";
 import { MAX_PROVIDER_RUN_MS } from "../lib/brightdata/client.ts";
 import { parseRefreshRequest } from "../lib/brightdata/refresh.ts";
 
@@ -21,7 +21,7 @@ function assertWorkflowPolicy(workflow) {
   let approvedEnvBlocks = 0;
   let secretReferences = 0;
   const approvedSecretSteps = new Set();
-  const secretReference = /(?:^|[^\w])secrets\.[A-Za-z_][\w-]*/;
+  const secretReference = /\$\{\{[\s\S]*?\bsecrets\b[\s\S]*?\}\}/;
   const scan = (value, allowed, approvedStepName) => {
     if (typeof value === "string") {
       if (secretReference.test(value)) {
@@ -134,6 +134,28 @@ test("workflow policy catches inline job env secrets and tolerates reordered ste
   assert.throws(() => assertWorkflowPolicy(inlineJobEnv), /approved step env blocks/);
 });
 
+test("workflow policy recognizes bracket and whole-secrets expressions in approved envs", async () => {
+  const workflow = await readFile(new URL("../.github/workflows/collect.yml", import.meta.url), "utf8");
+  const bracketed = workflow
+    .replaceAll("${{ secrets.RASTER_REFRESH_URL }}", "${{ secrets['RASTER_REFRESH_URL'] }}")
+    .replaceAll("${{ secrets.RASTER_INGEST_HMAC_SECRET }}", '${{ secrets["RASTER_INGEST_HMAC_SECRET"] }}');
+  assertWorkflowPolicy(bracketed);
+  assertWorkflowPolicy(workflow.replaceAll("${{ secrets.RASTER_REFRESH_URL }}", "${{ toJSON(secrets) }}"));
+
+  const leaks = [
+    "LEAK: \"${{ secrets['RASTER_REFRESH_URL'] }}\"",
+    'LEAK: \'${{ secrets["RASTER_REFRESH_URL"] }}\'',
+    "LEAK: \"${{ toJSON(secrets) }}\"",
+  ];
+  for (const leak of leaks) {
+    const outsideApprovedEnv = workflow.replace(
+      "  refresh:\n    if:",
+      `  refresh:\n    env:\n      ${leak}\n    if:`,
+    );
+    assert.throws(() => assertWorkflowPolicy(outsideApprovedEnv), /approved step env blocks/);
+  }
+});
+
 test("refresh sends one signed request and returns only safe response fields", async () => {
   let request;
   const summary = await runRefresh({
@@ -210,6 +232,30 @@ test("structured partial failures are bounded to safe slugs, codes, and counts",
   assert.equal(failure.summary.completed_sources[0].source_slug, "overclockers-uk");
   assert.equal(failure.summary.completed_sources[0].rows, 4);
   assert.equal(failure.summary.failed, 1);
+});
+
+test("structured summary list counts are capped", async () => {
+  const oversized = [];
+  oversized.length = MAX_SUMMARY_INTEGER + 1;
+  assert.equal(summaryListLength(oversized), MAX_SUMMARY_INTEGER);
+  assert.equal(summaryListLength("not-a-list"), undefined);
+
+  const summary = await runRefresh({
+    url: "https://raster.example.test/api/refresh",
+    slice: "sg-dynacore",
+    secret: "offline-test-secret-value",
+    fetchImpl: async () => new Response(JSON.stringify({
+      requested: ["one"],
+      completed: [],
+      notConfigured: [],
+      failed: [],
+    }), { status: 200 }),
+  });
+  assert.equal(summary.requested, 1);
+  assert.ok(summary.requested <= MAX_SUMMARY_INTEGER);
+  assert.ok(summary.completed <= MAX_SUMMARY_INTEGER);
+  assert.ok(summary.not_configured <= MAX_SUMMARY_INTEGER);
+  assert.ok(summary.failed <= MAX_SUMMARY_INTEGER);
 });
 
 test("fallback summary metrics accept only bounded non-negative integers", async () => {
