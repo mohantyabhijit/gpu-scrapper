@@ -9,7 +9,7 @@ import {
 } from "../../../lib/brightdata/refresh.ts";
 import type { RawOffer } from "../../../scrapers/contracts.ts";
 import { getSource, isKnownSource } from "../../../config/sources.ts";
-import { replayAcquired, releaseReplayClaim, type ReplayGuard, type ReplayClaim } from "../../../lib/d1/replay.ts";
+import { completeReplayClaim, replayAcquired, releaseReplayClaim, type ReplayGuard, type ReplayClaim } from "../../../lib/d1/replay.ts";
 import { readBoundedBody, RequestBodyTooLargeError } from "../../../lib/http/bounded-body.ts";
 
 function runtimeEnvironment(): RefreshEnvironment {
@@ -102,8 +102,9 @@ export async function handleRefreshRequest(
       { onComplete: persistCompletedRun, resolveSource: dependencies.resolveSource ?? runtimeSourceResolver() },
     );
     const result = await runner(parsed);
-    const accepted = result.completed.length > 0 || result.notConfigured.length > 0;
+    const accepted = result.failed.length === 0 && (result.completed.length > 0 || result.notConfigured.length > 0);
     if (!accepted) await releaseReplayClaim(replayClaim);
+    else await completeReplayClaim(replayClaim);
     return json(result, accepted ? 200 : 502);
   } catch {
     await releaseReplayClaim(replayClaim);

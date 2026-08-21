@@ -4,7 +4,7 @@ import {
   recordHealingEvent,
 } from "../../../lib/d1/healing-evidence.ts";
 import type { RasterDatabase } from "../../../lib/d1/repository.ts";
-import { replayAcquired, releaseReplayClaim, type ReplayGuard, type ReplayClaim } from "../../../lib/d1/replay.ts";
+import { completeReplayClaim, replayAcquired, releaseReplayClaim, type ReplayGuard, type ReplayClaim } from "../../../lib/d1/replay.ts";
 import { readBoundedBody, RequestBodyTooLargeError } from "../../../lib/http/bounded-body.ts";
 
 type Environment = { RASTER_INGEST_HMAC_SECRET?: string };
@@ -56,6 +56,7 @@ export async function handleHealEvidenceRequest(request: Request, dependencies: 
       return json({ error: "replayed_request" }, 409);
     }
     const result = await (dependencies.recordEvent ?? recordHealingEvent)(db, parsed, dependencies.now ?? new Date());
+    await completeReplayClaim(replayClaim);
     return json(result);
   } catch (error) {
     await releaseReplayClaim(replayClaim);
