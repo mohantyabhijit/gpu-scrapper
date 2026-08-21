@@ -1,0 +1,77 @@
+name: Raster refresh
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+    inputs:
+      slice:
+        description: "Run exactly one allowlisted market/source slice"
+        required: true
+        type: choice
+        default: us-central-computer
+        options:
+          - us-central-computer
+          - uk-overclockers-uk
+          - in-md-computers
+          - sg-dynacore
+
+permissions:
+  contents: read
+
+concurrency:
+  group: raster-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    permissions:
+      contents: read
+    env:
+      RASTER_REFRESH_URL: ${{ secrets.RASTER_REFRESH_URL }}
+      RASTER_INGEST_HMAC_SECRET: ${{ secrets.RASTER_INGEST_HMAC_SECRET }}
+      RASTER_REFRESH_SLICE: ${{ inputs.slice || 'us-central-computer' }}
+    steps:
+      - name: Check out workflow code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Validate protected refresh inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$RASTER_REFRESH_URL" || { echo "::error::RASTER_REFRESH_URL secret is missing"; exit 1; }
+          test -n "$RASTER_INGEST_HMAC_SECRET" || { echo "::error::refresh signing secret is missing"; exit 1; }
+          case "$RASTER_REFRESH_SLICE" in
+            us-central-computer|uk-overclockers-uk|in-md-computers|sg-dynacore) ;;
+            *) echo "::error::unsupported refresh slice"; exit 1 ;;
+          esac
+          node --version
+
+      - name: Trigger one market/source slice
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > "$RUNNER_TEMP/raster-refresh-result.json"
+          node scripts/sign-refresh.mjs --slice "$RASTER_REFRESH_SLICE" \
+            | tee "$RUNNER_TEMP/raster-refresh-result.json"
+
+      - name: Publish safe job summary
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            echo "### Raster refresh"
+            echo ""
+            echo "- Slice: `$RASTER_REFRESH_SLICE`"
+            if [ -s "$RUNNER_TEMP/raster-refresh-result.json" ]; then
+              echo "- Safe route summary:"
+              echo '```json'
+              sed -n '1p' "$RUNNER_TEMP/raster-refresh-result.json"
+              echo '```'
+            else
+              echo "- Result: no safe response emitted; the request failed before a response was available."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
