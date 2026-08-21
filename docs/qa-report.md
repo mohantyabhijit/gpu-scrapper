@@ -2,7 +2,7 @@
 
 Verified on 2026-08-21 against
 <https://abhijitmohanty.com/scrapper/> after Cloudflare Worker version
-`794ca924-9089-4d92-839c-7844306dee0f` was deployed from commit `2c3710d`.
+`6e334165-43ea-4e79-af8c-1ebb90a1c273` was deployed from commit `f57cf56`.
 
 ## Automated gates
 
@@ -15,8 +15,9 @@ Verified on 2026-08-21 against
 - `axe-core 4.11.4` reports zero automatically detected violations across the
   deployed home, method, health, and representative product-detail routes;
   this complements, rather than replaces, the manual keyboard checks below.
-- The GitHub push `Raster quality` run for commit `2c3710d` passes, and
-  `actionlint v1.7.12` accepts the scheduled and quality workflows.
+- The GitHub push and pull-request `Raster quality` runs for security-fix
+  commit `f57cf56` pass; `actionlint v1.7.12` accepts the scheduled and quality
+  workflows.
 - Remote D1 contains all five applied migrations and the expected production
   tables, including `market_packs`, `request_receipts`, and `healing_events`.
   Country Pack tests also force the second batched write to fail and verify the
