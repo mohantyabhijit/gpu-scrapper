@@ -58,7 +58,7 @@ still a separate release gate.
 | Keyboard focus | Pass | Representative brand, navigation, select, text input, checkbox, button, and outbound-link controls expose a `2px` solid lime focus outline. |
 | Retailer exits | Pass | Fixture cards preserve the expected public Micro Center and B&H HTTPS destinations and open them with `target="_blank" rel="noreferrer"`. |
 | Portfolio isolation | Pass | `/` and `/data-health` remain portfolio routes; only `/scrapper/` is proxied to Raster. |
-| Raster identity | Pass | Browser title is Raster-specific; shortcut, standard, and Apple icon metadata resolve to `/scrapper/favicon.svg`; the scoped manifest resolves at `/scrapper/manifest.webmanifest`; browser console reports zero errors. |
+| Raster identity | Pass | Browser title is Raster-specific; the v2 GPU-card favicon is published as SVG, PNG, ICO, and Apple Touch variants with cache-busting metadata; the scoped manifest resolves at `/scrapper/manifest.webmanifest`; browser console reports zero errors. |
 | Protected API | Pass | Unsigned `POST /scrapper/api/refresh` returns sanitized `401 {"error":"unauthorized"}`. |
 | Screenshot artifact | Pass | `evidence/screenshots/production-home-mobile-390x844.png` captures the deployed home at an emulated 390 × 844 CSS-pixel iPhone viewport (3× PNG); all three navigation links and hero copy are visible without clipping. |
 
