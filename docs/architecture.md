@@ -10,7 +10,7 @@ Bright Data Scraper Studio collectors (one per eligible source)
         -> authenticated server refresh route
         -> bounded trigger/poll + contract validation
         -> normalization and quarantine
-        -> Cloudflare D1 current offers + append-only observations
+        -> Hosted PostgreSQL current offers + append-only observations via private Hyperdrive/VPC
         -> Cloudflare Worker at its isolated workers.dev origin
         -> abhijitmohanty.com/scrapper/ subpath proxy
         -> public catalog/model pages
@@ -30,10 +30,10 @@ Bright Data Scraper Studio collectors (one per eligible source)
   retry bounds, redaction, and provider error translation.
 - **Validator/normalizer:** rejects missing/unsafe rows before persistence,
   preserves source fields, and maps defensible GPU identities.
-- **D1:** stores current offer state, price observations, collector runs, and
+- **PostgreSQL via private Hyperdrive/VPC:** stores current offer state, price observations, collector runs, and
   quarantine records. Replays are idempotent; failed sources preserve last good
   data.
-- **Market packs:** D1-owned country definitions remain pending until dated
+- **Market packs:** PostgreSQL-owned country definitions remain pending until dated
   eligibility, Collector creation, and successful run evidence exist. Only
   ready packs are merged with the four baseline markets and exposed by the
   selector. The HMAC-authenticated API atomically admits the pack and its
@@ -47,7 +47,7 @@ Bright Data Scraper Studio collectors (one per eligible source)
 
 ## Evidence surfaces
 
-The terminal, sanitized fixtures/transcripts, GitHub Action summaries, D1 run
+The terminal, sanitized fixtures/transcripts, GitHub Action summaries, PostgreSQL run
 summary, and public storefront are the judge surfaces. The dashboard is only a
 quick confirmation of collector existence or schedule state. See
 [evidence-matrix.md](evidence-matrix.md).
@@ -56,7 +56,7 @@ quick confirmation of collector existence or schedule state. See
 
 - [ ] Confirm whether each candidate needs Discovery + PDP or one combined
   collector.
-- [x] Provision D1 binding and migration strategy.
+- [x] Provision the private Hyperdrive/VPC binding and PostgreSQL migration strategy.
 - [x] Define the exact refresh HMAC and replay window.
 - [x] Add the source registry, Country Pack admission path, and contract schema without credentials.
 - [ ] Record the first real `c_*` ID and sanitized create/run evidence.

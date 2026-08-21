@@ -3,7 +3,7 @@
 Raster’s scheduled collection is deliberately one small, protected request at
 a time. GitHub Actions never receives the Bright Data provider key. It signs a
 request to the deployed server route; the server owns provider access,
-validation, normalization, and D1 writes.
+validation, normalization, and hosted PostgreSQL writes through private Hyperdrive/VPC.
 
 ## GitHub configuration
 
@@ -84,11 +84,11 @@ route and does not require a code deploy. To add a market safely:
    exclusion evidence. The pack remains pending and is not selectable.
 3. Create and run a source-specific custom Scraper Studio collector, record its
    real `c_*` ID, and validate its output against the shared contract.
-4. Submit the sanitized creation/run evidence. One D1 transaction marks the
+4. Submit the sanitized creation/run evidence. One PostgreSQL transaction marks the
    pack ready and binds the server-resolved source; it then appears in the
    selector without redeploying Raster.
 
-The selector, validation, currency formatting, and D1 query layer merge ready
+The selector, validation, currency formatting, and PostgreSQL query layer merge ready
 Country Packs with the baseline registry. Shopper input cannot supply a source
 URL or Collector ID, and an admitted source binding is immutable.
 
@@ -168,7 +168,7 @@ fetch and never calls a provider or a real route.
 - Timeouts and non-2xx responses fail the job without printing the route body.
 - The job summary contains only the selected slice and an allowlisted response
   summary; provider keys and raw provider error bodies are never copied.
-- A failed/partial collection must preserve the last known good D1 offer. The
+- A failed/partial collection must preserve the last known good PostgreSQL offer. The
   route, not this workflow, owns that transaction and quarantine behavior.
 - The workflow is not a retry loop. Investigate a failed source, then rerun one
   slice manually after the route/source is safe.
@@ -182,4 +182,4 @@ fetch and never calls a provider or a real route.
 - [ ] Dispatch one slice manually and inspect the safe Action summary.
 - [ ] Confirm no provider key, authorization header, or raw provider body is in
       the log or summary.
-- [ ] Confirm D1/current offers remain intact when a source fails validation.
+- [ ] Confirm PostgreSQL/current offers remain intact when a source fails validation.

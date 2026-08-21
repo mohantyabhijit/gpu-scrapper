@@ -28,7 +28,7 @@ evidence that already has a dated link in the evidence matrix.
    should show only the safe `{slug,status}` responses; the two payloads must
    keep the same verified country/source/collector boundary.
 4. **1:20–2:05 — Prompt-to-production and scheduled goal.** Show the structured
-   collector row crossing validation/normalization into D1 and the storefront,
+   collector row crossing validation/normalization into hosted PostgreSQL via private Hyperdrive and the storefront,
    then show the GitHub Action summary for one scheduled/manual market-source
    slice. Explain that the unattended goal is a fresh, market-local catalog,
    not a dashboard-only scraper.
@@ -54,7 +54,7 @@ before/after heal evidence are the proof surfaces.
 
 - Do not show the Bright Data API key, HMAC secret, `.env`, cookies, private
   account pages, dashboard identity, or unredacted provider output.
-- Do not claim a live collector, D1 write, schedule, or heal until its evidence
+- Do not claim a live collector, PostgreSQL write, schedule, or heal until its evidence
   row is dated and linked.
 - If a required live gate is still pending, stop the recording and fix the gate;
   do not substitute a fixture while narrating it as production behavior.

@@ -6,7 +6,7 @@
 - [ ] Two same-market sources have healthy live output and overlapping models.
 - [ ] At least one real create/run flow and stable Collector ID are recorded.
 - [ ] Same-ID heal is proven with sanitized before/preview/after evidence.
-- [ ] Scheduled/manual GitHub Action has completed and fed D1/storefront.
+- [ ] Scheduled/manual GitHub Action has completed and fed PostgreSQL/storefront.
 - [x] Search, filters, currency grouping, freshness, source attribution, and
       outbound links pass manual keyboard/browser QA at desktop and 390px.
 - [x] Automated axe scan reports zero violations across four deployed routes.
@@ -65,13 +65,13 @@ Bright Data Scraper Studio is Raster's production data source, not an add-on.
 Each eligible long-tail retailer gets an owned, source-specific collector with a
 stable `c_*` ID. The protected refresh pipeline triggers those IDs, validates
 and normalizes structured rows, quarantines bad output, preserves last-known-good
-offers, writes current state and observations to D1, and feeds the storefront on
+offers, writes current state and observations to hosted PostgreSQL via private Hyperdrive, and feeds the storefront on
 a GitHub Actions schedule. The demo shows a real create/run flow and repairs a
 broken extractor with `bdata scraper heal`, approval, and a successful rerun
 under the same Collector ID—without changing downstream code.
 
 Do not paste these drafts into the form until the claimed live collectors,
-schedule, D1 writes, and same-ID heal are proven in the evidence matrix.
+schedule, PostgreSQL writes, and same-ID heal are proven in the evidence matrix.
 
 ## Why Raster combines the organizer project patterns
 
@@ -80,7 +80,7 @@ strongest patterns:
 
 1. **Prompt-to-production pipeline:** a source-specific Scraper Studio
    collector produces structured GPU rows, the protected route validates and
-   normalizes them, D1 stores current/history state, and the storefront renders
+   normalizes them, PostgreSQL stores current/history state, and the storefront renders
    the result.
 2. **Set a goal and walk away:** the goal is a fresh, market-local catalog; a
    scheduled GitHub Action signs one bounded refresh slice and publishes a
@@ -99,7 +99,7 @@ evidence matrix have moved from `pending` to a dated proof link.
 ## Three-track winning proof
 
 - **Web-Slinger / Best Use of Bright Data:** show terminal-driven create, run,
-  protected trigger, D1 output, schedule, and same-ID heal end to end.
+  protected trigger, PostgreSQL output, schedule, and same-ID heal end to end.
 - **Suit-Up / Best UI:** show the polished four-market journey, accessible
   filters, market-local currency boundary, model detail, and health surface.
 - **Spider-Sense / Best Clean Code:** show typed contracts, allowlists, HMAC
@@ -117,7 +117,7 @@ responses.
 1. **0:00–0:20 — About the project:** regional GPU-price fragmentation and the
    four-market product promise.
 2. **0:20–0:45 — Tech stack and architecture:** Scraper Studio Collector IDs →
-   protected refresh → validation/normalization → D1 → Raster storefront.
+   protected refresh → validation/normalization → private Hyperdrive/VPC PostgreSQL → Raster storefront.
 3. **0:45–1:30 — Product demo:** switch markets, filter, open a model, inspect
    freshness/health, and verify at the retailer.
 4. **1:30–2:15 — Bright Data proof:** real create/run output and the structured

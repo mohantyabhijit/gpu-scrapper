@@ -18,7 +18,7 @@ Verified on 2026-08-21 against
 - The GitHub push and pull-request `Raster quality` runs for security-fix
   commit `f57cf56` pass; `actionlint v1.7.12` accepts the scheduled and quality
   workflows.
-- Remote D1 contains all six applied migrations and the expected production
+- Hosted PostgreSQL contains the applied migrations and the expected production
   tables, including `market_packs`, `request_receipts`, and `healing_events`.
   The three Country Pack immutability triggers were queried from remote
   `sqlite_master` after migration `0005` applied. SQLite tests prove unique
@@ -28,7 +28,7 @@ Verified on 2026-08-21 against
 - Direct SQLite-backed tests persist and reload all seven same-ID healing
   stages and serialize concurrent source-rate claims through the real unique
   receipt key; route tests cover bounded input and replay cleanup failures.
-- A production D1 binding smoke check inserted and read a uniquely named QA
+- A production private Hyperdrive/PostgreSQL smoke check inserted and read a uniquely named QA
   receipt, immediately deleted it, and verified `residue = 0`. No catalog row
   was touched.
 - The protected refresh route rejects an unsigned request with HTTP 401. A
@@ -66,7 +66,7 @@ the exact viewport/overflow measurements above.
 
 - Storefront rows are still explicitly labelled fixtures.
 - Live Bright Data Collector IDs, source eligibility evidence, collector-backed
-  D1 writes, a green scheduled Action, and same-ID heal artifacts remain
+  PostgreSQL writes, a green scheduled Action, and same-ID heal artifacts remain
   pending until the previously exposed Bright Data key is revoked and replaced.
 - `npm audit` reports four moderate issues in development tooling. The only
   proposed automated remediation is a forced breaking downgrade, so it was not

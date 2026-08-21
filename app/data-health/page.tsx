@@ -96,7 +96,7 @@ export default async function DataHealth() {
   const [snapshot, healing] = await Promise.all([loadCatalog(), loadHealingEvidence()]);
   const liveRead = snapshot.source === "postgres";
   const liveRowsLabel = liveRead
-    ? `${snapshot.liveOfferCount ?? snapshot.offers.length} normalized D1 rows`
+    ? `${snapshot.liveOfferCount ?? snapshot.offers.length} normalized PostgreSQL rows`
     : snapshot.fallbackReason === "database-empty"
       ? "pending · no normalized rows"
       : "pending · DB read unavailable";
@@ -104,11 +104,11 @@ export default async function DataHealth() {
     ? pipelineChecks.map((check) => check.key === "fixture-catalog"
       ? {
         ...check,
-        label: "D1 normalized offers",
+        label: "PostgreSQL normalized offers",
         state: `${snapshot.liveOfferCount ?? snapshot.offers.length} rows read`,
         detail: "Rows passed the market, currency, source, URL, and timestamp checks before entering the storefront.",
         evidence: [
-          { kind: "provider", label: "D1 read" },
+          { kind: "provider", label: "PostgreSQL read" },
           { kind: "policy", label: "Schema validated" },
         ],
       }
@@ -131,13 +131,13 @@ export default async function DataHealth() {
   const marketHealth: readonly MarketHealth[] = snapshot.markets.map((market) => ({
     market,
     tone: market.ready === false ? "pending" : "ready",
-    note: liveRead ? "D1 row · observed timestamp shown per offer" : "Fixture rows only · live provider not configured",
+    note: liveRead ? "PostgreSQL row · observed timestamp shown per offer" : "Fixture rows only · live provider not configured",
   }));
   return (
     <main className="site-shell health-page">
       <div className="demo-banner" role="note">
         <span className="pulse-dot" aria-hidden="true" />
-        <strong>{liveRead ? "D1 NORMALIZED READ" : "FIXTURE CATALOG"}</strong>
+        <strong>{liveRead ? "POSTGRESQL NORMALIZED READ" : "FIXTURE CATALOG"}</strong>
         <span>{liveRead ? `${liveRowsLabel}. Collector execution status remains separate and is not inferred from a database read.` : "Health here describes the current demo state; it does not claim a live scrape or production freshness."}</span>
       </div>
 
@@ -151,7 +151,7 @@ export default async function DataHealth() {
           <Link href="/how-it-works">How it works</Link>
           <Link href="/data-health" aria-current="page">Data health</Link>
         </nav>
-        <span className="status-chip"><span className="status-dot" aria-hidden="true" /> {liveRead ? "d1 view" : "fixture view"}</span>
+        <span className="status-chip"><span className="status-dot" aria-hidden="true" /> {liveRead ? "postgres view" : "fixture view"}</span>
       </header>
 
       <section className="health-hero">
@@ -160,9 +160,9 @@ export default async function DataHealth() {
           <h1>Trust the signal.<br /><em>Know its state.</em></h1>
           <p>One compact view for what is real in the demo, what is still pending, and what the live pipeline must prove before it earns a green badge.</p>
         </div>
-        <div className="health-stamp" aria-label={liveRead ? "Normalized D1 rows are available; provider proof is tracked separately" : "Live collectors not configured"}>
+        <div className="health-stamp" aria-label={liveRead ? "Normalized PostgreSQL rows are available; provider proof is tracked separately" : "Live collectors not configured"}>
           <span className="stamp-ring" aria-hidden="true" />
-          <strong>{liveRead ? <>D1 ROWS<br />READ</> : <>NO LIVE<br />RUN CLAIMED</>}</strong>
+          <strong>{liveRead ? <>POSTGRESQL ROWS<br />READ</> : <>NO LIVE<br />RUN CLAIMED</>}</strong>
           <small>honesty is a feature</small>
         </div>
       </section>
@@ -175,7 +175,7 @@ export default async function DataHealth() {
         <dl>
           <div>
             <dt>Current UI</dt>
-            <dd><span className="legend-dot legend-fixture" aria-hidden="true" /> {liveRead ? "D1 normalized rows" : "fixture rows only"}</dd>
+            <dd><span className="legend-dot legend-fixture" aria-hidden="true" /> {liveRead ? "PostgreSQL normalized rows" : "fixture rows only"}</dd>
           </div>
           <div>
             <dt>Live provider</dt>
@@ -200,7 +200,7 @@ export default async function DataHealth() {
           </div>
           <p className="section-note">Eligibility → collector → contract<br />Only ready packs enter the selector</p>
         </div>
-        {snapshot.marketPacks.length === 0 ? <div className="empty-state" role="status"><strong>No runtime Country Pack recorded.</strong><p>{snapshot.fallbackReason === "database-unavailable" ? "The D1 pack ledger is unavailable in this view." : "Submit an authenticated pending pack to begin the evidence-gated demo."}</p></div> : <div className="market-health-grid">
+        {snapshot.marketPacks.length === 0 ? <div className="empty-state" role="status"><strong>No runtime Country Pack recorded.</strong><p>{snapshot.fallbackReason === "database-unavailable" ? "The PostgreSQL pack ledger is unavailable in this view." : "Submit an authenticated pending pack to begin the evidence-gated demo."}</p></div> : <div className="market-health-grid">
           {snapshot.marketPacks.map((market) => {
             const gates = [
               ["eligibility", market.eligibilityProven],
@@ -233,12 +233,12 @@ export default async function DataHealth() {
               <article className="market-health-card" key={info.slug} data-health-tone={tone}>
                 <div className="health-card-top">
                   <span className="health-icon" aria-hidden="true">{info.symbol}</span>
-                  <span className={`state-pill ${tone === "ready" ? "state-fixture" : "state-pending"}`}>{tone === "ready" ? (liveRead ? "d1 ready" : "fixture ready") : "onboarding pending"}</span>
+                  <span className={`state-pill ${tone === "ready" ? "state-fixture" : "state-pending"}`}>{tone === "ready" ? (liveRead ? "postgres ready" : "fixture ready") : "onboarding pending"}</span>
                 </div>
                 <h3>{info.label}</h3>
                 <p>Market-local offers only</p>
                 <strong>{info.currency}</strong>
-                <small>{liveRead ? "D1 row · observed timestamp shown per offer" : note}</small>
+                <small>{liveRead ? "PostgreSQL row · observed timestamp shown per offer" : note}</small>
               </article>
             );
           })}
@@ -325,7 +325,7 @@ export default async function DataHealth() {
 
       <footer className="site-footer">
         <Link href="/" className="brand"><span className="brand-mark" aria-hidden="true">R</span><span>raster<span className="brand-dot">.</span></span></Link>
-        <span>{liveRead ? "D1 catalog health · provider run tracked separately" : "Fixture health · no live run claimed"}</span>
+        <span>{liveRead ? "PostgreSQL catalog health · provider run tracked separately" : "Fixture health · no live run claimed"}</span>
         <Link href="/#offers">Back to offers ↗</Link>
       </footer>
     </main>

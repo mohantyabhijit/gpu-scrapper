@@ -18,7 +18,7 @@ Public deployment: <https://abhijitmohanty.com/scrapper/>
 ## Current status
 
 This repository is at the deployed, non-live judge-ready baseline. The
-storefront, protected pipeline, D1 schema, four-market schedule, Country Pack
+storefront, protected pipeline, hosted PostgreSQL schema, four-market schedule, Country Pack
 contract, and same-ID evidence ledger are implemented and verified by 81 core
 tests plus 6 production-render tests. The authoritative execution plan is [the
 Raster master plan](docs/plans/2026-08-21-raster-gpu-marketplace-master-plan.md).
@@ -45,8 +45,8 @@ currency, or Collector ID and therefore cannot bypass the public-data gates.
 
 The public deployment now contains the product contract, fixture-backed market
 experience, typed source registry, protected refresh route, migrated production
-D1 database, and append-only healing ledger. Live custom Collector IDs,
-authenticated source eligibility, real collector-backed D1 writes, same-ID
+private Hyperdrive/VPC PostgreSQL database, and append-only healing ledger. Live custom Collector IDs,
+authenticated source eligibility, real collector-backed PostgreSQL writes, same-ID
 healing, and a verified scheduled run remain
 release gates. They are intentionally marked `pending` in the
 [evidence matrix](docs/evidence-matrix.md); do not describe fixtures as live
@@ -82,8 +82,8 @@ npm test
 npm run db:generate
 ```
 
-The storefront falls back to clearly labelled fixtures when D1 is unavailable
-or contains no valid rows; normalized D1 rows take over automatically. Copy `.env.example` to
+The storefront falls back to clearly labelled fixtures when hosted PostgreSQL is unavailable
+or contains no valid rows; normalized PostgreSQL rows take over automatically through private Hyperdrive. Copy `.env.example` to
 your local secret store only when a workflow explicitly needs it; never commit a
 real `.env` file or paste a provider token into an issue, log, screenshot, or
 demo recording.
@@ -92,7 +92,7 @@ demo recording.
 
 Operations are intentionally CLI-first. A future live run will use the Bright
 Data CLI/API with source URLs from an allowlisted registry, then validate and
-normalize results before writing D1. Collector IDs (`c_*`) are safe identifiers;
+normalize results before writing hosted PostgreSQL. Collector IDs (`c_*`) are safe identifiers;
 provider credentials are not. The README will be updated with the exact
 redacted create/run/heal transcript after a real collector is created.
 
@@ -138,7 +138,7 @@ workflow. Do not add a new retailer without updating the eligibility record.
 - [Evidence matrix](docs/evidence-matrix.md) — organizer expectation to proof.
 - [Demo script](docs/demo-script.md) — terminal-first judge walkthrough.
 - [Submission notes](docs/submission.md) — final release checklist.
-- [Production QA](docs/qa-report.md) — automated, browser, API, D1, and
+- [Production QA](docs/qa-report.md) — automated, browser, API, PostgreSQL, and
   deployment verification evidence.
 - [Rules compliance](docs/rules-compliance.md) — rule-by-rule proof ledger.
 - [Structured output example](examples/structured-output.json) — safe fixture
@@ -149,7 +149,7 @@ workflow. Do not add a new retailer without updating the eligibility record.
   product, technical, sequencing, and verification contract.
 
 This project uses [vinext](https://github.com/cloudflare/vinext) on a Cloudflare
-Worker with D1/Drizzle. The public portfolio origin proxies only `/scrapper/`
+Worker with hosted PostgreSQL through a private Hyperdrive/VPC connection and Drizzle. The public portfolio origin proxies only `/scrapper/`
 to the Worker, leaving all other `abhijitmohanty.com` routes untouched. Hosting
 bindings are non-secret configuration; credentials remain in deployment secret
 stores and never belong in this repository.

@@ -13,7 +13,7 @@ execution: code
 ## Goal Capsule
 
 - **Objective:** Ship a credible GPU shopping and market-intelligence product that converts public listings from multiple regional retailers into fresh, normalized, comparable offers and gives judges direct evidence that Bright Data Scraper Studio powers the product end to end.
-- **Means:** Build market-isolated comparison experiences for the United States, United Kingdom, India, and Singapore; normalize eligible long-tail retailer results into Cloudflare D1; and prove one collector can self-heal without changing its Collector ID (KTD1-KTD7).
+- **Means:** Build market-isolated comparison experiences for the United States, United Kingdom, India, and Singapore; normalize eligible long-tail retailer results into hosted PostgreSQL through private Hyperdrive/VPC; and prove one collector can self-heal without changing its Collector ID (KTD1-KTD7).
 - **Authority:** Organizer rules and best practices govern eligibility and judging proof; the Product Contract governs behavior; the Planning Contract governs implementation choices; retailer pages remain the authority at purchase time.
 - **Execution profile:** Deep, code-bearing hackathon plan with sequential evidence gates and small, continuously pushed GitHub milestones.
 - **Stop conditions:** Stop a source before scraping if it is login-walled, paywalled, disallows the intended public access pattern, contains personal data, or is already covered by a Bright Data pre-built scraper. Stop release if a secret appears in git history, logs, screenshots, demo footage, client bundles, or public artifacts.
@@ -94,7 +94,7 @@ GPU shoppers face volatile prices, fragmented regional availability, inconsisten
 - R13. Collector IDs must be maintained in a source registry separate from credentials; the production trigger path must use the Bright Data API/CLI rather than replaying hard-coded JSON.
 - R14. Raw result rows must be validated before they enter the catalog. Invalid rows are quarantined with a non-secret reason and must not overwrite the last known good offer.
 - R15. Normalization must map retailer-specific naming to a stable product identity while retaining the original title and source-specific SKU for auditability.
-- R16. D1 must keep the current offer state and timestamped price observations without storing login, identity, or personal data; a customer-facing recent-movement view is P1 stretch.
+- R16. Hosted PostgreSQL must keep the current offer state and timestamped price observations without storing login, identity, or personal data; a customer-facing recent-movement view is P1 stretch.
 
 **Evidence, healing, and automation**
 
@@ -124,7 +124,7 @@ GPU shoppers face volatile prices, fragmented regional availability, inconsisten
 ### Success Criteria
 
 - The registry, validation, persistence, and storefront support US/USD, UK/GBP, India/INR, and Singapore/SGD with no cross-market ranking. At least two same-market retailers have healthy live collectors, 12 valid live offers total, five canonical GPU models, and three reviewed cross-retailer matches; each remaining market has at least one documented eligible candidate and demo-safe coverage until its live collector clears the release gates.
-- The live site provides a coherent search-to-retailer flow using normalized D1 data and visibly dated observations.
+- The live site provides a coherent search-to-retailer flow using normalized PostgreSQL data and visibly dated observations.
 - One complete self-heal story proves before/after behavior under the same Collector ID.
 - A scheduled or manually dispatched GitHub Actions run completes with validation and a human-readable health summary.
 - The evidence matrix lets a judge verify every organizer guideline in under three minutes without accessing private dashboards or secrets.
@@ -157,7 +157,7 @@ GPU shoppers face volatile prices, fragmented regional availability, inconsisten
 - Bright Data account access, CLI authentication, Scraper Studio availability, and an API key stored outside the repository.
 - Public retailer pages that remain eligible and stable enough for the demo window.
 - GitHub repository and Actions secrets for scheduled collection.
-- Cloudflare/OpenAI Sites runtime with D1 binding and a public deployment path.
+- Cloudflare Worker runtime with a private Hyperdrive/VPC binding to hosted PostgreSQL and a public deployment path.
 
 ### Sources
 
@@ -179,8 +179,8 @@ Product Contract bootstrapped from the user’s GPU ecommerce request and organi
 
 - KTD1. **A source-specific collector set behind one normalized contract.** Each retailer owns one or more role-keyed Scraper Studio collectors rather than sharing a multi-domain scraper. Site-specific code and stable Collector IDs isolate breakage, make self-healing evidence legible, and prevent one redesign from blocking all sources. Governs R1-R5, R13-R15, R19.
 - KTD2. **Two-stage discovery and PDP where justified.** A source pipeline may use a discovery collector to enumerate GPU URLs and a PDP collector for complete details; a small source may use one combined collector when listing rows contain every required field. The source registry records role-keyed Collector IDs and designates the collector used for healing proof. Governs R2, R5, R13.
-- KTD3. **D1 current-state plus append-only observations.** Use normalized relational tables for products, sources, offers, observations, collector runs, and quarantined rows. Current offers are upserted by source plus source SKU/URL; observations use a deterministic run key to make retries idempotent. Governs R14-R16, R22.
-- KTD4. **One server-owned ingestion boundary.** GitHub Actions cron/manual dispatch sends a timestamped HMAC-authenticated request to the deployed refresh route; that route alone triggers Bright Data, validates/normalizes results, and writes D1 through the platform binding. The browser receives catalog reads only, and refresh inputs resolve from an allowlisted source registry rather than arbitrary URLs. Governs R13, R20, R23-R24.
+- KTD3. **PostgreSQL current-state plus append-only observations.** Use normalized relational tables for products, sources, offers, observations, collector runs, and quarantined rows. Current offers are upserted by source plus source SKU/URL; observations use a deterministic run key to make retries idempotent. Governs R14-R16, R22.
+- KTD4. **One server-owned ingestion boundary.** GitHub Actions cron/manual dispatch sends a timestamped HMAC-authenticated request to the deployed refresh route; that route alone triggers Bright Data, validates/normalizes results, and writes PostgreSQL through the private Hyperdrive/VPC binding. The browser receives catalog reads only, and refresh inputs resolve from an allowlisted source registry rather than arbitrary URLs. Governs R13, R20, R23-R24.
 - KTD5. **Fail stale, not empty.** Validation failure marks the source degraded and preserves its last known good offer. Freshness and health are displayed separately so stale data is never presented as current and a partial outage does not destroy the demo. Governs R11-R12, R14, R20-R22.
 - KTD6. **CLI-first proof with a thin judge surface.** Operational truth comes from versioned terminal commands, GitHub Action summaries, sanitized evidence, and stable IDs. The storefront exposes only customer-facing catalog and a compact “How it works / Data health” section. Governs R17-R21, R26.
 - KTD7. **Within-currency price ranking.** Store original amount and currency without silent conversion. Cross-region pages may juxtapose offers, but badges and ranking are computed only inside the same currency group. Governs R7, R9.
@@ -197,8 +197,8 @@ flowchart TB
   API --> VAL[Source contract validation]
   VAL -->|valid| NORM[GPU identity normalization]
   VAL -->|invalid| QUAR[Quarantine and degraded health]
-  NORM --> D1[(Cloudflare D1 offers and history)]
-  D1 --> WEB[Raster storefront]
+  NORM --> PG[(Hosted PostgreSQL offers and history)]
+  PG --> WEB[Raster storefront]
   WEB --> SHOP[Outbound retailer page]
   QUAR --> HEAL[bdata scraper heal and approve]
   HEAL --> API
@@ -225,7 +225,7 @@ flowchart TB
 ### Sequencing and GitHub Milestones
 
 1. **M0 — Plan and safety baseline:** Plan, same-market source overlap/eligibility checklist, threat model, ignore rules, secret rotation/placeholders, and repository README skeleton.
-2. **M1 — One proven vertical slice:** First eligible collector set, real run evidence, raw contract, validator/normalizer, fixture, provisioned/migrated D1 binding, minimal product listing, tests, and first deployed preview.
+2. **M1 — One proven vertical slice:** First eligible collector set, real run evidence, raw contract, validator/normalizer, fixture, provisioned/migrated PostgreSQL binding, minimal product listing, tests, and first deployed preview.
 3. **M2 — Hero self-heal protected early:** Intentionally omit one required public field in the live collector version for a fixed URL, capture failing output, heal/approve/rerun using the same URL and Collector ID, and prove no validator or downstream code changed.
 4. **M3 — Comparison market:** Second same-currency retailer, at least three overlapping canonical models, region-aware filtering, offer detail, freshness/health, and catalog breadth threshold.
 5. **M4 — Production automation:** HMAC-protected ingestion route, scheduled/manual GitHub Action, idempotent persistence, partial-failure behavior, and green summaries.
@@ -238,7 +238,7 @@ Each milestone ends with its focused tests plus every Verification Contract gate
 | Risk | Consequence | Mitigation |
 |---|---|---|
 | Candidate already has a pre-built scraper | Weakens organizer fit | Complete the pre-built-library exclusion gate before collector creation; replace the source, not the rationale. |
-| Retailer blocks, redesigns, or changes terms | Missing demo data | Maintain three isolated collectors, fixtures, last-known-good D1 state, visible freshness, and one prepared backup source. |
+| Retailer blocks, redesigns, or changes terms | Missing demo data | Maintain three isolated collectors, fixtures, last-known-good PostgreSQL state, visible freshness, and one prepared backup source. |
 | Similar product names merge incorrectly | Misleading comparison | Prefer manufacturer part number, then board partner + GPU + VRAM; preserve originals and flag ambiguous matches for quarantine. |
 | Cross-currency comparison misleads shoppers | Incorrect “best” claim | Rank only within currencies and label region explicitly; defer FX conversion. |
 | Auto-heal accepts a plausible but wrong field | Silent catalog corruption | Require contract tests, price bounds, URL host checks, preview evidence, and post-heal rerun validation before persistence. |
@@ -254,7 +254,7 @@ Each milestone ends with its focused tests plus every Verification Contract gate
 
 ### Priority Contract
 
-P0 is the judge-ready slice: a four-market storefront and contracts, two healthy same-currency live retailers with overlapping products, real create/run evidence, one manual same-ID heal, scheduled/manual Actions, D1 persistence, deployment, and sanitized evidence. Additional live collectors beyond the proof pair, R10’s shortlist, the customer-facing history view, and automatic heal approval are P1 stretch and cannot delay P0 release.
+P0 is the judge-ready slice: a four-market storefront and contracts, two healthy same-currency live retailers with overlapping products, real create/run evidence, one manual same-ID heal, scheduled/manual Actions, PostgreSQL persistence through private Hyperdrive/VPC, deployment, and sanitized evidence. Additional live collectors beyond the proof pair, R10’s shortlist, the customer-facing history view, and automatic heal approval are P1 stretch and cannot delay P0 release.
 
 ---
 
@@ -286,19 +286,19 @@ P0 is the judge-ready slice: a four-market storefront and contracts, two healthy
 - **Verification:** Focused contract tests pass; two same-market source records have real role-keyed Collector IDs and valid live output, while a third eligible source is recorded for expansion or backup.
 - **Dependencies:** U1.
 
-### U3. D1 schema and idempotent ingestion
+### U3. PostgreSQL schema and idempotent ingestion
 
 - **Goal:** Convert validated source rows into auditable current offers and price history without erasing good data on failure.
 - **Requirements:** R14-R16, R22.
 - **Files:** `gpuverse/.openai/hosting.json`, `gpuverse/vite.config.ts`, `gpuverse/db/schema.ts`, `gpuverse/db/index.ts`, `gpuverse/drizzle/*.sql`, `gpuverse/lib/normalize/gpu.ts`, `gpuverse/lib/ingest.ts`, `gpuverse/tests/normalization.test.ts`, `gpuverse/tests/ingestion.test.ts`.
-- **Approach:** Provision the production D1 resource, configure the Sites `DB` binding and local/test behavior, apply migrations before first ingestion, then implement canonical identity matching with MPN-first rules, minor-unit prices, explicit currencies, deterministic run/checksum keys, transactional upserts, append-only observations, and quarantine. Keep source titles and URLs for auditability.
+- **Approach:** Provision hosted PostgreSQL behind a private Hyperdrive/VPC binding, configure Worker and local/test behavior, apply migrations before first ingestion, then implement canonical identity matching with MPN-first rules, minor-unit prices, explicit currencies, deterministic run/checksum keys, transactional upserts, append-only observations, and quarantine. Keep source titles and URLs for auditability.
 - **Test scenarios:**
   1. Two naming variants with the same public MPN map to one product and two offers.
   2. Ambiguous titles without a defensible identity are quarantined instead of merged.
   3. Replaying the same run creates no duplicate observation; a changed price creates exactly one new observation.
   4. A failed source run retains the last good offer and marks its freshness/health degraded.
-  5. Local/test and deployed environments can perform a D1 read/write smoke test after migrations.
-- **Verification:** Database migration generation is clean, migrations apply to clean local and provisioned remote D1 databases, and normalization/ingestion tests plus binding smoke tests pass.
+  5. Local/test and deployed environments can perform a PostgreSQL read/write smoke test after migrations.
+- **Verification:** Database migration generation is clean, migrations apply to clean local and provisioned PostgreSQL databases, and normalization/ingestion tests plus binding smoke tests pass.
 - **Dependencies:** U2.
 
 ### U4. Public catalog and model comparison experience
@@ -306,7 +306,7 @@ P0 is the judge-ready slice: a four-market storefront and contracts, two healthy
 - **Goal:** Turn the collection pipeline into a polished, credible ecommerce-style shopping flow.
 - **Requirements:** R2a, R6-R12b, R16, R26.
 - **Files:** `gpuverse/app/page.tsx`, `gpuverse/app/gpu/[slug]/page.tsx`, `gpuverse/app/how-it-works/page.tsx`, `gpuverse/app/globals.css`, `gpuverse/components/*`, `gpuverse/lib/catalog.ts`, `gpuverse/tests/rendered-html.test.mjs`, `gpuverse/tests/catalog.test.ts`.
-- **Approach:** Build a visually focused homepage whose hierarchy is search, active filters/result count, GPU cards, and trust/data-health explanation. The server merges four baseline markets with ready D1 Country Packs; pending packs remain visible only in the health ledger. Model pages prioritize current same-currency offers, retailer exit actions, freshness/source cues, authoritative MSRP context, and then recent price movement when the P1 history slice is enabled. Use semantic landmarks/headings, labelled form controls, keyboard-operable controls, announced result changes, visible focus, non-color status text, adequate touch targets, and cards/tables that reflow at narrow widths. Keep operational controls out of the customer UI; local shortlist is P1 stretch.
+- **Approach:** Build a visually focused homepage whose hierarchy is search, active filters/result count, GPU cards, and trust/data-health explanation. The server merges four baseline markets with ready PostgreSQL Country Packs; pending packs remain visible only in the health ledger. Model pages prioritize current same-currency offers, retailer exit actions, freshness/source cues, authoritative MSRP context, and then recent price movement when the P1 history slice is enabled. Use semantic landmarks/headings, labelled form controls, keyboard-operable controls, announced result changes, visible focus, non-color status text, adequate touch targets, and cards/tables that reflow at narrow widths. Keep operational controls out of the customer UI; local shortlist is P1 stretch.
 - **Test scenarios:**
   1. Search and filters produce deterministic URLs and empty states.
   2. Mixed currencies never receive a single cheapest badge or misleading global sort.
@@ -322,13 +322,13 @@ P0 is the judge-ready slice: a four-market storefront and contracts, two healthy
 - **Goal:** Refresh all enabled collectors on a schedule and prove reliable downstream ingestion without human dashboard work.
 - **Requirements:** R13-R16, R20, R22-R24.
 - **Files:** `gpuverse/lib/bright-data/client.ts`, `gpuverse/app/api/refresh/route.ts`, `gpuverse/lib/pipeline.ts`, `gpuverse/.github/workflows/collect.yml`, `gpuverse/tests/bright-data-client.test.ts`, `gpuverse/tests/refresh-route.test.ts`, `gpuverse/tests/pipeline.test.ts`.
-- **Approach:** Build a bounded trigger/poll client and one server-owned pipeline behind a timestamped HMAC request using a dedicated rotation-friendly secret, five-minute replay window, constant-time signature check, source allowlist, bounded batch, and per-caller rate limit. GitHub Actions only schedules/signs the request and renders the returned summary; the route owns Bright Data and D1. Schedule conservatively and retain manual dispatch for judging.
+- **Approach:** Build a bounded trigger/poll client and one server-owned pipeline behind a timestamped HMAC request using a dedicated rotation-friendly secret, five-minute replay window, constant-time signature check, source allowlist, bounded batch, and per-caller rate limit. GitHub Actions only schedules/signs the request and renders the returned summary; the route owns Bright Data and PostgreSQL through private Hyperdrive/VPC. Schedule conservatively and retain manual dispatch for judging.
 - **Test scenarios:**
   1. Anonymous, invalid-secret, arbitrary-URL, disabled-source, and oversized requests are rejected before provider calls.
   2. Provider timeout, rate limit, malformed JSON, partial source failure, and delayed dataset completion yield bounded, redacted results.
   3. One healthy source still ingests when another fails, and rerunning the job remains idempotent.
   4. The Action summary reports source, counts, freshness, and status without secrets or raw provider bodies.
-- **Verification:** Client/route/pipeline tests pass with provider mocks; a manual Action run completes against live collectors and D1; scheduled syntax is validated.
+- **Verification:** Client/route/pipeline tests pass with provider mocks; a manual Action run completes against live collectors and PostgreSQL; scheduled syntax is validated.
 - **Dependencies:** U2-U3.
 
 ### U6. Same-ID self-healing and CI guardrails
@@ -368,9 +368,9 @@ P0 is the judge-ready slice: a four-market storefront and contracts, two healthy
 | Static quality | `npm run lint` | U1-U7 | Zero lint errors. |
 | Production build | `npm run build` | U1-U7 | Vinext/Worker build succeeds with no missing binding or server/client secret leak. |
 | Full automated suite | `npm test` | U1-U7 | Build and all repository tests pass. Extend the script to include new TypeScript/unit suites. |
-| D1 schema | `npm run db:generate` plus migration diff review | U3 | Deterministic migration exists and applies to a clean local D1 database. |
+| PostgreSQL schema | `npm run db:generate` plus migration diff review | U3 | Deterministic migration exists and applies to a clean local PostgreSQL database. |
 | Collector contract | Focused collector/normalizer tests and one live CLI run | U2-U3 | Valid row reaches normalized fixture; invalid rows are rejected safely. |
-| Pipeline integration | Manual `collect.yml` dispatch against live secrets | U5 | All enabled sources report bounded outcomes; valid rows reach D1; no secret appears in logs. |
+| Pipeline integration | Manual `collect.yml` dispatch against live secrets | U5 | All enabled sources report bounded outcomes; valid rows reach PostgreSQL; no secret appears in logs. |
 | Same-ID healing | Sanitized before/preview/after evidence | U6 | Required field recovers, exact Collector ID matches before/after, and downstream files need no change. |
 | Browser behavior | Clean-profile desktop/mobile smoke test | U4, U7 | Search, filter, model detail, source link, freshness, stale state, and currency grouping work; shortlist/history are included only when their P1 slices ship. |
 | Accessibility | Automated scan plus keyboard pass | U4 | No critical accessibility violations; visible focus and logical navigation are confirmed. |
@@ -398,8 +398,8 @@ Release validation is blocked if the live site contains only fixtures, if no rea
 
 - U1 is done when a clean clone is safe and buildable, eligibility decisions are documented, and the GitHub target is established.
 - U2 is done when the collector registry and contracts are tested, two same-market source records have real role-keyed Collector IDs and valid live evidence, and a third eligible expansion/backup source is recorded.
-- U3 is done when normalization and D1 ingestion are transactional, idempotent, auditable, and preserve last-known-good data.
+- U3 is done when normalization and PostgreSQL ingestion are transactional, idempotent, auditable, and preserve last-known-good data.
 - U4 is done when the customer journey works across representative desktop/mobile/keyboard conditions with correct currency and freshness semantics.
-- U5 is done when live scheduled/manual automation safely refreshes D1 and reports per-source health without secret exposure.
+- U5 is done when live scheduled/manual automation safely refreshes PostgreSQL and reports per-source health without secret exposure.
 - U6 is done when same-ID healing is proven and its automation guardrails reject unsafe outcomes.
 - U7 is done when the release gates, public deployment, judge evidence, and submission package are verified.
