@@ -11,6 +11,12 @@ const APPROVED_SECRET_STEP_NAMES = new Set([
   "Validate protected refresh inputs",
   "Trigger one market/source slice",
 ]);
+const APPROVED_STEP_ENV = Object.freeze({
+  RASTER_REFRESH_URL: "${{ secrets.RASTER_REFRESH_URL }}",
+  RASTER_INGEST_HMAC_SECRET: "${{ secrets.RASTER_INGEST_HMAC_SECRET }}",
+  RASTER_REFRESH_SLICE: "${{ matrix.slice }}",
+});
+const normalizeWorkflowValue = (value) => typeof value === "string" ? value.trim() : value;
 
 function assertWorkflowPolicy(workflow) {
   const document = parseYaml(workflow);
@@ -20,23 +26,22 @@ function assertWorkflowPolicy(workflow) {
 
   let approvedEnvBlocks = 0;
   let secretReferences = 0;
-  const approvedSecretSteps = new Set();
   const secretReference = /\$\{\{[\s\S]*?\bsecrets\b[\s\S]*?\}\}/;
-  const scan = (value, allowed, approvedStepName) => {
+  const scan = (value, allowed) => {
     if (typeof value === "string") {
       if (secretReference.test(value)) {
         secretReferences += 1;
-        if (allowed) approvedSecretSteps.add(approvedStepName);
         assert.equal(allowed, true, "secrets.* references must stay in approved step env blocks");
+        assert.ok(Object.values(APPROVED_STEP_ENV).includes(normalizeWorkflowValue(value)), "secret references must use exact approved expressions");
       }
       return;
     }
     if (Array.isArray(value)) {
-      for (const item of value) scan(item, allowed, approvedStepName);
+      for (const item of value) scan(item, allowed);
       return;
     }
     if (!value || typeof value !== "object") return;
-    for (const child of Object.values(value)) scan(child, allowed, approvedStepName);
+    for (const child of Object.values(value)) scan(child, allowed);
   };
 
   for (const [key, value] of Object.entries(document)) {
@@ -52,13 +57,19 @@ function assertWorkflowPolicy(workflow) {
     for (const step of job.steps) {
       assert.ok(step && typeof step === "object" && !Array.isArray(step), "workflow steps must be mappings");
       const approved = APPROVED_SECRET_STEP_NAMES.has(step.name);
-      if (approved && Object.hasOwn(step, "env")) approvedEnvBlocks += 1;
-      for (const [key, value] of Object.entries(step)) scan(value, approved && key === "env", step.name);
+      if (approved) {
+        approvedEnvBlocks += 1;
+        assert.ok(step.env && typeof step.env === "object" && !Array.isArray(step.env), `${step.name} must define an env mapping`);
+        assert.deepEqual(Object.keys(step.env).sort(), Object.keys(APPROVED_STEP_ENV).sort(), `${step.name} env must contain only the approved mappings`);
+        for (const [key, expected] of Object.entries(APPROVED_STEP_ENV)) {
+          assert.equal(normalizeWorkflowValue(step.env[key]), expected, `${step.name} env.${key} must use the exact approved expression`);
+        }
+      }
+      for (const [key, value] of Object.entries(step)) scan(value, approved && key === "env");
     }
   }
   assert.equal(approvedEnvBlocks, 2, "exactly two approved secret-bearing step env blocks are required");
-  assert.equal(approvedSecretSteps.size, 2, "both approved env blocks should contain a secret reference");
-  assert.ok(secretReferences > 0, "workflow should contain at least one secret reference");
+  assert.equal(secretReferences, 4, "the two approved env blocks should contain only the four approved secret references");
   return document;
 }
 
@@ -134,13 +145,20 @@ test("workflow policy catches inline job env secrets and tolerates reordered ste
   assert.throws(() => assertWorkflowPolicy(inlineJobEnv), /approved step env blocks/);
 });
 
-test("workflow policy recognizes bracket and whole-secrets expressions in approved envs", async () => {
+test("workflow policy rejects non-exact secret expressions even in approved envs", async () => {
   const workflow = await readFile(new URL("../.github/workflows/collect.yml", import.meta.url), "utf8");
   const bracketed = workflow
     .replaceAll("${{ secrets.RASTER_REFRESH_URL }}", "${{ secrets['RASTER_REFRESH_URL'] }}")
     .replaceAll("${{ secrets.RASTER_INGEST_HMAC_SECRET }}", '${{ secrets["RASTER_INGEST_HMAC_SECRET"] }}');
-  assertWorkflowPolicy(bracketed);
-  assertWorkflowPolicy(workflow.replaceAll("${{ secrets.RASTER_REFRESH_URL }}", "${{ toJSON(secrets) }}"));
+  assert.throws(() => assertWorkflowPolicy(bracketed), /exact approved expression/);
+  assert.throws(() => assertWorkflowPolicy(workflow.replaceAll("${{ secrets.RASTER_REFRESH_URL }}", "${{ toJSON(secrets) }}")), /exact approved expression/);
+  assert.throws(() => assertWorkflowPolicy(workflow.replaceAll("${{ secrets.RASTER_REFRESH_URL }}", "${{ secrets.RASTER_INGEST_HMAC_SECRET }}")), /exact approved expression/);
+
+  const extraSecret = workflow.replaceAll(
+    "          RASTER_REFRESH_SLICE: ${{ matrix.slice }}",
+    "          RASTER_REFRESH_SLICE: ${{ matrix.slice }}\n          EXTRA_SECRET: ${{ secrets.RASTER_REFRESH_URL }}",
+  );
+  assert.throws(() => assertWorkflowPolicy(extraSecret), /only the approved mappings/);
 
   const leaks = [
     "LEAK: \"${{ secrets['RASTER_REFRESH_URL'] }}\"",
