@@ -2,7 +2,7 @@
 
 Verified on 2026-08-21 against
 <https://abhijitmohanty.com/scrapper/> after Cloudflare Worker version
-`463ffe5b-be7f-4de9-82d0-f6cb4d77eceb` was deployed from commit `206b5e2`.
+`794ca924-9089-4d92-839c-7844306dee0f` was deployed from commit `2c3710d`.
 
 ## Automated gates
 
@@ -12,7 +12,7 @@ Verified on 2026-08-21 against
 - 6/6 production server-render tests pass.
 - TypeScript, ESLint, `git diff --check`, the deployment dry run, and the
   repository secret scan pass.
-- Both GitHub `Raster quality` runs for commit `206b5e2` pass, and
+- The GitHub push `Raster quality` run for commit `2c3710d` passes, and
   `actionlint v1.7.12` accepts the scheduled and quality workflows.
 - Remote D1 contains all five applied migrations and the expected production
   tables, including `market_packs`, `request_receipts`, and `healing_events`.
