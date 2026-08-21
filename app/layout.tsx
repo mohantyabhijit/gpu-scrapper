@@ -15,19 +15,20 @@ const geistMono = Geist_Mono({
 
 const title = "Raster — GPU prices without the tab circus";
 const description = "A public-data GPU offer comparison across the US, UK, India, and Singapore, built for Into the Scrape-Verse.";
+const basePath = "/scrapper";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
   const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "localhost:3000";
   const protocol = requestHeaders.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  const image = new URL("/og.png", `${protocol}://${host}`).toString();
+  const image = new URL(`${basePath}/og.png`, `${protocol}://${host}`).toString();
 
   return {
     title,
     description,
     icons: {
-      icon: "/favicon.svg",
-      shortcut: "/favicon.svg",
+      icon: `${basePath}/favicon.svg`,
+      shortcut: `${basePath}/favicon.svg`,
     },
     openGraph: {
       title,

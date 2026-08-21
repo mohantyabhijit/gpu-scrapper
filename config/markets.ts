@@ -22,6 +22,11 @@ export type MarketDefinition = {
   readonly symbol: string;
   readonly enabled?: boolean;
   readonly ready?: boolean;
+  readonly runtime?: boolean;
+  readonly sourceDisplayName?: string;
+  readonly eligibilityProven?: boolean;
+  readonly collectorCreatedProven?: boolean;
+  readonly collectorRunProven?: boolean;
 };
 
 const marketsByCode = Object.fromEntries(

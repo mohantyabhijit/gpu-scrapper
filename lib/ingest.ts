@@ -60,7 +60,7 @@ export function ingestRows(rows: readonly RawOffer[], context: IngestionContext)
       return;
     }
     try {
-      const offer = normalizeOffer(validation.value, context.observedAt);
+    const offer = normalizeOffer(validation.value, context.observedAt, context.source?.currency);
       if (seenOffers.has(offer.offerKey)) return;
       const observationKey = `${context.runId}:${offer.offerKey}`;
       if (seenObservations.has(observationKey)) return;

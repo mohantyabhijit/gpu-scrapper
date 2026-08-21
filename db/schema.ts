@@ -101,6 +101,31 @@ export const quarantinedRows = sqliteTable("quarantined_rows", {
   uniqueIndex("quarantine_run_fingerprint_idx").on(table.runId, table.rowFingerprint),
 ]);
 
+export const requestReceipts = sqliteTable("request_receipts", {
+  key: text("key").primaryKey(),
+  route: text("route").notNull(),
+  createdAt: text("created_at").notNull(),
+  expiresAt: text("expires_at").notNull(),
+}, (table) => [index("request_receipts_expiry_idx").on(table.expiresAt)]);
+
+export const healingEvents = sqliteTable("healing_events", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  sessionId: text("session_id").notNull(),
+  sourceSlug: text("source_slug").notNull().references(() => sources.slug),
+  collectorId: text("collector_id").notNull(),
+  stage: text("stage").notNull(),
+  occurredAt: text("occurred_at").notNull(),
+  evidenceRef: text("evidence_ref").notNull(),
+  detail: text("detail").notNull(),
+  acceptedCount: integer("accepted_count"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  index("healing_events_session_idx").on(table.sessionId, table.id),
+  uniqueIndex("healing_events_session_stage_idx").on(table.sessionId, table.stage),
+  check("healing_events_stage_check", sql`stage IN ('healthy', 'broken', 'quarantined', 'previewed', 'approved', 'rerun', 'published')`),
+  check("healing_events_accepted_count_check", sql`accepted_count IS NULL OR accepted_count >= 0`),
+]);
+
 export const marketPacks = sqliteTable("market_packs", {
   slug: text("slug").primaryKey(),
   countryCode: text("country_code").notNull().unique(),
@@ -133,3 +158,4 @@ export type SourceRow = typeof sources.$inferSelect;
 export type ProductRow = typeof products.$inferSelect;
 export type OfferRow = typeof offers.$inferSelect;
 export type MarketPackRow = typeof marketPacks.$inferSelect;
+export type HealingEventRow = typeof healingEvents.$inferSelect;

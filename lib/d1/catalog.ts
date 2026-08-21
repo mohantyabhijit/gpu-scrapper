@@ -4,6 +4,7 @@ import { offers as fixtureOffers, type Currency, type Market, type Offer } from 
 import { marketRegistry, type MarketDefinition } from "../../config/markets.ts";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { and, eq } from "drizzle-orm";
+import { loadLatestHealingSession, type HealingSession } from "./healing-evidence.ts";
 
 type CatalogDatabase = DrizzleD1Database<typeof schema>;
 
@@ -22,6 +23,8 @@ type D1CatalogRow = {
   readonly sourceCurrency: string;
   readonly sourceDisplayName: string;
   readonly sourceAllowedHosts: string;
+  readonly sourceEnabled: boolean;
+  readonly sourceOnboardingStatus: string;
   readonly productSlug: string;
   readonly productModel: string;
   readonly boardPartner: string | null;
@@ -41,6 +44,16 @@ export type CatalogSnapshot = {
 
 export type CatalogQuery = (market?: MarketDefinition, modelSlug?: string) => Promise<readonly D1CatalogRow[]>;
 export type MarketQuery = () => Promise<readonly MarketDefinition[]>;
+
+/** Read the latest append-only healing proof without making catalog reads depend on it. */
+export async function loadHealingEvidence(): Promise<HealingSession | undefined> {
+  try {
+    const { getDb } = await import("../../db/index.ts");
+    return await loadLatestHealingSession(getDb());
+  } catch {
+    return undefined;
+  }
+}
 
 const observedDateFormatter = new Intl.DateTimeFormat("en-GB", {
   day: "2-digit",
@@ -88,6 +101,7 @@ export function mapD1Offer(row: D1CatalogRow, definitions: readonly MarketDefini
   const sourceCurrency = viewCurrency(row.sourceCurrency.toUpperCase());
   const expectedCurrency = sourceCurrency;
 
+  if (!row.sourceEnabled || row.sourceOnboardingStatus !== "ready") return undefined;
   if (!market || !currency || !expectedCurrency || currency !== expectedCurrency || market.currency !== currency) return undefined;
   if (!sourceMarket || sourceMarket !== market.code || sourceCurrency !== currency) return undefined;
   if (!sourceSlug) return undefined;
@@ -148,6 +162,8 @@ async function queryD1Rows(db: CatalogDatabase, market?: MarketDefinition, model
     sourceCurrency: schema.sources.currency,
     sourceDisplayName: schema.sources.displayName,
     sourceAllowedHosts: schema.sources.allowedHosts,
+    sourceEnabled: schema.sources.enabled,
+    sourceOnboardingStatus: schema.sources.onboardingStatus,
     productSlug: schema.products.slug,
     productModel: schema.products.model,
     boardPartner: schema.products.boardPartner,
@@ -186,7 +202,7 @@ async function queryD1Rows(db: CatalogDatabase, market?: MarketDefinition, model
 function fixtureSnapshot(
   reason?: CatalogSnapshot["fallbackReason"],
   markets: readonly MarketDefinition[] = Object.values(marketRegistry),
-  marketPacks: readonly MarketDefinition[] = Object.values(marketRegistry),
+  marketPacks: readonly MarketDefinition[] = [],
   selectedMarket: MarketDefinition = marketRegistry.us,
 ): CatalogSnapshot {
   return {
@@ -214,7 +230,7 @@ export async function loadCatalog(options: {
   let query = options.query;
   let marketQuery = options.marketQuery;
   let markets: readonly MarketDefinition[] = Object.values(marketRegistry);
-  let marketPacks: readonly MarketDefinition[] = Object.values(marketRegistry);
+  let marketPacks: readonly MarketDefinition[] = [];
   if (!query) {
     try {
       const { getDb } = await import("../../db/index.ts");
@@ -230,6 +246,10 @@ export async function loadCatalog(options: {
           baseUrl: schema.marketPacks.baseUrl,
           catalogUrl: schema.marketPacks.catalogUrl,
           symbol: schema.marketPacks.symbol,
+          sourceDisplayName: schema.marketPacks.sourceDisplayName,
+          eligibilityEvidenceRef: schema.marketPacks.eligibilityEvidenceRef,
+          collectorCreatedEvidenceRef: schema.marketPacks.collectorCreatedEvidenceRef,
+          collectorRunEvidenceRef: schema.marketPacks.collectorRunEvidenceRef,
           status: schema.marketPacks.status,
         }).from(schema.marketPacks).all();
         return rows.map((row) => ({
@@ -241,6 +261,11 @@ export async function loadCatalog(options: {
             symbol: row.symbol,
             enabled: row.status === "ready",
             ready: row.status === "ready",
+            runtime: true,
+            sourceDisplayName: row.sourceDisplayName,
+            eligibilityProven: Boolean(row.eligibilityEvidenceRef),
+            collectorCreatedProven: Boolean(row.collectorCreatedEvidenceRef),
+            collectorRunProven: Boolean(row.collectorRunEvidenceRef),
           }));
       });
     } catch {
@@ -252,7 +277,7 @@ export async function loadCatalog(options: {
   try {
     if (marketQuery) {
       const runtimeMarkets = await marketQuery();
-      marketPacks = [...Object.values(marketRegistry), ...runtimeMarkets.filter((runtime) => !(runtime.slug in marketRegistry))];
+      marketPacks = runtimeMarkets;
       const merged = new Map<string, MarketDefinition>(Object.values(marketRegistry).map((market) => [market.slug, market]));
       for (const runtime of runtimeMarkets) {
         if (runtime.enabled !== false && runtime.ready !== false) merged.set(runtime.slug, runtime);

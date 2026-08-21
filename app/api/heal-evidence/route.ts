@@ -1,5 +1,8 @@
 import { authenticateRefreshRequest } from "../../../lib/brightdata/refresh.ts";
-import { MarketPackValidationError, upsertMarketPack } from "../../../lib/d1/market-packs.ts";
+import {
+  HealingEvidenceValidationError,
+  recordHealingEvent,
+} from "../../../lib/d1/healing-evidence.ts";
 import type { RasterDatabase } from "../../../lib/d1/repository.ts";
 import type { ReplayGuard } from "../../../lib/d1/replay.ts";
 
@@ -16,12 +19,18 @@ function json(payload: unknown, status = 200) {
   return Response.json(payload, { status, headers: { "Cache-Control": "no-store" } });
 }
 
-export async function handleMarketPackRequest(
-  request: Request,
-  dependencies: { environment: Environment; db?: RasterDatabase; nowSeconds?: number; now?: Date; replayGuard?: ReplayGuard },
-): Promise<Response> {
+type Dependencies = {
+  environment: Environment;
+  db?: RasterDatabase;
+  nowSeconds?: number;
+  now?: Date;
+  replayGuard?: ReplayGuard;
+  recordEvent?: typeof recordHealingEvent;
+};
+
+export async function handleHealEvidenceRequest(request: Request, dependencies: Dependencies): Promise<Response> {
   const body = await request.text();
-  if (body.length > 64 * 1024) return json({ error: "request_too_large" }, 413);
+  if (body.length > 32 * 1024) return json({ error: "request_too_large" }, 413);
   const timestamp = request.headers.get("x-raster-timestamp");
   const authenticated = await authenticateRefreshRequest(
     timestamp,
@@ -35,17 +44,17 @@ export async function handleMarketPackRequest(
   try { parsed = JSON.parse(body); } catch { return json({ error: "Request body is invalid JSON" }, 400); }
   try {
     const db = dependencies.db ?? (await import("../../../db/index.ts")).getDb();
-    if (!timestamp || !await (dependencies.replayGuard ?? (await import("../../../lib/d1/replay.ts")).createReplayGuard(db))("market-packs", timestamp, body)) {
+    if (!timestamp || !await (dependencies.replayGuard ?? (await import("../../../lib/d1/replay.ts")).createReplayGuard(db))("heal-evidence", timestamp, body)) {
       return json({ error: "replayed_request" }, 409);
     }
-    const result = await upsertMarketPack(db, parsed, dependencies.now ?? new Date());
-    return json(result, 200);
+    const result = await (dependencies.recordEvent ?? recordHealingEvent)(db, parsed, dependencies.now ?? new Date());
+    return json(result);
   } catch (error) {
-    if (error instanceof MarketPackValidationError) return json({ error: error.message }, 400);
-    return json({ error: "market_pack_unavailable" }, 503);
+    if (error instanceof HealingEvidenceValidationError) return json({ error: error.message }, 400);
+    return json({ error: "heal_evidence_unavailable" }, 503);
   }
 }
 
 export async function POST(request: Request): Promise<Response> {
-  return handleMarketPackRequest(request, { environment: runtimeEnvironment() });
+  return handleHealEvidenceRequest(request, { environment: runtimeEnvironment() });
 }

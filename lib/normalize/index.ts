@@ -90,8 +90,8 @@ export function normalizeMpn(value?: string): string | undefined {
   return result || undefined;
 }
 
-export function normalizeOffer(offer: ValidatedOffer, observedAt = "2026-08-21T00:00:00.000Z"): NormalizedOffer {
-  if (marketCurrency(offer.market) !== offer.currency.toUpperCase()) {
+export function normalizeOffer(offer: ValidatedOffer, observedAt = "2026-08-21T00:00:00.000Z", expectedCurrency = marketCurrency(offer.market)): NormalizedOffer {
+  if (!expectedCurrency || expectedCurrency !== offer.currency.toUpperCase()) {
     throw new Error("market and currency do not match");
   }
   const title = offer.title.trim();
@@ -133,11 +133,11 @@ export function normalizeOffer(offer: ValidatedOffer, observedAt = "2026-08-21T0
   };
 }
 
-export function canCompareOffers(left: NormalizedOffer, right: NormalizedOffer): boolean {
+export function canCompareOffers(left: NormalizedOffer, right: NormalizedOffer, expectedCurrency = marketCurrency(left.market)): boolean {
   return (
     left.market === right.market &&
     left.currency === right.currency &&
-    marketCurrency(left.market) === left.currency
+    expectedCurrency === left.currency
   );
 }
 
@@ -145,8 +145,8 @@ export function canCompareOffers(left: NormalizedOffer, right: NormalizedOffer):
 export function comparableOffers(
   offers: readonly NormalizedOffer[],
   market: Market,
+  expectedCurrency = marketCurrency(market),
 ): NormalizedOffer[] {
-  const currency = marketCurrency(market);
-  if (!currency) return [];
-  return offers.filter((offer) => offer.market === market && offer.currency === currency);
+  if (!expectedCurrency) return [];
+  return offers.filter((offer) => offer.market === market && offer.currency === expectedCurrency);
 }

@@ -122,6 +122,7 @@ test("route uses an injected runner and returns no provider body", async () => {
       BRIGHTDATA_API_KEY: "provider-secret",
     },
     nowSeconds: 1700000000,
+    replayGuard: async () => true,
     runner: async () => ({
       requested: ["central-computer"],
       completed: [{ sourceSlug: "central-computer", collectorId: "c_demo", responseId: "r_demo", rowCount: 1, attempts: 1 }],
@@ -277,10 +278,26 @@ test("route sanitizes an unexpected persistence exception", async () => {
       BRIGHTDATA_API_KEY: "provider-secret",
     },
     nowSeconds: 1700000000,
+    replayGuard: async () => true,
     runner: async () => {
       throw new Error("D1 provider body secret");
     },
   });
   assert.equal(response.status, 503);
   assert.deepEqual(await response.json(), { error: "refresh_unavailable" });
+});
+
+test("route rejects an authenticated replay before provider execution", async () => {
+  const body = JSON.stringify({ sourceSlugs: ["central-computer"], role: "combined" });
+  const request = await signedRequest(body, "refresh-secret");
+  let runs = 0;
+  const response = await handleRefreshRequest(request, {
+    environment: { RASTER_INGEST_HMAC_SECRET: "refresh-secret", BRIGHTDATA_API_KEY: "provider-secret" },
+    nowSeconds: 1700000000,
+    replayGuard: async () => false,
+    runner: async () => { runs += 1; throw new Error("must not run"); },
+  });
+  assert.equal(response.status, 409);
+  assert.deepEqual(await response.json(), { error: "replayed_request" });
+  assert.equal(runs, 0);
 });

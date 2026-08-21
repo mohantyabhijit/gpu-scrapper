@@ -48,6 +48,8 @@ test("validates a pending pack and rejects unsafe onboarding fields", () => {
   assert.throws(() => validateMarketPack({ ...valid, collectorId: "collector-id" }), MarketPackValidationError);
   assert.throws(() => validateMarketPack({ ...valid, countryCode: "ZZ" }), MarketPackValidationError);
   assert.throws(() => validateMarketPack({ ...valid, allowedHosts: ["*.example.jp"] }), MarketPackValidationError);
+  assert.throws(() => validateMarketPack({ ...valid, slug: "us", countryCode: "US" }), /baseline markets/);
+  assert.throws(() => validateMarketPack({ ...valid, sourceSlug: "dynacore" }), /baseline sources/);
 });
 
 test("ready requires dated eligibility, creation, and run evidence", () => {
@@ -63,6 +65,16 @@ test("ready requires dated eligibility, creation, and run evidence", () => {
     collectorRunAt: "2026-08-21",
   }, new Date("2026-08-21T00:00:00Z"));
   assert.equal(result.status, "ready");
+  assert.throws(() => validateMarketPack({
+    ...valid,
+    status: "ready",
+    eligibilityEvidenceRef: "evidence/eligibility.md",
+    eligibilityVerifiedAt: "2026-08-21",
+    collectorCreatedEvidenceRef: "evidence/create.md",
+    collectorCreatedAt: "2026-08-20",
+    collectorRunEvidenceRef: "evidence/run.md",
+    collectorRunAt: "2026-08-21",
+  }, new Date("2026-08-21T00:00:00Z")), /eligibility evidence must predate/);
 });
 
 test("upsert atomically admits the market and its server-resolved source", async () => {
@@ -81,6 +93,7 @@ test("route authenticates HMAC and does not echo provider evidence", async () =>
     db,
     nowSeconds: 1700000000,
     now: new Date("2026-08-21T00:00:00Z"),
+    replayGuard: async () => true,
   });
   assert.equal(response.status, 200);
   const payload = await response.json();

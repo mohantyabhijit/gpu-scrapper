@@ -45,8 +45,8 @@ export function getMarket(value: string | undefined): Market {
 }
 export function getMarketOffers(market: Market) { return offers.filter((offer) => offer.market === market); }
 export function getModelOffers(slug: string, market: Market) { return offers.filter((offer) => offer.modelSlug === slug && offer.market === market); }
-export function formatPrice(price: number, currency: Currency) {
-  const locale = Object.values(markets).find((market) => market.currency === currency)?.locale ?? "en-US";
-  return new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: currency === "USD" || currency === "GBP" ? 2 : 0 }).format(price);
+export function formatPrice(price: number, currency: Currency, locale?: string) {
+  const resolvedLocale = locale ?? Object.values(markets).find((market) => market.currency === currency)?.locale ?? "en-US";
+  return new Intl.NumberFormat(resolvedLocale, { style: "currency", currency }).format(price);
 }
 export const models = Array.from(new Map(offers.map((offer) => [offer.modelSlug, { slug: offer.modelSlug, name: offer.model, vram: offer.vram }])).values());

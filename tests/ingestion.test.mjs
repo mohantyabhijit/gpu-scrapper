@@ -41,3 +41,34 @@ test("row fingerprints are stable regardless of object key order", () => {
     fingerprintRow({ b: "two", a: 1 }),
   );
 });
+
+test("a resolved runtime Country Pack accepts and normalizes its local currency", () => {
+  const source = {
+    slug: "example-japan",
+    displayName: "Example Japan",
+    role: "secondary",
+    region: "JP",
+    currency: "JPY",
+    baseUrl: "https://example.jp/",
+    allowedHosts: ["example.jp"],
+    catalogUrl: "https://example.jp/gpus",
+    enabled: true,
+    collectorIds: { combined: "c_japan_gpu_01" },
+    collectorRoles: ["combined"],
+  };
+  const result = ingestRows([{
+    source_slug: source.slug,
+    market: "JP",
+    title: "ASUS GeForce RTX 5080 16GB",
+    product_url: "https://example.jp/gpus/asus-5080",
+    price: "189,900",
+    currency: "JPY",
+    availability: "in stock",
+    sku: "JP-5080-1",
+  }], { runId: "run-japan", observedAt: "2026-08-21T10:00:00.000Z", expectedSource: source.slug, source });
+  assert.equal(result.summary.accepted, 1);
+  assert.equal(result.summary.rejected, 0);
+  assert.equal(result.offers[0].market, "JP");
+  assert.equal(result.offers[0].currency, "JPY");
+  assert.equal(result.offers[0].priceMinor, 189900);
+});

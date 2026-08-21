@@ -1,5 +1,7 @@
 import { eq } from "drizzle-orm";
 import * as schema from "../../db/schema.ts";
+import { marketRegistry } from "../../config/markets.ts";
+import { sourceRegistry } from "../../config/sources.ts";
 import type { RasterDatabase } from "./repository.ts";
 
 export type MarketPackStatus = "pending" | "ready";
@@ -112,6 +114,9 @@ export function validateMarketPack(input: unknown, now = new Date()): MarketPack
   if (!slugPattern.test(slug)) throw new MarketPackValidationError("slug is invalid");
   const countryCode = requiredText(body.countryCode, "countryCode", 2).toUpperCase();
   if (!isIsoCountryCode(countryCode)) throw new MarketPackValidationError("countryCode is invalid");
+  if (slug in marketRegistry || Object.values(marketRegistry).some((market) => market.code === countryCode)) {
+    throw new MarketPackValidationError("baseline markets cannot be replaced by a Country Pack");
+  }
   const label = requiredText(body.label, "label", 80);
   const currency = requiredText(body.currency, "currency", 3).toUpperCase();
   if (!currencyPattern.test(currency) || (typeof Intl.supportedValuesOf === "function" && !Intl.supportedValuesOf("currency").includes(currency))) throw new MarketPackValidationError("currency is invalid");
@@ -123,6 +128,7 @@ export function validateMarketPack(input: unknown, now = new Date()): MarketPack
   const symbol = requiredText(body.symbol, "symbol", 8);
   const sourceSlug = requiredText(body.sourceSlug, "sourceSlug", 64);
   if (!slugPattern.test(sourceSlug)) throw new MarketPackValidationError("sourceSlug is invalid");
+  if (sourceSlug in sourceRegistry) throw new MarketPackValidationError("baseline sources cannot be replaced by a Country Pack");
   const sourceDisplayName = requiredText(body.sourceDisplayName, "sourceDisplayName", 80);
   const allowedHosts = normalizedHosts(body.allowedHosts, base, catalog);
   const collectorId = requiredText(body.collectorId, "collectorId", 128);
@@ -138,6 +144,12 @@ export function validateMarketPack(input: unknown, now = new Date()): MarketPack
   const collectorRunAt = body.collectorRunAt === undefined ? undefined : dateValue(body.collectorRunAt, "collectorRunAt", now);
   if (status === "ready" && !(eligibilityEvidenceRef && eligibilityVerifiedAt && collectorCreatedEvidenceRef && collectorCreatedAt && collectorRunEvidenceRef && collectorRunAt)) {
     throw new MarketPackValidationError("ready packs require dated eligibility, create, and run evidence");
+  }
+  if (status === "ready" && eligibilityVerifiedAt! > collectorCreatedAt!) {
+    throw new MarketPackValidationError("eligibility evidence must predate collector creation");
+  }
+  if (status === "ready" && collectorCreatedAt! > collectorRunAt!) {
+    throw new MarketPackValidationError("collector creation must predate the successful run");
   }
 
   return {

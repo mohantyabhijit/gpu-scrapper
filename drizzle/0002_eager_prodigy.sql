@@ -27,6 +27,12 @@ CREATE TABLE `market_packs` (
 --> statement-breakpoint
 CREATE UNIQUE INDEX `market_packs_country_code_unique` ON `market_packs` (`country_code`);--> statement-breakpoint
 CREATE UNIQUE INDEX `market_packs_source_slug_unique` ON `market_packs` (`source_slug`);--> statement-breakpoint
+CREATE TRIGGER `market_packs_source_slug_immutable`
+BEFORE UPDATE OF `source_slug` ON `market_packs`
+WHEN OLD.`source_slug` <> NEW.`source_slug`
+BEGIN
+  SELECT RAISE(ABORT, 'market pack source slug is immutable');
+END;--> statement-breakpoint
 PRAGMA foreign_keys=OFF;--> statement-breakpoint
 CREATE TABLE `__new_offers` (
 	`offer_key` text PRIMARY KEY NOT NULL,
@@ -95,7 +101,10 @@ CREATE TABLE `__new_sources` (
 	CONSTRAINT "sources_onboarding_status_check" CHECK(onboarding_status IN ('pending', 'ready'))
 );
 --> statement-breakpoint
-INSERT INTO `__new_sources`("slug", "display_name", "market", "region", "currency", "base_url", "enabled", "created_at") SELECT "slug", "display_name", "market", "region", "currency", "base_url", false, "created_at" FROM `sources`;--> statement-breakpoint
+-- Preserve the legacy flag for auditability. The new onboarding_status remains
+-- pending, so no legacy row can run until its allowlist and collector metadata
+-- are explicitly backfilled through the evidence gate.
+INSERT INTO `__new_sources`("slug", "display_name", "market", "region", "currency", "base_url", "enabled", "created_at") SELECT "slug", "display_name", "market", "region", "currency", "base_url", "enabled", "created_at" FROM `sources`;--> statement-breakpoint
 DROP TABLE `sources`;--> statement-breakpoint
 ALTER TABLE `__new_sources` RENAME TO `sources`;--> statement-breakpoint
 PRAGMA foreign_keys=ON;

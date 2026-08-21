@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { markets, type Market } from "../catalog";
-import { loadCatalog } from "../../lib/d1/catalog";
+import type { MarketDefinition } from "../../config/markets";
+import { loadCatalog, loadHealingEvidence } from "../../lib/d1/catalog";
+import { HEALING_STAGES, type HealingStage } from "../../lib/d1/healing-evidence";
 
 type HealthTone = "ready" | "pending" | "planned";
 type EvidenceKind = "fixture" | "provider" | "policy";
@@ -23,7 +24,7 @@ type HealthCheck = {
 };
 
 type MarketHealth = {
-  readonly market: Market;
+  readonly market: MarketDefinition;
   readonly tone: HealthTone;
   readonly note: string;
 };
@@ -72,15 +73,34 @@ const pipelineChecks: readonly HealthCheck[] = [
   },
 ];
 
+const healingLabels: Record<HealingStage, string> = {
+  healthy: "healthy run",
+  broken: "contract break",
+  quarantined: "quarantined",
+  previewed: "heal preview",
+  approved: "approved",
+  rerun: "same-ID rerun",
+  published: "published",
+};
+
+const healingTime = new Intl.DateTimeFormat("en-GB", {
+  day: "2-digit",
+  month: "short",
+  hour: "2-digit",
+  minute: "2-digit",
+  hour12: false,
+  timeZone: "UTC",
+});
+
 export default async function DataHealth() {
-  const snapshot = await loadCatalog();
+  const [snapshot, healing] = await Promise.all([loadCatalog(), loadHealingEvidence()]);
   const liveRead = snapshot.source === "d1";
   const liveRowsLabel = liveRead
     ? `${snapshot.liveOfferCount ?? snapshot.offers.length} normalized D1 rows`
     : snapshot.fallbackReason === "database-empty"
       ? "pending · no normalized rows"
       : "pending · DB read unavailable";
-  const displayedChecks: readonly HealthCheck[] = liveRead
+  const withCatalogState: readonly HealthCheck[] = liveRead
     ? pipelineChecks.map((check) => check.key === "fixture-catalog"
       ? {
         ...check,
@@ -94,8 +114,22 @@ export default async function DataHealth() {
       }
       : check)
     : pipelineChecks;
+  const displayedChecks: readonly HealthCheck[] = withCatalogState.map((check) => check.key === "self-heal" && healing
+    ? {
+      ...check,
+      state: healing.complete ? "Proven · same ID" : `${healing.events.length}/7 stages recorded`,
+      tone: healing.complete ? "ready" : "pending",
+      detail: healing.complete
+        ? `The full recovery finished on ${healing.sourceSlug} without changing Collector ${healing.collectorId}.`
+        : `Append-only evidence has reached ${healingLabels[healing.events.at(-1)!.stage]}; ${healing.nextStage ? healingLabels[healing.nextStage] : "completion"} is next.`,
+      evidence: [
+        { kind: "provider", label: healing.collectorId },
+        { kind: "policy", label: healing.complete ? "7/7 stages proved" : `${healing.events.length}/7 stages` },
+      ],
+    }
+    : check);
   const marketHealth: readonly MarketHealth[] = snapshot.markets.map((market) => ({
-    market: market.slug,
+    market,
     tone: market.ready === false ? "pending" : "ready",
     note: liveRead ? "D1 row · observed timestamp shown per offer" : "Fixture rows only · live provider not configured",
   }));
@@ -126,7 +160,7 @@ export default async function DataHealth() {
           <h1>Trust the signal.<br /><em>Know its state.</em></h1>
           <p>One compact view for what is real in the demo, what is still pending, and what the live pipeline must prove before it earns a green badge.</p>
         </div>
-        <div className="health-stamp" aria-label="Live collectors not configured">
+        <div className="health-stamp" aria-label={liveRead ? "Normalized D1 rows are available; provider proof is tracked separately" : "Live collectors not configured"}>
           <span className="stamp-ring" aria-hidden="true" />
           <strong>{liveRead ? <>D1 ROWS<br />READ</> : <>NO LIVE<br />RUN CLAIMED</>}</strong>
           <small>honesty is a feature</small>
@@ -166,30 +200,37 @@ export default async function DataHealth() {
           </div>
           <p className="section-note">Eligibility → collector → contract<br />Only ready packs enter the selector</p>
         </div>
-        <div className="market-health-grid">
-          {snapshot.marketPacks.map((market) => (
+        {snapshot.marketPacks.length === 0 ? <div className="empty-state" role="status"><strong>No runtime Country Pack recorded.</strong><p>{snapshot.fallbackReason === "database-unavailable" ? "The D1 pack ledger is unavailable in this view." : "Submit an authenticated pending pack to begin the evidence-gated demo."}</p></div> : <div className="market-health-grid">
+          {snapshot.marketPacks.map((market) => {
+            const gates = [
+              ["eligibility", market.eligibilityProven],
+              ["collector created", market.collectorCreatedProven],
+              ["collector run", market.collectorRunProven],
+            ] as const;
+            const missing = gates.filter(([, proven]) => !proven).map(([label]) => label);
+            return (
             <article className="market-health-card" key={market.slug} data-health-tone={market.ready === false ? "pending" : "ready"}>
-              <div className="health-card-top"><span className="health-icon" aria-hidden="true">{market.symbol}</span><span className="state-pill state-fixture">{market.ready === false ? "evidence pending" : "ready pack"}</span></div>
-              <h3>{market.label}</h3><p>{market.code} · {market.currency}</p>
-              <small>Public source eligibility and a dated collector run are required before publish.</small>
+              <div className="health-card-top"><span className="health-icon" aria-hidden="true">{market.symbol}</span><span className={`state-pill ${market.ready === false ? "state-pending" : "state-fixture"}`}>{market.ready === false ? "evidence pending" : "ready pack"}</span></div>
+              <h3>{market.label}</h3><p>{market.code} · {market.currency} · {market.sourceDisplayName ?? "starter retailer"}</p>
+              <ul className="evidence-list" aria-label={`${market.label} admission gates`}>{gates.map(([label, proven]) => <li className={`evidence-chip evidence-chip-${proven ? "policy" : "fixture"}`} key={label}>{proven ? "✓" : "·"} {label}</li>)}</ul>
+              <small>{missing.length > 0 ? `Still required: ${missing.join(", ")}.` : "All admission gates proved; this pack can enter the selector."}</small>
             </article>
-          ))}
-        </div>
+          );})}
+        </div>}
       </section>
 
       <section className="health-section" aria-labelledby="market-coverage-title">
         <div className="section-heading">
           <div>
             <p className="eyebrow"><span>01</span> / MARKET COVERAGE</p>
-            <h2 id="market-coverage-title">Four local views.</h2>
+            <h2 id="market-coverage-title">{snapshot.markets.length} local views.</h2>
           </div>
           <p className="section-note">No FX conversion<br />No cross-market ranking</p>
         </div>
         <div className="market-health-grid">
-          {marketHealth.map(({ market, tone, note }) => {
-            const info = markets[market] ?? snapshot.markets.find((item) => item.slug === market) ?? markets.us;
+          {marketHealth.map(({ market: info, tone, note }) => {
             return (
-              <article className="market-health-card" key={market} data-health-tone={tone}>
+              <article className="market-health-card" key={info.slug} data-health-tone={tone}>
                 <div className="health-card-top">
                   <span className="health-icon" aria-hidden="true">{info.symbol}</span>
                   <span className={`state-pill ${tone === "ready" ? "state-fixture" : "state-pending"}`}>{tone === "ready" ? (liveRead ? "d1 ready" : "fixture ready") : "onboarding pending"}</span>
@@ -210,20 +251,38 @@ export default async function DataHealth() {
             <p className="eyebrow"><span>02</span> / SAME-ID SELF-HEAL</p>
             <h2 id="heal-timeline-title">A recovery judges can inspect.</h2>
           </div>
-          <p className="section-note">Collector ID must remain unchanged<br />Evidence pending until the live rehearsal</p>
+          <p className="section-note">Collector ID must remain unchanged<br />{healing ? `${healing.events.length}/7 immutable stages recorded` : "Evidence pending until the live rehearsal"}</p>
         </div>
-        <div className="evidence-card" data-status-key="self-heal-timeline" data-health-tone="pending">
-          <div className="recovery-flow" aria-label="Self-healing evidence timeline">
-            <span>healthy run</span><b>→</b><span>contract break</span><b>→</b><span>quarantined</span><b>→</b><span>heal preview</span><b>→</b><span>approved</span><b>→</b><span>same-ID rerun</span><b>→</b><span>published</span>
-          </div>
-          <p><strong>Current evidence state: pending.</strong> Raster will only mark this green when pre-break, heal, and post-heal artifacts prove the same <code>c_*</code> Collector ID, a valid output contract, and no downstream code change.</p>
+        <div className="evidence-card" data-status-key="self-heal-timeline" data-health-tone={healing?.complete ? "ready" : "pending"}>
+          <ol className="heal-timeline" aria-label="Self-healing evidence timeline">
+            {HEALING_STAGES.map((stage, index) => {
+              const event = healing?.events[index];
+              const current = !healing?.complete && healing?.nextStage === stage;
+              return (
+                <li key={stage} className={event ? "heal-stage-proven" : "heal-stage-pending"} {...(current ? { "aria-current": "step" as const } : {})}>
+                  <strong>{event ? "✓" : index + 1}</strong> {healingLabels[stage]}
+                  {event ? <small>{healingTime.format(new Date(event.occurredAt))} UTC</small> : null}
+                </li>
+              );
+            })}
+          </ol>
+          {healing ? (
+            <div className="heal-proof-summary">
+              <p><strong>{healing.complete ? "Self-heal proved." : "Live rehearsal in progress."}</strong> Source <code>{healing.sourceSlug}</code> remains bound to <code>{healing.collectorId}</code> across every recorded stage.</p>
+              <dl>
+                <div><dt>Session</dt><dd>{healing.sessionId}</dd></div>
+                <div><dt>Collector</dt><dd>{healing.collectorId}</dd></div>
+                <div><dt>Evidence</dt><dd>{healing.events.length}/7 immutable stages</dd></div>
+              </dl>
+            </div>
+          ) : <p><strong>Current evidence state: pending.</strong> Raster will only mark this green when pre-break, heal, and post-heal artifacts prove the same <code>c_*</code> Collector ID, a valid output contract, and no downstream code change.</p>}
         </div>
       </section>
 
       <section className="health-section pipeline-section" aria-labelledby="pipeline-title">
         <div className="section-heading">
           <div>
-            <p className="eyebrow"><span>02</span> / PIPELINE READINESS</p>
+            <p className="eyebrow"><span>03</span> / PIPELINE READINESS</p>
             <h2 id="pipeline-title">Green means proven.</h2>
           </div>
           <p className="section-note">Pending states stay visible<br />until evidence exists</p>

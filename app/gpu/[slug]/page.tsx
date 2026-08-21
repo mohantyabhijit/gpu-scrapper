@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatPrice, getMarket, markets, models } from "../../catalog";
+import { formatPrice as formatCurrencyPrice, getMarket, markets, models, type Currency } from "../../catalog";
 import { loadCatalog } from "../../../lib/d1/catalog";
 
 export function generateStaticParams() {
@@ -15,6 +15,7 @@ export default async function GpuDetail({ params, searchParams }: { params: Prom
   const snapshot = await loadCatalog({ market: requestedMarket, modelSlug: slug });
   const marketInfo = snapshot.selectedMarket ?? markets.us;
   const market = marketInfo.slug;
+  const formatPrice = (price: number, currency: Currency) => formatCurrencyPrice(price, currency, marketInfo.locale);
   const modelOffers = snapshot.offers.filter((offer) => offer.modelSlug === slug && offer.market === market && offer.currency === marketInfo.currency);
   const fixtureModel = models.find((item) => item.slug === slug);
   const model = fixtureModel ?? (modelOffers[0] ? { slug, name: modelOffers[0].model, vram: modelOffers[0].vram } : undefined);

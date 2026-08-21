@@ -17,6 +17,8 @@ const validRow = {
   sourceCurrency: "USD",
   sourceDisplayName: "Central Computers",
   sourceAllowedHosts: '["centralcomputer.com","www.centralcomputer.com"]',
+  sourceEnabled: true,
+  sourceOnboardingStatus: "ready",
   productSlug: "rtx-5080",
   productModel: "GeForce RTX 5080",
   boardPartner: "ASUS",
@@ -39,6 +41,8 @@ test("rejects cross-market currency and untrusted retailer rows", () => {
   assert.equal(mapD1Offer({ ...validRow, offerCurrency: "GBP" }), undefined);
   assert.equal(mapD1Offer({ ...validRow, productUrl: "https://evil.example/gpu" }), undefined);
   assert.equal(mapD1Offer({ ...validRow, sourceMarket: "UK" }), undefined);
+  assert.equal(mapD1Offer({ ...validRow, sourceEnabled: false }), undefined);
+  assert.equal(mapD1Offer({ ...validRow, sourceOnboardingStatus: "pending" }), undefined);
 });
 
 test("loadCatalog uses injected D1 rows and reports real counts", async () => {

@@ -9,6 +9,7 @@ import {
 } from "../../../lib/brightdata/refresh.ts";
 import type { RawOffer } from "../../../scrapers/contracts.ts";
 import { getSource, isKnownSource } from "../../../config/sources.ts";
+import type { ReplayGuard } from "../../../lib/d1/replay.ts";
 
 function runtimeEnvironment(): RefreshEnvironment {
   const runtime = globalThis as typeof globalThis & { RASTER_ENV?: RefreshEnvironment };
@@ -56,11 +57,13 @@ export async function handleRefreshRequest(
     nowSeconds?: number;
     runner?: ReturnType<typeof createRefreshRunner>;
     resolveSource?: SourceResolver;
+    replayGuard?: ReplayGuard;
   },
 ): Promise<Response> {
   const body = await request.text();
+  const timestamp = request.headers.get("x-raster-timestamp");
   const authenticated = await authenticateRefreshRequest(
-    request.headers.get("x-raster-timestamp"),
+    timestamp,
     request.headers.get("x-raster-signature"),
     body,
     dependencies.environment.RASTER_INGEST_HMAC_SECRET,
@@ -81,6 +84,9 @@ export async function handleRefreshRequest(
   }
 
   try {
+    if (!timestamp || !await (dependencies.replayGuard ?? runtimeReplayGuard())("refresh", timestamp, body)) {
+      return json({ error: "replayed_request" }, 409);
+    }
     const runner = dependencies.runner ?? createRefreshRunner(
       dependencies.environment,
       {},
@@ -108,5 +114,15 @@ function runtimeSourceResolver(): SourceResolver {
     } catch {
       return isKnownSource(slug) ? getSource(slug) : undefined;
     }
+  };
+}
+
+function runtimeReplayGuard(): ReplayGuard {
+  return async (route, timestamp, body) => {
+    const [{ getDb }, { createReplayGuard }] = await Promise.all([
+      import("../../../db/index.ts"),
+      import("../../../lib/d1/replay.ts"),
+    ]);
+    return createReplayGuard(getDb())(route, timestamp, body);
   };
 }

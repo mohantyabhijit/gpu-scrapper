@@ -65,6 +65,7 @@ h1 em,h2 em { color:var(--lime); font-style:normal; }
 .health-icon { display:grid; place-items:center; width:35px; height:35px; color:#152015; background:var(--lime); font:700 16px Georgia,serif; border-radius:50%; }
 .state-pill { padding:5px 7px; font:9px ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.08em; text-transform:uppercase; }
 .state-fixture { color:#b9ef6a; border:1px solid #5f7b54; }
+.state-pending { color:var(--orange); border:1px solid #795a41; }
 .market-health-card h3 { margin-bottom:7px; font:500 20px Georgia,serif; }
 .market-health-card p { margin-bottom:24px; color:#969d95; font-size:12px; }
 .market-health-card>strong { display:block; color:var(--lime); font:500 24px Georgia,serif; }
@@ -89,6 +90,17 @@ h1 em,h2 em { color:var(--lime); font-style:normal; }
 .recovery-flow { display:flex; flex-wrap:wrap; align-items:center; gap:9px; margin-top:28px; color:var(--lime); font:10px ui-monospace,SFMono-Regular,Menlo,monospace; text-transform:uppercase; letter-spacing:.06em; }
 .recovery-flow span { padding:8px 10px; border:1px solid #4f6149; }
 .recovery-flow b { color:var(--orange); font-weight:400; }
+.heal-timeline { display:flex; flex-wrap:wrap; gap:9px; margin:28px 0 20px; padding:0; list-style:none; }
+.heal-timeline li { padding:8px 10px; border:1px solid #4f6149; color:#aeb8a8; font:10px ui-monospace,SFMono-Regular,Menlo,monospace; text-transform:uppercase; letter-spacing:.06em; }
+.heal-timeline li strong { color:inherit; }
+.heal-timeline li small { display:block; margin-top:6px; color:#8f998a; font-size:8px; letter-spacing:.03em; }
+.heal-timeline .heal-stage-proven { color:var(--lime); border-color:#5f7b54; background:#b9ef6a0b; }
+.heal-timeline .heal-stage-pending { color:#777f77; border-color:#353b34; }
+.heal-timeline li[aria-current="step"] { color:var(--orange); border-color:#795a41; }
+.heal-proof-summary dl { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; margin:20px 0 0; }
+.heal-proof-summary dl>div { min-width:0; padding:11px; border:1px solid var(--line); background:#0d100f; }
+.heal-proof-summary dt { color:#7f887e; font:9px ui-monospace,SFMono-Regular,Menlo,monospace; text-transform:uppercase; letter-spacing:.08em; }
+.heal-proof-summary dd { margin:7px 0 0; color:var(--ink); font:10px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace; overflow-wrap:anywhere; }
 @media (max-width:850px) {
   .health-hero { grid-template-columns:1fr; padding:70px 8% 60px; }
   .health-stamp { width:180px; height:180px; justify-self:start; }
@@ -103,6 +115,8 @@ h1 em,h2 em { color:var(--lime); font-style:normal; }
   .market-health-card { min-height:190px; }
   .pipeline-row { padding:18px 15px; }
   .evidence-card { padding:24px; }
+  .heal-timeline { flex-direction:column; align-items:stretch; }
+  .heal-proof-summary dl { grid-template-columns:1fr; }
 }
 .health-legend { display:grid; grid-template-columns:1fr 2fr; gap:8%; align-items:center; padding:34px 8%; border-bottom:1px solid var(--line); background:#0d100f; }
 .health-legend h2 { margin:0; font:500 clamp(25px,3vw,38px)/1.05 Georgia,serif; letter-spacing:-.05em; }
