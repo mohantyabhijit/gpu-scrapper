@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "source_slug": "dynacore",
+  "role": "combined",
+  "name": "raster-sg-dynacore-gpus",
+  "target_url": "https://dynacoretech.com/collections/all/graphics-card",
+  "market": "SG",
+  "currency": "SGD",
+  "description": "Extract every public GPU product card. Return rows with source_slug='dynacore', market='SG', title, product_url, price, currency='SGD', availability, sku, mpn, manufacturer, board_partner, raw_model, image_url, and scraped_at ISO UTC. Use null for unavailable optional public fields. Do not collect seller contacts, reviews, accounts, cart, checkout, or personal data.",
+  "evidence_state": "pending-live-create-run"
+}

@@ -1,4 +1,4 @@
-import { isKnownSource, isSafeSourceSlug, sourceHostIsAllowed, sourceHostIsAllowedForDefinition, type SourceDefinition, type SourceSlug } from "../config/sources.ts";
+import { getSource, isKnownSource, isSafeSourceSlug, sourceHostIsAllowed, sourceHostIsAllowedForDefinition, type SourceDefinition, type SourceSlug } from "../config/sources.ts";
 import {
   MARKET_CURRENCIES,
   marketCurrency,
@@ -20,6 +20,34 @@ export const AVAILABILITIES = [
 
 export type Availability = (typeof AVAILABILITIES)[number];
 
+/** The wire contract is intentionally explicit: every collector row has all of these keys. */
+export const COLLECTOR_FIELDS = [
+  "source_slug",
+  "market",
+  "title",
+  "product_url",
+  "price",
+  "currency",
+  "availability",
+  "sku",
+  "mpn",
+  "manufacturer",
+  "board_partner",
+  "raw_model",
+  "image_url",
+  "scraped_at",
+] as const;
+
+export type CollectorField = (typeof COLLECTOR_FIELDS)[number];
+export const COLLECTOR_NULLABLE_FIELDS = [
+  "sku",
+  "mpn",
+  "manufacturer",
+  "board_partner",
+  "raw_model",
+  "image_url",
+] as const satisfies readonly CollectorField[];
+
 export type RawOffer = {
   source_slug?: string;
   market?: unknown;
@@ -36,6 +64,7 @@ export type RawOffer = {
   manufacturer_part_number?: unknown;
   manufacturer?: unknown;
   board_partner?: unknown;
+  raw_model?: unknown;
   image_url?: unknown;
   scraped_at?: unknown;
   [key: string]: unknown;
@@ -54,6 +83,7 @@ export type ValidatedOffer = {
   mpn?: string;
   manufacturer?: string;
   boardPartner?: string;
+  rawModel?: string;
   imageUrl?: string;
   scrapedAt?: string;
   raw: RawOffer;
@@ -70,7 +100,8 @@ export type ValidationCode =
   | "currency_invalid"
   | "market_invalid"
   | "currency_market_mismatch"
-  | "availability_invalid";
+  | "availability_invalid"
+  | "scraped_at_invalid";
 
 export type ValidationResult =
   | { ok: true; value: ValidatedOffer }
@@ -110,6 +141,13 @@ function validMinorPrice(value: unknown): boolean {
   return typeof value === "string" && /^\d+$/.test(value.trim()) && Number.isSafeInteger(Number(value)) && Number(value) > 0;
 }
 
+function validTimestamp(value: unknown): boolean {
+  if (typeof value !== "string" || !value.trim()) return false;
+  const timestamp = value.trim();
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/.test(timestamp)) return false;
+  return Number.isFinite(Date.parse(timestamp));
+}
+
 export function validateRawOffer(input: unknown, expectedSource?: string, expectedDefinition?: SourceDefinition): ValidationResult {
   const errors: ValidationCode[] = [];
   if (!input || typeof input !== "object" || Array.isArray(input)) {
@@ -143,6 +181,7 @@ export function validateRawOffer(input: unknown, expectedSource?: string, expect
   }
   const availability = canonicalAvailability(raw.availability ?? raw.stock);
   if (!availability) errors.push("availability_invalid");
+  if (raw.scraped_at !== undefined && raw.scraped_at !== null && !validTimestamp(raw.scraped_at)) errors.push("scraped_at_invalid");
 
   if (errors.length || !sourceSlug || !title || !productUrl || !currency || !availability || !market || !expectedCurrency) {
     return { ok: false, errors };
@@ -164,9 +203,146 @@ export function validateRawOffer(input: unknown, expectedSource?: string, expect
       mpn,
       manufacturer: text(raw.manufacturer),
       boardPartner: text(raw.board_partner),
+      rawModel: text(raw.raw_model),
       imageUrl,
       scrapedAt: text(raw.scraped_at),
       raw,
     },
+  };
+}
+
+export type CollectorValidationCode =
+  | "malformed_root"
+  | "malformed_wrapper"
+  | "empty_results"
+  | "not_an_object"
+  | "additional_field"
+  | "contact_field"
+  | "missing_field"
+  | "unknown_source"
+  | "market_invalid"
+  | "currency_invalid"
+  | "currency_market_mismatch"
+  | "title_required"
+  | "url_required"
+  | "url_not_allowed"
+  | "price_required"
+  | "price_invalid"
+  | "availability_invalid"
+  | "timestamp_invalid"
+  | "field_invalid";
+
+export type CollectorValidationSummary = {
+  ok: boolean;
+  rowCount: number;
+  acceptedCount: number;
+  rejectedCount: number;
+  errorCounts: Partial<Record<CollectorValidationCode, number>>;
+};
+
+type CollectorRowsResult =
+  | { ok: true; rows: readonly unknown[] }
+  | { ok: false; code: "malformed_root" | "malformed_wrapper" | "empty_results" };
+
+const wrapperKeys = new Set(["data", "results", "rows", "items"]);
+const contactFieldPattern = /(?:contact|email|phone|telephone|mobile|address|name|social|account|customer|seller)/i;
+
+/** Extract only the row array shape Bright Data emits; no provider metadata is retained. */
+export function extractCollectorRows(payload: unknown): CollectorRowsResult {
+  if (Array.isArray(payload)) return payload.length ? { ok: true, rows: payload } : { ok: false, code: "empty_results" };
+  if (!payload || typeof payload !== "object") return { ok: false, code: "malformed_root" };
+  const keys = Object.keys(payload);
+  const recognized = keys.filter((key) => wrapperKeys.has(key));
+  if (recognized.length !== 1 || keys.length !== 1) return { ok: false, code: "malformed_wrapper" };
+  const rows = (payload as Record<string, unknown>)[recognized[0]];
+  if (!Array.isArray(rows)) return { ok: false, code: "malformed_wrapper" };
+  return rows.length ? { ok: true, rows } : { ok: false, code: "empty_results" };
+}
+
+function incrementError(errors: Partial<Record<CollectorValidationCode, number>>, code: CollectorValidationCode): void {
+  errors[code] = (errors[code] ?? 0) + 1;
+}
+
+function validateCollectorRow(row: unknown, expectedSource?: string): CollectorValidationCode[] {
+  if (!row || typeof row !== "object" || Array.isArray(row)) return ["not_an_object"];
+  const record = row as Record<string, unknown>;
+  const errors: CollectorValidationCode[] = [];
+  for (const key of Object.keys(record)) {
+    if (!COLLECTOR_FIELDS.includes(key as CollectorField)) {
+      errors.push(contactFieldPattern.test(key) ? "contact_field" : "additional_field");
+    }
+  }
+  for (const field of COLLECTOR_FIELDS) {
+    if (!Object.prototype.hasOwnProperty.call(record, field)) errors.push("missing_field");
+  }
+  if (errors.length) {
+    // Preserve the complete shape check but avoid doing semantic work on a row
+    // that cannot satisfy the published explicit contract.
+    return errors;
+  }
+  const sourceSlug = record.source_slug;
+  const source = typeof sourceSlug === "string" && isKnownSource(sourceSlug) ? sourceRegistryForValidation(sourceSlug) : undefined;
+  if (!source || (expectedSource && sourceSlug !== expectedSource)) errors.push("unknown_source");
+  const market = typeof record.market === "string" ? record.market.toUpperCase() : undefined;
+  if (!market || !source || market !== source.region) errors.push("market_invalid");
+  const currency = typeof record.currency === "string" ? record.currency.toUpperCase() : undefined;
+  if (!currency || !/^[A-Z]{3}$/.test(currency)) errors.push("currency_invalid");
+  if (source && currency && currency !== source.currency) errors.push("currency_market_mismatch");
+  if (typeof record.title !== "string" || !record.title.trim()) errors.push("title_required");
+  if (typeof record.product_url !== "string" || !record.product_url.trim()) errors.push("url_required");
+  else if (source && !sourceHostIsAllowedForDefinition(source, record.product_url)) errors.push("url_not_allowed");
+  if (record.price === null || record.price === undefined || record.price === "") errors.push("price_required");
+  else if (!validPrice(record.price)) errors.push("price_invalid");
+  if (typeof record.availability !== "string" || !AVAILABILITIES.includes(record.availability as Availability)) errors.push("availability_invalid");
+  if (!validTimestamp(record.scraped_at)) errors.push("timestamp_invalid");
+  for (const field of COLLECTOR_NULLABLE_FIELDS) {
+    const value = record[field];
+    if (value !== null && typeof value !== "string") errors.push("field_invalid");
+  }
+  if (record.image_url !== null && typeof record.image_url === "string") {
+    try {
+      if (new URL(record.image_url).protocol !== "https:") errors.push("field_invalid");
+    } catch {
+      errors.push("field_invalid");
+    }
+  }
+  return errors;
+}
+
+// Kept as a tiny indirection so tests and the CLI cannot accidentally bypass the
+// static registry when validating a row.
+function sourceRegistryForValidation(slug: string): SourceDefinition | undefined {
+  try {
+    return getSource(slug);
+  } catch {
+    return undefined;
+  }
+}
+
+/** Validate provider output without exposing or retaining any raw row content. */
+export function validateCollectorOutput(payload: unknown, expectedSource?: string): CollectorValidationSummary {
+  const extracted = extractCollectorRows(payload);
+  if (!extracted.ok) {
+    return {
+      ok: false,
+      rowCount: 0,
+      acceptedCount: 0,
+      rejectedCount: 0,
+      errorCounts: { [extracted.code]: 1 },
+    };
+  }
+  const errorCounts: Partial<Record<CollectorValidationCode, number>> = {};
+  let acceptedCount = 0;
+  for (const row of extracted.rows) {
+    const errors = validateCollectorRow(row, expectedSource);
+    if (errors.length) for (const error of errors) incrementError(errorCounts, error);
+    else acceptedCount += 1;
+  }
+  return {
+    ok: acceptedCount === extracted.rows.length,
+    rowCount: extracted.rows.length,
+    acceptedCount,
+    rejectedCount: extracted.rows.length - acceptedCount,
+    errorCounts,
   };
 }

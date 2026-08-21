@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raster.local/schemas/gpu-offer.schema.json",
+  "title": "Raster public GPU offer",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source_slug",
+    "market",
+    "title",
+    "product_url",
+    "price",
+    "currency",
+    "availability",
+    "sku",
+    "mpn",
+    "manufacturer",
+    "board_partner",
+    "raw_model",
+    "image_url",
+    "scraped_at"
+  ],
+  "properties": {
+    "source_slug": { "type": "string", "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$" },
+    "market": { "type": "string", "pattern": "^[A-Z]{2}$" },
+    "title": { "type": "string", "minLength": 1 },
+    "product_url": { "type": "string", "format": "uri", "pattern": "^https://" },
+    "price": { "oneOf": [{ "type": "number", "exclusiveMinimum": 0 }, { "type": "string", "minLength": 1 }] },
+    "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
+    "availability": { "enum": ["in_stock", "out_of_stock", "preorder", "unknown"] },
+    "sku": { "type": ["string", "null"] },
+    "mpn": { "type": ["string", "null"] },
+    "manufacturer": { "type": ["string", "null"] },
+    "board_partner": { "type": ["string", "null"] },
+    "raw_model": { "type": ["string", "null"] },
+    "image_url": { "type": ["string", "null"], "format": "uri" },
+    "scraped_at": { "type": "string", "format": "date-time" }
+  }
+}
