@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { ingestRows } from "../lib/ingest.ts";
 import { persistIngestion } from "../lib/postgres/repository.ts";
+import { sourceRegistry } from "../config/sources.ts";
 import * as schema from "../db/schema.ts";
 
 class FakeInsert {
@@ -162,6 +163,14 @@ const context = {
   startedAt: "2026-08-21T09:59:00.000Z",
   finishedAt: "2026-08-21T10:00:00.000Z",
   observedAt: "2026-08-21T10:00:00.000Z",
+  collectorId: "c_fixture",
+  responseId: "response-fixture",
+  source: {
+    ...sourceRegistry["central-computer"],
+    enabled: true,
+    collectorIds: { combined: "c_fixture" },
+    collectorRoles: ["combined"],
+  },
 };
 
 test("persistence upserts valid state and quarantines invalid rows", async () => {
