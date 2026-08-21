@@ -14,7 +14,7 @@ test("one market registry drives slugs, codes, and local currencies", () => {
     assert.equal(marketForCode(market.code)?.slug, slug);
     assert.equal(marketCurrency(market.code), market.currency);
   }
-  assert.equal(marketSlug("not-onboarded"), "us");
+  assert.equal(marketSlug("not-onboarded"), "not-onboarded");
   assert.equal(marketForCode("ZZ"), undefined);
 });
 

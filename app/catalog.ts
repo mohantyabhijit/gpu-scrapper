@@ -2,6 +2,7 @@ export type Availability = "In stock" | "Low stock" | "Stale check";
 import {
   marketRegistry,
   marketSlug,
+  type MarketDefinition,
   type MarketCurrency,
   type MarketSlug,
 } from "../config/markets.ts";
@@ -26,7 +27,7 @@ export type Offer = {
   note: string;
 };
 
-export const markets = marketRegistry;
+export const markets: Record<string, MarketDefinition> = marketRegistry;
 
 export const offers: Offer[] = [
   { id: "us-microcenter-5070ti", market: "us", modelSlug: "rtx-5070-ti", model: "GeForce RTX 5070 Ti", brand: "ASUS TUF Gaming", vram: "16 GB GDDR7", source: "Micro Center", price: 749.99, currency: "USD", availability: "In stock", freshness: "fixture · today", freshnessTone: "fresh", productUrl: "https://www.microcenter.com/product/688528/asus-nvidia-geforce-rtx-5070-ti-tuf-gaming-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card", note: "Demo fixture; verify at retailer" },

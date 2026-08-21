@@ -98,6 +98,10 @@ test("publishes judge-facing data health without fabricating live state", async 
   assert.match(html, /last-known-good|last known-good/i);
   assert.match(html, /quarantine/);
   assert.match(html, /self-heal|heal/i);
+  assert.match(html, /contract break/);
+  assert.match(html, /heal preview/);
+  assert.match(html, /same-ID rerun/);
+  assert.match(html, /Current evidence state: pending/);
   assert.match(html, /brightdata\.com/);
   assert.doesNotMatch(html, /c_gpu_|collectors online/i);
 });

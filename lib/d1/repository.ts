@@ -2,7 +2,7 @@ import type { DrizzleD1Database } from "drizzle-orm/d1";
 import type { BatchItem } from "drizzle-orm/batch";
 import { eq } from "drizzle-orm";
 import * as schema from "../../db/schema.ts";
-import { getSource, type SourceSlug } from "../../config/sources.ts";
+import { getSource, isKnownSource, type CollectorId, type CollectorRole, type SourceDefinition, type SourceRole, type SourceSlug } from "../../config/sources.ts";
 import type { IngestionResult } from "../ingest.ts";
 
 export type RasterDatabase = DrizzleD1Database<typeof schema>;
@@ -11,6 +11,7 @@ type RasterBatchItem = BatchItem<"sqlite">;
 export type PersistenceContext = {
   runId: string;
   sourceSlug: SourceSlug;
+  source?: SourceDefinition;
   startedAt: string;
   finishedAt?: string;
   observedAt: string;
@@ -25,6 +26,38 @@ export type PersistenceResult = {
   quarantinedAttempted: number;
   status: "healthy" | "degraded" | "empty";
 };
+
+function parseJson<T>(value: unknown, fallback: T): T {
+  if (typeof value !== "string") return (value as T) ?? fallback;
+  try { return JSON.parse(value) as T; } catch { return fallback; }
+}
+
+/** Resolve operator-owned D1 source metadata; static registry remains the fallback. */
+export function createD1SourceResolver(db: RasterDatabase) {
+  return async (slug: string): Promise<SourceDefinition | undefined> => {
+    const staticSource = isKnownSource(slug) ? getSource(slug) : undefined;
+    const row = await db.select().from(schema.sources).where(eq(schema.sources.slug, slug)).get();
+    if (!row) return staticSource;
+    if (row.onboardingStatus !== "ready") return undefined;
+    const allowedHosts = parseJson<readonly string[]>(row.allowedHosts, staticSource?.allowedHosts ?? []);
+    const collectorIds = parseJson<Partial<Record<CollectorRole, CollectorId>>>(row.collectorIds, staticSource?.collectorIds ?? {});
+    const source: SourceDefinition = {
+      slug,
+      displayName: row.displayName || staticSource?.displayName || slug,
+      role: (row.role || staticSource?.role || "secondary") as SourceRole,
+      region: (row.region || row.market || staticSource?.region || "") as SourceDefinition["region"],
+      currency: (row.currency || staticSource?.currency || "") as SourceDefinition["currency"],
+      baseUrl: row.baseUrl || staticSource?.baseUrl || "",
+      allowedHosts,
+      catalogUrl: row.catalogUrl || staticSource?.catalogUrl || "",
+      enabled: row.enabled,
+      collectorIds,
+      collectorRoles: Object.keys(collectorIds) as CollectorRole[],
+    };
+    if (!source.enabled || !source.catalogUrl || source.allowedHosts.length === 0 || Object.keys(source.collectorIds).length === 0) return undefined;
+    return source;
+  };
+}
 
 function statusFor(result: IngestionResult, requested?: PersistenceContext["status"]): PersistenceResult["status"] {
   // A caller may downgrade an otherwise healthy run (for example, when a
@@ -52,26 +85,28 @@ function assertBatchBelongsToSource(result: IngestionResult, context: Persistenc
   }
 }
 
-function sourceUpsert(db: RasterDatabase, sourceSlug: SourceSlug): RasterBatchItem {
-  const source = getSource(sourceSlug);
-  return db.insert(schema.sources).values({
-    slug: source.slug,
+function sourceUpsert(db: RasterDatabase, source: SourceDefinition): RasterBatchItem {
+  const timestamp = new Date().toISOString();
+  const sourceValues = {
     displayName: source.displayName,
     market: source.region,
     region: source.region,
     currency: source.currency,
     baseUrl: source.baseUrl,
+    role: source.role,
+    allowedHosts: JSON.stringify(source.allowedHosts),
+    catalogUrl: source.catalogUrl,
+    collectorIds: JSON.stringify(source.collectorIds),
+    onboardingStatus: source.enabled ? "ready" : "pending",
     enabled: source.enabled,
+    updatedAt: timestamp,
+  };
+  return db.insert(schema.sources).values({
+    slug: source.slug,
+    ...sourceValues,
   }).onConflictDoUpdate({
     target: schema.sources.slug,
-    set: {
-      displayName: source.displayName,
-      market: source.region,
-      region: source.region,
-      currency: source.currency,
-      baseUrl: source.baseUrl,
-      enabled: source.enabled,
-    },
+    set: sourceValues,
   });
 }
 
@@ -168,7 +203,7 @@ function runAndQuarantineUpserts(
   context: PersistenceContext,
   status: PersistenceResult["status"],
 ): RasterBatchItem[] {
-  const source = getSource(context.sourceSlug);
+  const source = context.source ?? getSource(context.sourceSlug);
   const statements: RasterBatchItem[] = [db.insert(schema.collectorRuns).values({
     runId: context.runId,
     sourceSlug: context.sourceSlug,
@@ -221,13 +256,16 @@ function buildPersistenceBatch(
   context: PersistenceContext,
   status: PersistenceResult["status"],
 ): [RasterBatchItem, ...RasterBatchItem[]] {
-  const statements: RasterBatchItem[] = [sourceUpsert(db, context.sourceSlug)];
-  statements.push(...productUpserts(db, result, context.observedAt));
-  statements.push(...offerAndObservationUpserts(db, result, context.runId));
+  const source = context.source ?? getSource(context.sourceSlug);
+  const statements: RasterBatchItem[] = [sourceUpsert(db, source)];
   if (status === "degraded") {
+    // Degrade the previous snapshot first; accepted rows in this run are then
+    // restored to healthy by their upserts below.
     statements.push(degradedOfferUpdate(db, context.sourceSlug, context.observedAt));
   }
-  statements.push(...runAndQuarantineUpserts(db, result, context, status));
+  statements.push(...productUpserts(db, result, context.observedAt));
+  statements.push(...offerAndObservationUpserts(db, result, context.runId));
+  statements.push(...runAndQuarantineUpserts(db, result, { ...context, source }, status));
   return statements as [RasterBatchItem, ...RasterBatchItem[]];
 }
 

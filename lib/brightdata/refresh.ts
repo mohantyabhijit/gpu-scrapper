@@ -10,6 +10,7 @@ import {
   isKnownSource,
   sourceRegistry,
   type CollectorRole,
+  type SourceDefinition,
   type SourceSlug,
 } from "../../config/sources.ts";
 
@@ -49,6 +50,7 @@ export type RefreshCompletionInput = {
   rows: unknown[];
   runId: string;
   observedAt: string;
+  source: SourceDefinition;
 };
 
 export type RefreshCompletion = (input: RefreshCompletionInput) => void | Promise<void>;
@@ -56,7 +58,10 @@ export type RefreshCompletion = (input: RefreshCompletionInput) => void | Promis
 export type RefreshRunnerOptions = {
   onComplete?: RefreshCompletion;
   now?: () => Date;
+  resolveSource?: SourceResolver;
 };
+
+export type SourceResolver = (slug: string) => SourceDefinition | undefined | Promise<SourceDefinition | undefined>;
 
 const roles = new Set<CollectorRole>(["discovery", "pdp", "combined"]);
 
@@ -70,8 +75,8 @@ export function parseRefreshRequest(raw: unknown): RefreshRequest {
   if (!Array.isArray(sourceSlugs) || sourceSlugs.length < 1 || sourceSlugs.length > MAX_REFRESH_SOURCES) {
     throw new RefreshRequestError(`sourceSlugs must contain 1-${MAX_REFRESH_SOURCES} registered sources`);
   }
-  if (sourceSlugs.some((slug) => typeof slug !== "string" || !isKnownSource(slug))) {
-    throw new RefreshRequestError("sourceSlugs contains an unregistered source");
+  if (sourceSlugs.some((slug) => typeof slug !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug) || slug.length > 64)) {
+    throw new RefreshRequestError("sourceSlugs contains an invalid source slug");
   }
   const unique = [...new Set(sourceSlugs)] as SourceSlug[];
   if (unique.length !== sourceSlugs.length) throw new RefreshRequestError("sourceSlugs must not contain duplicates");
@@ -128,15 +133,20 @@ export function createRefreshRunner(
     const completed: RefreshSuccess[] = [];
     const notConfigured: SourceSlug[] = [];
     const failed: RefreshResult["failed"] = [];
-    const configured: Array<{ sourceSlug: SourceSlug; collectorId: string; inputUrl: string }> = [];
+    const configured: Array<{ sourceSlug: SourceSlug; collectorId: string; inputUrl: string; source: SourceDefinition }> = [];
+    const resolveSource = runnerOptions.resolveSource ?? ((slug: string) => isKnownSource(slug) ? getSource(slug) : undefined);
     for (const sourceSlug of request.sourceSlugs) {
-      const source = getSource(sourceSlug);
+      const source = await resolveSource(sourceSlug);
+      if (!source || source.slug !== sourceSlug) {
+        notConfigured.push(sourceSlug);
+        continue;
+      }
       const collectorId = collectorForSource(source, request.role);
       if (!source.enabled || !collectorId) {
         notConfigured.push(sourceSlug);
         continue;
       }
-      configured.push({ sourceSlug, collectorId, inputUrl: source.catalogUrl });
+      configured.push({ sourceSlug, collectorId, inputUrl: source.catalogUrl, source });
     }
     let client: ReturnType<typeof createBrightDataClient>;
     try {
@@ -163,6 +173,7 @@ export function createRefreshRunner(
             rows: run.rows,
             runId,
             observedAt,
+            source: source.source,
           });
         } catch {
           failed.push({ sourceSlug: source.sourceSlug, code: "persistence_error" });

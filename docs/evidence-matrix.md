@@ -16,6 +16,7 @@ artifact, commit, Action run, or public URL as each gate is completed.
 | Downstream product | Normalized offers rendered in storefront | public URL and browser screenshots | pending |
 | Prompt-to-production | Collector output crosses validation, D1, and storefront boundaries | sanitized row, D1 run, public offer card | pending |
 | Goal/schedule | One bounded market/source slice runs unattended on schedule | `.github/workflows/collect.yml`, Action summary | pending |
+| Runtime country onboarding | Ready Country Pack appears in the selector only after eligibility, collector, and contract evidence | `/data-health` Country Packs ledger, sanitized onboarding artifact, D1 market-pack row | pending |
 | Self-healing hero | Same `c_*` ID recovers after a controlled break | `evidence/healing/` before/preview/after set | pending |
 | Safety and honesty | Freshness, stale/degraded labels, source links, no checkout claim | storefront QA and README | baseline |
 

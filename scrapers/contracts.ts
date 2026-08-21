@@ -1,4 +1,4 @@
-import { isKnownSource, sourceHostIsAllowed, type SourceSlug } from "../config/sources.ts";
+import { isKnownSource, isSafeSourceSlug, sourceHostIsAllowed, sourceHostIsAllowedForDefinition, type SourceDefinition, type SourceSlug } from "../config/sources.ts";
 import {
   MARKET_CURRENCIES,
   marketCurrency,
@@ -110,14 +110,14 @@ function validMinorPrice(value: unknown): boolean {
   return typeof value === "string" && /^\d+$/.test(value.trim()) && Number.isSafeInteger(Number(value)) && Number(value) > 0;
 }
 
-export function validateRawOffer(input: unknown, expectedSource?: string): ValidationResult {
+export function validateRawOffer(input: unknown, expectedSource?: string, expectedDefinition?: SourceDefinition): ValidationResult {
   const errors: ValidationCode[] = [];
   if (!input || typeof input !== "object" || Array.isArray(input)) {
     return { ok: false, errors: ["not_an_object"] };
   }
   const raw = input as RawOffer;
   const sourceSlug = text(raw.source_slug) ?? expectedSource;
-  const knownSource = typeof sourceSlug === "string" && isKnownSource(sourceSlug);
+  const knownSource = typeof sourceSlug === "string" && isSafeSourceSlug(sourceSlug) && (Boolean(expectedDefinition) || isKnownSource(sourceSlug));
   if (!knownSource) errors.push("unknown_source");
   const market = text(raw.market)?.toUpperCase() as string | undefined;
   const expectedCurrency = market ? marketCurrency(market) : undefined;
@@ -126,7 +126,7 @@ export function validateRawOffer(input: unknown, expectedSource?: string): Valid
   if (!title) errors.push("title_required");
   const productUrl = text(raw.product_url) ?? text(raw.url);
   if (!productUrl) errors.push("url_required");
-  else if (!knownSource || !sourceHostIsAllowed(sourceSlug as SourceSlug, productUrl)) errors.push("url_not_allowed");
+  else if (!knownSource || (expectedDefinition ? !sourceHostIsAllowedForDefinition(expectedDefinition, productUrl) : !sourceHostIsAllowed(sourceSlug as SourceSlug, productUrl))) errors.push("url_not_allowed");
 
   const rawPrice = raw.price_minor ?? raw.price;
   const usesMinorPrice = raw.price_minor !== undefined && raw.price_minor !== null && raw.price_minor !== "";
@@ -136,6 +136,10 @@ export function validateRawOffer(input: unknown, expectedSource?: string): Valid
   const currency = text(raw.currency)?.toUpperCase();
   if (!currency || !/^[A-Z]{3}$/.test(currency)) errors.push("currency_invalid");
   else if (expectedCurrency && currency !== expectedCurrency) errors.push("currency_market_mismatch");
+  if (expectedDefinition && (market !== expectedDefinition.region || currency !== expectedDefinition.currency)) {
+    if (market !== expectedDefinition.region) errors.push("market_invalid");
+    if (currency !== expectedDefinition.currency) errors.push("currency_market_mismatch");
+  }
   const availability = canonicalAvailability(raw.availability ?? raw.stock);
   if (!availability) errors.push("availability_invalid");
 

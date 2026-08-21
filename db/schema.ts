@@ -2,10 +2,8 @@ import { sql } from "drizzle-orm";
 import { check, index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 const marketCurrencyCheck = (name: string) =>
-  check(name, sql`(market = 'US' AND currency = 'USD')
-    OR (market = 'UK' AND currency = 'GBP')
-    OR (market = 'IN' AND currency = 'INR')
-    OR (market = 'SG' AND currency = 'SGD')`);
+  check(name, sql`length(market) = 2 AND market = upper(market)
+    AND length(currency) = 3 AND currency = upper(currency)`);
 
 export const sources = sqliteTable("sources", {
   slug: text("slug").primaryKey(),
@@ -14,9 +12,19 @@ export const sources = sqliteTable("sources", {
   region: text("region").notNull(),
   currency: text("currency").notNull(),
   baseUrl: text("base_url").notNull(),
+  role: text("role").notNull().default("secondary"),
+  allowedHosts: text("allowed_hosts").notNull().default("[]"),
+  catalogUrl: text("catalog_url").notNull().default(""),
+  collectorIds: text("collector_ids").notNull().default("{}"),
+  onboardingStatus: text("onboarding_status").notNull().default("pending"),
   enabled: integer("enabled", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-}, () => [marketCurrencyCheck("sources_market_currency_check")]);
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, () => [
+  marketCurrencyCheck("sources_market_currency_check"),
+  check("sources_role_check", sql`role IN ('primary', 'secondary', 'backup')`),
+  check("sources_onboarding_status_check", sql`onboarding_status IN ('pending', 'ready')`),
+]);
 
 export const products = sqliteTable("products", {
   identityKey: text("identity_key").primaryKey(),
@@ -93,6 +101,35 @@ export const quarantinedRows = sqliteTable("quarantined_rows", {
   uniqueIndex("quarantine_run_fingerprint_idx").on(table.runId, table.rowFingerprint),
 ]);
 
+export const marketPacks = sqliteTable("market_packs", {
+  slug: text("slug").primaryKey(),
+  countryCode: text("country_code").notNull().unique(),
+  label: text("label").notNull(),
+  currency: text("currency").notNull(),
+  locale: text("locale").notNull(),
+  symbol: text("symbol").notNull(),
+  sourceSlug: text("source_slug").notNull().unique(),
+  sourceDisplayName: text("source_display_name").notNull(),
+  baseUrl: text("base_url").notNull(),
+  catalogUrl: text("catalog_url").notNull(),
+  allowedHosts: text("allowed_hosts").notNull(),
+  collectorId: text("collector_id").notNull(),
+  status: text("status").notNull().default("pending"),
+  eligibilityEvidenceRef: text("eligibility_evidence_ref"),
+  eligibilityVerifiedAt: text("eligibility_verified_at"),
+  collectorCreatedEvidenceRef: text("collector_created_evidence_ref"),
+  collectorCreatedAt: text("collector_created_at"),
+  collectorRunEvidenceRef: text("collector_run_evidence_ref"),
+  collectorRunAt: text("collector_run_at"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, () => [
+  check("market_packs_status_check", sql`status IN ('pending', 'ready')`),
+  check("market_packs_code_currency_check", sql`length(country_code) = 2 AND country_code = upper(country_code)
+    AND length(currency) = 3 AND currency = upper(currency)`),
+]);
+
 export type SourceRow = typeof sources.$inferSelect;
 export type ProductRow = typeof products.$inferSelect;
 export type OfferRow = typeof offers.$inferSelect;
+export type MarketPackRow = typeof marketPacks.$inferSelect;

@@ -31,6 +31,12 @@ Bright Data Scraper Studio collectors (one per eligible source)
 - **D1:** stores current offer state, price observations, collector runs, and
   quarantine records. Replays are idempotent; failed sources preserve last good
   data.
+- **Market packs:** D1-owned country definitions remain pending until dated
+  eligibility, Collector creation, and successful run evidence exist. Only
+  ready packs are merged with the four baseline markets and exposed by the
+  selector. The HMAC-authenticated API atomically admits the pack and its
+  server-owned source metadata; arbitrary shopper-supplied currencies, URLs,
+  and Collector IDs are never accepted by the refresh path.
 - **Storefront:** read-only catalog, same-currency filters/sorts, freshness and
   health labels, source attribution, and safe outbound links. No checkout.
 
@@ -45,9 +51,9 @@ quick confirmation of collector existence or schedule state. See
 
 - [ ] Confirm whether each candidate needs Discovery + PDP or one combined
   collector.
-- [ ] Provision D1 binding and migration strategy.
-- [ ] Define the exact refresh HMAC and replay window.
-- [ ] Add the source registry and contract schema without credentials.
+- [x] Provision D1 binding and migration strategy.
+- [x] Define the exact refresh HMAC and replay window.
+- [x] Add the source registry, Country Pack admission path, and contract schema without credentials.
 - [ ] Record the first real `c_*` ID and sanitized create/run evidence.
 - [ ] Verify at least two same-market candidates and the authenticated
   pre-built-library exclusion before enabling any market.

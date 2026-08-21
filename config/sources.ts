@@ -153,19 +153,30 @@ export const sourceRegistry = {
   },
 } satisfies Record<string, SourceDefinition>;
 
-export type SourceSlug = keyof typeof sourceRegistry;
+/** Runtime source IDs are D1-owned; the static registry is only the fallback. */
+export type SourceSlug = string;
+export const SOURCE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+export const MAX_SOURCE_SLUG_LENGTH = 64;
+
+export function isSafeSourceSlug(value: unknown): value is SourceSlug {
+  return typeof value === "string" && value.length > 0 && value.length <= MAX_SOURCE_SLUG_LENGTH && SOURCE_SLUG_PATTERN.test(value);
+}
 
 export function getSource(slug: string): SourceDefinition {
-  const source = sourceRegistry[slug as SourceSlug];
+  const source = sourceRegistry[slug as keyof typeof sourceRegistry];
   if (!source) throw new Error(`Unknown source slug: ${slug}`);
   return source;
 }
 
 export function isKnownSource(slug: string): slug is SourceSlug {
-  return slug in sourceRegistry;
+  return isSafeSourceSlug(slug) && slug in sourceRegistry;
 }
 
 export function sourceHostIsAllowed(slug: string, url: string): boolean {
+  return sourceHostIsAllowedForDefinition(getSource(slug), url);
+}
+
+export function sourceHostIsAllowedForDefinition(source: SourceDefinition, url: string): boolean {
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -173,7 +184,6 @@ export function sourceHostIsAllowed(slug: string, url: string): boolean {
     return false;
   }
   if (parsed.protocol !== "https:") return false;
-  const source = getSource(slug);
   return source.allowedHosts.some(
     (host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`),
   );

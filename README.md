@@ -28,12 +28,13 @@ the intended access pattern, has same-market overlap, and is not already
 covered by a Bright Data pre-built scraper. Region-specific discounts, tax, and
 shipping labels remain source claims and are never silently normalized away.
 
-Country support is registry-driven. `config/markets.ts` is the single source of
-truth for route slugs, country codes, local currencies, formatting, and the
-selector. A new country becomes visible after an operator adds its market
-definition, approves at least one public source in `config/sources.ts`, and
-passes the collector contract. Raster never accepts arbitrary runtime countries
-or currencies that could bypass the source and public-data gates.
+Country support is registry-driven. The four baseline markets live in
+`config/markets.ts`; additional countries arrive through the authenticated
+Country Pack API. One pack atomically stores the country/currency definition
+and a server-resolved retailer source. It remains pending until dated
+eligibility, custom Collector creation, and successful run evidence exist.
+Only then does it enter the selector. Shopper input can never supply a URL,
+currency, or Collector ID and therefore cannot bypass the public-data gates.
 
 ## Judge-proof status
 
@@ -75,8 +76,8 @@ npm test
 npm run db:generate
 ```
 
-The current starter runs with fixture/local behavior. D1 and live collection
-are added through the implementation units in the plan. Copy `.env.example` to
+The storefront falls back to clearly labelled fixtures when D1 is unavailable
+or contains no valid rows; normalized D1 rows take over automatically. Copy `.env.example` to
 your local secret store only when a workflow explicitly needs it; never commit a
 real `.env` file or paste a provider token into an issue, log, screenshot, or
 demo recording.

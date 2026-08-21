@@ -5,8 +5,10 @@ import {
   RefreshRequestError,
   type RefreshCompletionInput,
   type RefreshEnvironment,
+  type SourceResolver,
 } from "../../../lib/brightdata/refresh.ts";
 import type { RawOffer } from "../../../scrapers/contracts.ts";
+import { getSource, isKnownSource } from "../../../config/sources.ts";
 
 function runtimeEnvironment(): RefreshEnvironment {
   const runtime = globalThis as typeof globalThis & { RASTER_ENV?: RefreshEnvironment };
@@ -35,6 +37,7 @@ async function persistCompletedRun(input: RefreshCompletionInput): Promise<void>
     runId: input.runId,
     observedAt: input.observedAt,
     expectedSource: input.sourceSlug,
+    source: input.source,
   });
   await persistIngestion(getDb(), result, {
     runId: input.runId,
@@ -42,6 +45,7 @@ async function persistCompletedRun(input: RefreshCompletionInput): Promise<void>
     startedAt: input.observedAt,
     finishedAt: input.observedAt,
     observedAt: input.observedAt,
+    source: input.source,
   });
 }
 
@@ -51,6 +55,7 @@ export async function handleRefreshRequest(
     environment: RefreshEnvironment;
     nowSeconds?: number;
     runner?: ReturnType<typeof createRefreshRunner>;
+    resolveSource?: SourceResolver;
   },
 ): Promise<Response> {
   const body = await request.text();
@@ -79,7 +84,7 @@ export async function handleRefreshRequest(
     const runner = dependencies.runner ?? createRefreshRunner(
       dependencies.environment,
       {},
-      { onComplete: persistCompletedRun },
+      { onComplete: persistCompletedRun, resolveSource: dependencies.resolveSource ?? runtimeSourceResolver() },
     );
     const result = await runner(parsed);
     return json(result, result.completed.length > 0 || result.notConfigured.length > 0 ? 200 : 502);
@@ -90,4 +95,18 @@ export async function handleRefreshRequest(
 
 export async function POST(request: Request): Promise<Response> {
   return handleRefreshRequest(request, { environment: runtimeEnvironment() });
+}
+
+function runtimeSourceResolver(): SourceResolver {
+  return async (slug) => {
+    try {
+      const [{ getDb }, { createD1SourceResolver }] = await Promise.all([
+        import("../../../db/index.ts"),
+        import("../../../lib/d1/repository.ts"),
+      ]);
+      return createD1SourceResolver(getDb())(slug);
+    } catch {
+      return isKnownSource(slug) ? getSource(slug) : undefined;
+    }
+  };
 }

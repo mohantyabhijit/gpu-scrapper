@@ -15,17 +15,20 @@ evidence that already has a dated link in the evidence matrix.
    redacted custom Scraper Studio create/run command, one stable `c_*` ID, the
    valid-row count, currency, and timestamp. Name the long-tail source and
    point to its eligibility record; never show credentials or raw headers.
-3. **0:45–1:30 — Product and UI proof.** Switch between the four market views,
-   filter one market, open a model detail page, and follow an attributed
+3. **0:45–1:20 — Dynamic country and UI proof.** Submit one signed Country Pack,
+   show it pending in the health ledger, attach its dated eligibility/create/run
+   proof, then show the same country enter the selector without a deploy. Filter
+   that market, open a model detail page, and follow an attributed
    retailer link. Call out same-currency ranking, freshness/health labels, and
    “verify at retailer.” The visible catalog must say `live` only when backed by
    a verified live row; otherwise keep the fixture label.
-4. **1:30–2:15 — Prompt-to-production and scheduled goal.** Show the structured
+4. **1:20–2:05 — Prompt-to-production and scheduled goal.** Show the structured
    collector row crossing validation/normalization into D1 and the storefront,
    then show the GitHub Action summary for one scheduled/manual market-source
    slice. Explain that the unattended goal is a fresh, market-local catalog,
    not a dashboard-only scraper.
-5. **2:15–2:45 — Self-healing hero.** Show the sanitized failing contract,
+5. **2:05–2:45 — Self-healing hero.** Open the visible Data Health timeline,
+   then show the sanitized failing contract,
    `bdata scraper heal` preview, approval, and rerun. Highlight the exact same
    Collector ID before and after, with no downstream code change. Show that
    invalid output quarantines and last-known-good data survives.

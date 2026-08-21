@@ -1,10 +1,12 @@
 import { normalizeOffer, type NormalizedOffer, type NormalizedProduct } from "./normalize/index.ts";
 import { validateRawOffer, type RawOffer, type ValidationCode } from "../scrapers/contracts.ts";
+import type { SourceDefinition } from "../config/sources.ts";
 
 export type IngestionContext = {
   runId: string;
   observedAt: string;
   expectedSource?: string;
+  source?: SourceDefinition;
 };
 
 export type QuarantinedRow = {
@@ -46,7 +48,7 @@ export function ingestRows(rows: readonly RawOffer[], context: IngestionContext)
 
   rows.forEach((row, rowIndex) => {
     const fingerprint = fingerprintRow(row);
-    const validation = validateRawOffer(row, context.expectedSource);
+    const validation = validateRawOffer(row, context.expectedSource, context.source);
     if (!validation.ok) {
       quarantined.push({
         runId: context.runId,

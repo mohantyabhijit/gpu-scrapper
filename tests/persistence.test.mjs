@@ -157,7 +157,7 @@ test("persistence upserts valid state and quarantines invalid rows", async () =>
   assert.equal(db.rows("offers").length, 1);
   assert.equal(db.rows("observations").length, 1);
   assert.equal(db.rows("quarantine").length, 1);
-  assert.equal(db.rows("offers")[0].health, "degraded");
+  assert.equal(db.rows("offers")[0].health, "healthy");
   assert.equal(db.rows("runs")[0].status, "degraded");
 });
 

@@ -6,17 +6,20 @@ export function generateStaticParams() {
   return models.map((model) => ({ slug: model.slug }));
 }
 
+export const dynamicParams = true;
+
 export default async function GpuDetail({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const { slug } = await params;
   const query = searchParams ? await searchParams : {};
-  const market = getMarket(Array.isArray(query.market) ? query.market[0] : query.market);
-  const marketInfo = markets[market];
-  const snapshot = await loadCatalog({ market, modelSlug: slug });
+  const requestedMarket = getMarket(Array.isArray(query.market) ? query.market[0] : query.market);
+  const snapshot = await loadCatalog({ market: requestedMarket, modelSlug: slug });
+  const marketInfo = snapshot.selectedMarket ?? markets.us;
+  const market = marketInfo.slug;
   const modelOffers = snapshot.offers.filter((offer) => offer.modelSlug === slug && offer.market === market && offer.currency === marketInfo.currency);
   const fixtureModel = models.find((item) => item.slug === slug);
   const model = fixtureModel ?? (modelOffers[0] ? { slug, name: modelOffers[0].model, vram: modelOffers[0].vram } : undefined);
   const liveRead = snapshot.source === "d1";
-  if (!model || modelOffers.length === 0) return <main className="site-shell empty-route"><Link href="/" className="brand"><span className="brand-mark" aria-hidden="true">R</span><span>raster<span className="brand-dot">.</span></span></Link><h1>No {marketInfo.label} offer for that GPU.</h1><p>Raster does not compare markets together. Return to the market selector to choose another local catalog.</p><Link className="button button-primary" href={`/?market=${market}`}>Back to {marketInfo.label}</Link></main>;
+  if (!model || modelOffers.length === 0) return <main className="site-shell empty-route"><Link href="/" className="brand"><span className="brand-mark" aria-hidden="true">R</span><span>raster<span className="brand-dot">.</span></span></Link><h1>No {marketInfo.label} offer for that GPU.</h1><p>This market is enabled, but no normalized offer has been published for this model yet. Raster does not substitute another country’s rows.</p><Link className="button button-primary" href={`/?market=${market}`}>Back to {marketInfo.label}</Link></main>;
   const lowest = [...modelOffers].sort((a, b) => a.price - b.price)[0];
   const catalogLabel = liveRead ? "D1 CATALOG" : "FIXTURE CATALOG";
   const catalogMessage = liveRead ? "Normalized D1 rows · verify every price and stock claim at the retailer." : "Demo data only · verify every price and stock claim at the retailer.";

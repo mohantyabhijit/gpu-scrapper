@@ -16,6 +16,7 @@ const validRow = {
   sourceMarket: "US",
   sourceCurrency: "USD",
   sourceDisplayName: "Central Computers",
+  sourceAllowedHosts: '["centralcomputer.com","www.centralcomputer.com"]',
   productSlug: "rtx-5080",
   productModel: "GeForce RTX 5080",
   boardPartner: "ASUS",
@@ -54,7 +55,43 @@ test("loadCatalog uses injected D1 rows and reports real counts", async () => {
   assert.equal(snapshot.liveOfferCount, 1);
   assert.equal(snapshot.rejectedRows, 0);
   assert.equal(snapshot.offers[0].id, validRow.offerKey);
-  assert.deepEqual(calls, [["us", "rtx-5080"]]);
+  assert.equal(calls[0][0].code, "US");
+  assert.equal(calls[0][0].currency, "USD");
+  assert.equal(calls[0][1], "rtx-5080");
+});
+
+test("a ready runtime country merges with the four baseline markets and uses its country code", async () => {
+  const calls = [];
+  const japan = { slug: "japan", code: "JP", label: "Japan", currency: "JPY", locale: "ja-JP", symbol: "¥", enabled: true, ready: true };
+  const dynamicRow = {
+    ...validRow,
+    sourceSlug: "example-japan",
+    sourceDisplayName: "Example Japan",
+    sourceAllowedHosts: '["example.jp"]',
+    offerMarket: "JP",
+    sourceMarket: "JP",
+    offerCurrency: "JPY",
+    sourceCurrency: "JPY",
+    productUrl: "https://example.jp/gpus/5080",
+    priceMinor: 18990000,
+  };
+  const snapshot = await loadCatalog({
+    market: "japan",
+    marketQuery: async () => [japan],
+    query: async (...args) => { calls.push(args); return [dynamicRow]; },
+  });
+  assert.equal(snapshot.markets.length, 5);
+  assert.equal(snapshot.selectedMarket.code, "JP");
+  assert.equal(snapshot.offers[0].market, "japan");
+  assert.equal(calls[0][0].currency, "JPY");
+});
+
+test("pending runtime countries stay in the ledger but not the selector", async () => {
+  const pending = { slug: "australia", code: "AU", label: "Australia", currency: "AUD", locale: "en-AU", symbol: "A$", enabled: false, ready: false };
+  const snapshot = await loadCatalog({ market: "australia", marketQuery: async () => [pending], query: async () => [] });
+  assert.equal(snapshot.selectedMarket.slug, "us");
+  assert.equal(snapshot.markets.some((market) => market.slug === "australia"), false);
+  assert.equal(snapshot.marketPacks.some((market) => market.slug === "australia"), true);
 });
 
 test("loadCatalog falls back to fixtures when D1 is empty or unavailable", async () => {

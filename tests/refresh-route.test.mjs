@@ -90,7 +90,12 @@ test("refresh input only accepts bounded registered sources and no URLs", () => 
     role: "combined",
   });
   assert.throws(() => parseRefreshRequest({ sourceSlugs: ["central-computer", "central-computer"] }));
-  assert.throws(() => parseRefreshRequest({ sourceSlugs: ["unknown"], role: "combined" }));
+  assert.deepEqual(parseRefreshRequest({ sourceSlugs: ["custom-retailer"], role: "combined" }), {
+    sourceSlugs: ["custom-retailer"],
+    role: "combined",
+  });
+  assert.throws(() => parseRefreshRequest({ sourceSlugs: ["https://evil.test"], role: "combined" }));
+  assert.throws(() => parseRefreshRequest({ sourceSlugs: ["bad_slug"], role: "combined" }));
   assert.throws(() => parseRefreshRequest({ sourceSlugs: ["central-computer"], url: "https://evil.test" }));
 });
 
@@ -139,6 +144,42 @@ test("runner reports absent role-keyed collector IDs without a provider call", a
   const result = await run({ sourceSlugs: ["central-computer"], role: "combined" });
   assert.deepEqual(result.notConfigured, ["central-computer"]);
   assert.deepEqual(result.completed, []);
+});
+
+test("runner resolves a custom runtime source without accepting collector or URL input", async () => {
+  const source = {
+    ...sourceRegistry["central-computer"],
+    slug: "custom-retailer",
+    displayName: "Custom Retailer",
+    baseUrl: "https://custom-retailer.example",
+    allowedHosts: ["custom-retailer.example"],
+    catalogUrl: "https://custom-retailer.example/gpus",
+    enabled: true,
+    collectorIds: { combined: "c_custom" },
+  };
+  const run = createRefreshRunner({ BRIGHTDATA_API_KEY: "provider-secret" }, {
+    fetchImpl: mockProvider([{
+      ...validRow,
+      source_slug: "custom-retailer",
+      product_url: "https://custom-retailer.example/rtx-5080/1",
+    }]),
+    pollIntervalMs: 0,
+    sleep: async () => {},
+  }, {
+    resolveSource: async (slug) => slug === "custom-retailer" ? source : undefined,
+    onComplete: async (input) => {
+      assert.equal(input.source.slug, "custom-retailer");
+      const result = ingestRows(input.rows, {
+        runId: input.runId,
+        observedAt: input.observedAt,
+        expectedSource: input.sourceSlug,
+        source: input.source,
+      });
+      assert.equal(result.offers.length, 1);
+    },
+  });
+  const result = await run({ sourceSlugs: ["custom-retailer"], role: "combined" });
+  assert.equal(result.completed[0].collectorId, "c_custom");
 });
 
 test("runner preserves an honest not-configured result without an API key", async () => {

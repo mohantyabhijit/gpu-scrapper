@@ -28,14 +28,6 @@ type MarketHealth = {
   readonly note: string;
 };
 
-const marketOrder: readonly Market[] = ["us", "uk", "india", "singapore"];
-
-const marketHealth: readonly MarketHealth[] = marketOrder.map((market) => ({
-  market,
-  tone: "ready",
-  note: "Fixture rows only · live provider not configured",
-}));
-
 const pipelineChecks: readonly HealthCheck[] = [
   {
     key: "fixture-catalog",
@@ -72,7 +64,7 @@ const pipelineChecks: readonly HealthCheck[] = [
     label: "Self-heal",
     state: "Planned · evidence required",
     tone: "planned",
-    detail: "A repair is only considered real after the same collector is healed, validated, and rerun.",
+    detail: "Contract break → quarantine → heal preview → approval → rerun. The catalog changes only after the same Collector ID and a valid post-heal contract are evidenced.",
     evidence: [
       { kind: "policy", label: "Policy: same-ID repair" },
       { kind: "fixture", label: "Evidence required" },
@@ -102,6 +94,11 @@ export default async function DataHealth() {
       }
       : check)
     : pipelineChecks;
+  const marketHealth: readonly MarketHealth[] = snapshot.markets.map((market) => ({
+    market: market.slug,
+    tone: market.ready === false ? "pending" : "ready",
+    note: liveRead ? "D1 row · observed timestamp shown per offer" : "Fixture rows only · live provider not configured",
+  }));
   return (
     <main className="site-shell health-page">
       <div className="demo-banner" role="note">
@@ -161,6 +158,25 @@ export default async function DataHealth() {
         </dl>
       </section>
 
+      <section className="health-section" aria-labelledby="onboarding-title">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow"><span>00</span> / COUNTRY PACKS</p>
+            <h2 id="onboarding-title">Markets earn their place.</h2>
+          </div>
+          <p className="section-note">Eligibility → collector → contract<br />Only ready packs enter the selector</p>
+        </div>
+        <div className="market-health-grid">
+          {snapshot.marketPacks.map((market) => (
+            <article className="market-health-card" key={market.slug} data-health-tone={market.ready === false ? "pending" : "ready"}>
+              <div className="health-card-top"><span className="health-icon" aria-hidden="true">{market.symbol}</span><span className="state-pill state-fixture">{market.ready === false ? "evidence pending" : "ready pack"}</span></div>
+              <h3>{market.label}</h3><p>{market.code} · {market.currency}</p>
+              <small>Public source eligibility and a dated collector run are required before publish.</small>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="health-section" aria-labelledby="market-coverage-title">
         <div className="section-heading">
           <div>
@@ -171,12 +187,12 @@ export default async function DataHealth() {
         </div>
         <div className="market-health-grid">
           {marketHealth.map(({ market, tone, note }) => {
-            const info = markets[market];
+            const info = markets[market] ?? snapshot.markets.find((item) => item.slug === market) ?? markets.us;
             return (
               <article className="market-health-card" key={market} data-health-tone={tone}>
                 <div className="health-card-top">
                   <span className="health-icon" aria-hidden="true">{info.symbol}</span>
-                  <span className="state-pill state-fixture">{liveRead ? "d1 ready" : "fixture ready"}</span>
+                  <span className={`state-pill ${tone === "ready" ? "state-fixture" : "state-pending"}`}>{tone === "ready" ? (liveRead ? "d1 ready" : "fixture ready") : "onboarding pending"}</span>
                 </div>
                 <h3>{info.label}</h3>
                 <p>Market-local offers only</p>
@@ -185,6 +201,22 @@ export default async function DataHealth() {
               </article>
             );
           })}
+        </div>
+      </section>
+
+      <section className="health-section" aria-labelledby="heal-timeline-title">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow"><span>02</span> / SAME-ID SELF-HEAL</p>
+            <h2 id="heal-timeline-title">A recovery judges can inspect.</h2>
+          </div>
+          <p className="section-note">Collector ID must remain unchanged<br />Evidence pending until the live rehearsal</p>
+        </div>
+        <div className="evidence-card" data-status-key="self-heal-timeline" data-health-tone="pending">
+          <div className="recovery-flow" aria-label="Self-healing evidence timeline">
+            <span>healthy run</span><b>→</b><span>contract break</span><b>→</b><span>quarantined</span><b>→</b><span>heal preview</span><b>→</b><span>approved</span><b>→</b><span>same-ID rerun</span><b>→</b><span>published</span>
+          </div>
+          <p><strong>Current evidence state: pending.</strong> Raster will only mark this green when pre-break, heal, and post-heal artifacts prove the same <code>c_*</code> Collector ID, a valid output contract, and no downstream code change.</p>
         </div>
       </section>
 

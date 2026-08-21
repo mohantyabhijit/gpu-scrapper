@@ -1,7 +1,7 @@
-import { isKnownSource, sourceHostIsAllowed, type SourceSlug } from "../../config/sources.ts";
+import { isKnownSource, sourceHostIsAllowed } from "../../config/sources.ts";
 import * as schema from "../../db/schema.ts";
 import { offers as fixtureOffers, type Currency, type Market, type Offer } from "../../app/catalog.ts";
-import { marketCurrency, marketForCode, marketRegistry } from "../../config/markets.ts";
+import { marketRegistry, type MarketDefinition } from "../../config/markets.ts";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { and, eq } from "drizzle-orm";
 
@@ -21,6 +21,7 @@ type D1CatalogRow = {
   readonly sourceMarket: string;
   readonly sourceCurrency: string;
   readonly sourceDisplayName: string;
+  readonly sourceAllowedHosts: string;
   readonly productSlug: string;
   readonly productModel: string;
   readonly boardPartner: string | null;
@@ -32,10 +33,14 @@ export type CatalogSnapshot = {
   readonly offers: readonly Offer[];
   readonly liveOfferCount: number | null;
   readonly rejectedRows: number;
+  readonly markets: readonly MarketDefinition[];
+  readonly marketPacks: readonly MarketDefinition[];
+  readonly selectedMarket: MarketDefinition;
   readonly fallbackReason?: "database-unavailable" | "database-empty" | "database-no-valid-rows";
 };
 
-export type CatalogQuery = (market?: Market, modelSlug?: string) => Promise<readonly D1CatalogRow[]>;
+export type CatalogQuery = (market?: MarketDefinition, modelSlug?: string) => Promise<readonly D1CatalogRow[]>;
+export type MarketQuery = () => Promise<readonly MarketDefinition[]>;
 
 const observedDateFormatter = new Intl.DateTimeFormat("en-GB", {
   day: "2-digit",
@@ -44,12 +49,14 @@ const observedDateFormatter = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
-function viewMarket(value: string): Market | undefined {
-  return marketForCode(value)?.slug;
+function viewMarketCode(value: string): string | undefined {
+  const code = value.trim().toUpperCase();
+  return /^[A-Z]{2}$/.test(code) ? code : undefined;
 }
 
 function viewCurrency(value: string): Currency | undefined {
-  return value === "USD" || value === "GBP" || value === "INR" || value === "SGD" ? value : undefined;
+  const code = value.trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(code) ? code : undefined;
 }
 
 function observedLabel(value: string): string | undefined {
@@ -70,20 +77,34 @@ function availability(value: string, health: string): Offer["availability"] {
  * Invalid or cross-market rows are rejected here so callers cannot compare
  * mismatched currencies even if a database contains a bad historical row.
  */
-export function mapD1Offer(row: D1CatalogRow): Offer | undefined {
-  const market = viewMarket(row.offerMarket);
+export function mapD1Offer(row: D1CatalogRow, definitions: readonly MarketDefinition[] = Object.values(marketRegistry)): Offer | undefined {
+  const marketCode = viewMarketCode(row.offerMarket);
+  const market = definitions.find((definition) => definition.code === marketCode);
   const currency = viewCurrency(row.offerCurrency.toUpperCase());
-  const expectedCurrency = market ? marketRegistry[market].currency : undefined;
   const observed = observedLabel(row.observedAt);
   const sourceSlug = row.sourceSlug.trim();
   const productUrl = row.productUrl.trim();
-  const sourceMarket = viewMarket(row.sourceMarket);
+  const sourceMarket = viewMarketCode(row.sourceMarket);
   const sourceCurrency = viewCurrency(row.sourceCurrency.toUpperCase());
+  const expectedCurrency = sourceCurrency;
 
-  if (!market || !currency || currency !== expectedCurrency) return undefined;
-  if (!sourceMarket || sourceMarket !== market || sourceCurrency !== currency) return undefined;
-  if (!sourceSlug || !isKnownSource(sourceSlug)) return undefined;
-  if (!productUrl || !sourceHostIsAllowed(sourceSlug as SourceSlug, productUrl)) return undefined;
+  if (!market || !currency || !expectedCurrency || currency !== expectedCurrency || market.currency !== currency) return undefined;
+  if (!sourceMarket || sourceMarket !== market.code || sourceCurrency !== currency) return undefined;
+  if (!sourceSlug) return undefined;
+  let allowedHosts: readonly string[] = [];
+  try {
+    const parsed = JSON.parse(row.sourceAllowedHosts || "[]");
+    if (Array.isArray(parsed)) allowedHosts = parsed.filter((host): host is string => typeof host === "string");
+  } catch { /* invalid source metadata is rejected below */ }
+  let trustedUrl = false;
+  if (isKnownSource(sourceSlug)) trustedUrl = sourceHostIsAllowed(sourceSlug, productUrl);
+  if (!trustedUrl && allowedHosts.length > 0) {
+    try {
+      const parsed = new URL(productUrl);
+      trustedUrl = parsed.protocol === "https:" && allowedHosts.some((host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`));
+    } catch { trustedUrl = false; }
+  }
+  if (!productUrl || !trustedUrl) return undefined;
   if (!row.offerKey.trim() || !row.title.trim() || !row.productModel.trim()) return undefined;
   if (!Number.isSafeInteger(row.priceMinor) || row.priceMinor <= 0 || !observed) return undefined;
   if (row.health !== "healthy" && row.health !== "degraded") return undefined;
@@ -95,7 +116,7 @@ export function mapD1Offer(row: D1CatalogRow): Offer | undefined {
 
   return {
     id: row.offerKey,
-    market,
+    market: market.slug,
     modelSlug: row.productSlug.trim(),
     model: row.productModel.trim(),
     brand: boardPartner,
@@ -111,7 +132,7 @@ export function mapD1Offer(row: D1CatalogRow): Offer | undefined {
   };
 }
 
-async function queryD1Rows(db: CatalogDatabase, market?: Market, modelSlug?: string): Promise<readonly D1CatalogRow[]> {
+async function queryD1Rows(db: CatalogDatabase, market?: MarketDefinition, modelSlug?: string): Promise<readonly D1CatalogRow[]> {
   const selection = db.select({
     offerKey: schema.offers.offerKey,
     sourceSlug: schema.offers.sourceSlug,
@@ -126,6 +147,7 @@ async function queryD1Rows(db: CatalogDatabase, market?: Market, modelSlug?: str
     sourceMarket: schema.sources.market,
     sourceCurrency: schema.sources.currency,
     sourceDisplayName: schema.sources.displayName,
+    sourceAllowedHosts: schema.sources.allowedHosts,
     productSlug: schema.products.slug,
     productModel: schema.products.model,
     boardPartner: schema.products.boardPartner,
@@ -134,8 +156,8 @@ async function queryD1Rows(db: CatalogDatabase, market?: Market, modelSlug?: str
     .innerJoin(schema.products, eq(schema.offers.productIdentityKey, schema.products.identityKey))
     .innerJoin(schema.sources, eq(schema.offers.sourceSlug, schema.sources.slug));
 
-  const marketCode = market ? marketRegistry[market].code : undefined;
-  const currency = marketCode ? marketCurrency(marketCode) : undefined;
+  const marketCode = market?.code;
+  const currency = market?.currency;
   let rows: readonly D1CatalogRow[];
   if (market && marketCode && currency && modelSlug) {
     rows = await selection.where(and(
@@ -148,6 +170,11 @@ async function queryD1Rows(db: CatalogDatabase, market?: Market, modelSlug?: str
       eq(schema.offers.market, marketCode),
       eq(schema.offers.currency, currency),
     )).all() as unknown as readonly D1CatalogRow[];
+  } else if (market && marketCode && modelSlug) {
+    rows = await selection.where(and(
+      eq(schema.offers.market, marketCode),
+      eq(schema.products.slug, modelSlug),
+    )).all() as unknown as readonly D1CatalogRow[];
   } else if (modelSlug) {
     rows = await selection.where(eq(schema.products.slug, modelSlug)).all() as unknown as readonly D1CatalogRow[];
   } else {
@@ -156,12 +183,20 @@ async function queryD1Rows(db: CatalogDatabase, market?: Market, modelSlug?: str
   return rows;
 }
 
-function fixtureSnapshot(reason?: CatalogSnapshot["fallbackReason"]): CatalogSnapshot {
+function fixtureSnapshot(
+  reason?: CatalogSnapshot["fallbackReason"],
+  markets: readonly MarketDefinition[] = Object.values(marketRegistry),
+  marketPacks: readonly MarketDefinition[] = Object.values(marketRegistry),
+  selectedMarket: MarketDefinition = marketRegistry.us,
+): CatalogSnapshot {
   return {
     source: "fixture",
     offers: [...fixtureOffers],
     liveOfferCount: null,
     rejectedRows: 0,
+    markets,
+    marketPacks,
+    selectedMarket,
     ...(reason ? { fallbackReason: reason } : {}),
   };
 }
@@ -174,31 +209,73 @@ export async function loadCatalog(options: {
   market?: Market;
   modelSlug?: string;
   query?: CatalogQuery;
+  marketQuery?: MarketQuery;
 } = {}): Promise<CatalogSnapshot> {
   let query = options.query;
+  let marketQuery = options.marketQuery;
+  let markets: readonly MarketDefinition[] = Object.values(marketRegistry);
+  let marketPacks: readonly MarketDefinition[] = Object.values(marketRegistry);
   if (!query) {
     try {
       const { getDb } = await import("../../db/index.ts");
       const db = getDb();
       query = (market, modelSlug) => queryD1Rows(db, market, modelSlug);
+      marketQuery = marketQuery ?? (async () => {
+        const rows = await db.select({
+          slug: schema.marketPacks.slug,
+          code: schema.marketPacks.countryCode,
+          label: schema.marketPacks.label,
+          currency: schema.marketPacks.currency,
+          locale: schema.marketPacks.locale,
+          baseUrl: schema.marketPacks.baseUrl,
+          catalogUrl: schema.marketPacks.catalogUrl,
+          symbol: schema.marketPacks.symbol,
+          status: schema.marketPacks.status,
+        }).from(schema.marketPacks).all();
+        return rows.map((row) => ({
+            slug: row.slug,
+            code: row.code,
+            label: row.label,
+            currency: row.currency,
+            locale: row.locale,
+            symbol: row.symbol,
+            enabled: row.status === "ready",
+            ready: row.status === "ready",
+          }));
+      });
     } catch {
-      return fixtureSnapshot("database-unavailable");
+      const selectedMarket = markets.find((market) => market.slug === options.market) ?? marketRegistry.us;
+      return fixtureSnapshot("database-unavailable", markets, marketPacks, selectedMarket);
     }
   }
 
   try {
-    const rows = await query(options.market, options.modelSlug);
-    const mapped = rows.map(mapD1Offer).filter((offer): offer is Offer => Boolean(offer));
+    if (marketQuery) {
+      const runtimeMarkets = await marketQuery();
+      marketPacks = [...Object.values(marketRegistry), ...runtimeMarkets.filter((runtime) => !(runtime.slug in marketRegistry))];
+      const merged = new Map<string, MarketDefinition>(Object.values(marketRegistry).map((market) => [market.slug, market]));
+      for (const runtime of runtimeMarkets) {
+        if (runtime.enabled !== false && runtime.ready !== false) merged.set(runtime.slug, runtime);
+      }
+      markets = [...merged.values()];
+    }
+    const selectedMarket = markets.find((market) => market.slug === options.market) ?? marketRegistry.us;
+    const rows = await query(selectedMarket, options.modelSlug);
+    const mapped = rows.map((row) => mapD1Offer(row, markets)).filter((offer): offer is Offer => Boolean(offer));
     if (mapped.length === 0) {
-      return fixtureSnapshot(rows.length > 0 ? "database-no-valid-rows" : "database-empty");
+      return fixtureSnapshot(rows.length > 0 ? "database-no-valid-rows" : "database-empty", markets, marketPacks, selectedMarket);
     }
     return {
       source: "d1",
       offers: mapped,
+      markets,
+      marketPacks,
+      selectedMarket,
       liveOfferCount: mapped.length,
       rejectedRows: rows.length - mapped.length,
     };
   } catch {
-    return fixtureSnapshot("database-unavailable");
+    const selectedMarket = markets.find((market) => market.slug === options.market) ?? marketRegistry.us;
+    return fixtureSnapshot("database-unavailable", markets, marketPacks, selectedMarket);
   }
 }
