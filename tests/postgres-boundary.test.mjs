@@ -76,6 +76,12 @@ test("db:check rejects an untracked PostgreSQL migration artifact", async () => 
   }
 });
 
+test("db:check includes a path-scoped Git index and worktree comparison", async () => {
+  const checker = await readFile(path.join(root, "scripts/check-postgres-migration.mjs"), "utf8");
+  assert.match(checker, /\["diff", "--name-status", "--find-renames", "HEAD", "--", \.\.\.guardedPaths\]/);
+  assert.match(checker, /index\/worktree/);
+});
+
 test("SQLite test adapter normalizes PostgreSQL boolean binds", async () => {
   const { db, sqlite } = createSqliteTestDatabase();
   await db.insert(schema.sources).values({

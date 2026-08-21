@@ -39,6 +39,11 @@ function headSnapshot() {
   return new Map(files.map((relativePath) => [relativePath, createHash("sha256").update(execFileSync("git", ["show", `HEAD:${relativePath}`], { cwd: root })).digest("hex")]));
 }
 
+function gitDirtyPaths() {
+  const output = execFileSync("git", ["diff", "--name-status", "--find-renames", "HEAD", "--", ...guardedPaths], { cwd: root, encoding: "utf8" });
+  return output.split("\n").map((line) => line.trim()).filter(Boolean);
+}
+
 async function takeSnapshot() {
   const snapshots = await Promise.all(guardedPaths.map((relativePath) => snapshot(relativePath)));
   return new Map(snapshots.flatMap((current) => [...current]));
@@ -64,8 +69,10 @@ function runGenerate() {
 const head = headSnapshot();
 const before = await takeSnapshot();
 const preexisting = differences(before, head);
-if (preexisting.length > 0) {
-  console.error(`Guarded PostgreSQL paths differ from HEAD before generation: ${preexisting.join(", ")}`);
+const gitDirty = gitDirtyPaths();
+if (preexisting.length > 0 || gitDirty.length > 0) {
+  if (gitDirty.length > 0) console.error(`Git reports guarded PostgreSQL paths dirty against HEAD (index/worktree): ${gitDirty.join(", ")}`);
+  if (preexisting.length > 0) console.error(`Guarded PostgreSQL paths differ from HEAD before generation: ${preexisting.join(", ")}`);
   console.error("Commit or revert guarded schema/config/migration changes before rerunning db:check.");
   process.exit(1);
 }
