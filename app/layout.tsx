@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 const title = "Raster — GPU prices without the tab circus";
 const description = "A public-data GPU offer comparison across the US, UK, India, and Singapore, built for Into the Scrape-Verse.";
 const basePath = "/scrapper";
-const faviconVersion = "v2";
+const faviconVersion = "v3";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();
@@ -35,7 +35,7 @@ export async function generateMetadata(): Promise<Metadata> {
       shortcut: `${basePath}/favicon.ico?${faviconVersion}`,
       apple: [{ url: `${basePath}/apple-touch-icon.png?${faviconVersion}`, sizes: "180x180", type: "image/png" }],
     },
-    manifest: `${basePath}/manifest.webmanifest`,
+    manifest: `${basePath}/manifest.webmanifest?${faviconVersion}`,
     openGraph: {
       title,
       description,
