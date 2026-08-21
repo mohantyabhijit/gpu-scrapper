@@ -13,6 +13,8 @@ private implementation detail.
 
 Repository: <https://github.com/mohantyabhijit/gpu-scrapper>
 
+Public deployment: <https://abhijitmohanty.com/scrapper/>
+
 ## Current status
 
 This repository is at the safe implementation baseline. The authoritative
@@ -38,10 +40,11 @@ currency, or Collector ID and therefore cannot bypass the public-data gates.
 
 ## Judge-proof status
 
-The public repository currently contains the product contract, fixture-backed
-market experience, typed source registry, protected-refresh design, and QA
-scaffolding. Live custom Collector IDs, authenticated source eligibility,
-deployed D1 writes, same-ID healing, and a verified scheduled run remain
+The public deployment now contains the product contract, fixture-backed market
+experience, typed source registry, protected refresh route, migrated production
+D1 database, and append-only healing ledger. Live custom Collector IDs,
+authenticated source eligibility, real collector-backed D1 writes, same-ID
+healing, and a verified scheduled run remain
 release gates. They are intentionally marked `pending` in the
 [evidence matrix](docs/evidence-matrix.md); do not describe fixtures as live
 Scraper Studio output in the submission or video.
@@ -138,6 +141,8 @@ workflow. Do not add a new retailer without updating the eligibility record.
 - [Master plan](docs/plans/2026-08-21-raster-gpu-marketplace-master-plan.md) —
   product, technical, sequencing, and verification contract.
 
-This project uses [vinext](https://github.com/cloudflare/vinext) with optional
-Cloudflare D1/Drizzle support. Hosting bindings are configured separately from
-the public source; no deployment credential belongs in this repository.
+This project uses [vinext](https://github.com/cloudflare/vinext) on a Cloudflare
+Worker with D1/Drizzle. The public portfolio origin proxies only `/scrapper/`
+to the Worker, leaving all other `abhijitmohanty.com` routes untouched. Hosting
+bindings are non-secret configuration; credentials remain in deployment secret
+stores and never belong in this repository.

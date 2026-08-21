@@ -11,6 +11,8 @@ Bright Data Scraper Studio collectors (one per eligible source)
         -> bounded trigger/poll + contract validation
         -> normalization and quarantine
         -> Cloudflare D1 current offers + append-only observations
+        -> Cloudflare Worker at its isolated workers.dev origin
+        -> abhijitmohanty.com/scrapper/ subpath proxy
         -> public catalog/model pages
         -> outbound retailer link (verify and buy there)
 ```
@@ -39,6 +41,9 @@ Bright Data Scraper Studio collectors (one per eligible source)
   and Collector IDs are never accepted by the refresh path.
 - **Storefront:** read-only catalog, same-currency filters/sorts, freshness and
   health labels, source attribution, and safe outbound links. No checkout.
+- **Public route:** the portfolio origin proxies only `/scrapper/` to Raster's
+  Worker origin. The Worker keeps the `/scrapper` base path for pages, assets,
+  and protected APIs; unrelated portfolio routes never enter Raster.
 
 ## Evidence surfaces
 

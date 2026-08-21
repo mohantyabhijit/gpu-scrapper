@@ -37,20 +37,22 @@ minute timeout, and permissions are read-only.
 
 ## Onboarding another country
 
-Country expansion is configuration-driven but intentionally not open-ended at
-runtime. To add a market safely:
+Country expansion is runtime-driven through the authenticated Country Pack
+route and does not require a code deploy. To add a market safely:
 
-1. Add its route slug, ISO-style market code, currency, locale, and symbol to
-   `config/markets.ts`.
-2. Add public retailer candidates to `config/sources.ts` and complete the
-   source-eligibility checklist before enabling any of them.
+1. Submit its route slug, ISO-style market code, currency, locale, symbol, and a
+   server-recognized retailer slug to the signed Country Pack route.
+2. Record dated public-data eligibility and Bright Data pre-built-library
+   exclusion evidence. The pack remains pending and is not selectable.
 3. Create and run a source-specific custom Scraper Studio collector, record its
    real `c_*` ID, and validate its output against the shared contract.
-4. Add the scheduled/manual refresh slice and verify market-local D1 reads.
+4. Submit the sanitized creation/run evidence. One D1 transaction marks the
+   pack ready and binds the server-resolved source; it then appears in the
+   selector without redeploying Raster.
 
-The selector, validation, currency formatting, and D1 query layer all derive
-from the market registry. Arbitrary request parameters cannot create a new
-country or currency and cannot bypass the allowlisted sources.
+The selector, validation, currency formatting, and D1 query layer merge ready
+Country Packs with the baseline registry. Shopper input cannot supply a source
+URL or Collector ID, and an admitted source binding is immutable.
 
 ## Signing contract
 
@@ -99,8 +101,8 @@ fetch and never calls a provider or a real route.
 
 ## Operator checklist
 
-- [ ] Confirm the route URL is HTTPS and points to the protected deployment.
-- [ ] Confirm both workflow secrets exist without displaying their values.
+- [x] Confirm the route URL is HTTPS and points to the protected deployment.
+- [x] Confirm both workflow secrets exist without displaying their values.
 - [ ] Confirm the chosen source has passed public-data and pre-built coverage
       checks in [source-eligibility.md](source-eligibility.md).
 - [ ] Dispatch one slice manually and inspect the safe Action summary.

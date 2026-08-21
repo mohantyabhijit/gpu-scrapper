@@ -2,7 +2,7 @@
 
 ## P0 release gate
 
-- [ ] Public deployment loads signed out on desktop and mobile widths.
+- [x] Public deployment loads signed out on desktop and mobile widths.
 - [ ] Two same-market sources have healthy live output and overlapping models.
 - [ ] At least one real create/run flow and stable Collector ID are recorded.
 - [ ] Same-ID heal is proven with sanitized before/preview/after evidence.
@@ -38,7 +38,7 @@ Do not submit the form until Page 2 is captured and every link is public.
 | Person submitting | Participant must provide and confirm. |
 | Track | Select all three: Best Use of Bright Data — Web-Slinger; Best UI — Suit-Up; Best Clean Code — Spider-Sense. |
 | GitHub project | <https://github.com/mohantyabhijit/gpu-scrapper> after the final branch is merged and public history is verified. |
-| Deployed project | **TODO:** replace with the verified public production URL. |
+| Deployed project | <https://abhijitmohanty.com/scrapper/> |
 | YouTube demo | **TODO:** public or unlisted video, no more than 3 minutes. |
 | What does your project do? | Use the reviewed draft below after live behavior is verified. |
 | How did you use Scraper Studio? | Use the reviewed draft below after live Collector evidence exists. |
