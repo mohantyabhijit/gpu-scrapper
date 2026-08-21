@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createBrightDataClient, BrightDataError } from "../lib/brightdata/client.ts";
+import { createBrightDataClient, BrightDataError, MAX_RESPONSE_ID_LENGTH } from "../lib/brightdata/client.ts";
 
 test("Bright Data client triggers and polls without exposing provider bodies", async () => {
   const calls = [];
@@ -83,4 +83,34 @@ test("polling limits are bounded even when callers pass excessive values", async
     (error) => error instanceof BrightDataError && error.code === "timeout",
   );
   assert.equal(calls, 11);
+});
+
+test("polling failures retain the bounded trigger response identity", async () => {
+  const client = createBrightDataClient({
+    apiKey: "test-api-key",
+    maxPollAttempts: 1,
+    fetchImpl: async (url) => url.includes("trigger")
+      ? new Response(JSON.stringify({ collection_id: "response-timeout" }), { status: 200 })
+      : new Response(JSON.stringify({ status: "pending" }), { status: 202 }),
+  });
+  await assert.rejects(
+    client.triggerAndPoll({ sourceSlug: "central-computer", collectorId: "c_demo", inputUrl: "https://www.centralcomputer.com/gpus" }),
+    (error) => error instanceof BrightDataError && error.code === "timeout" && error.responseId === "response-timeout",
+  );
+});
+
+test("overlong trigger response identities are rejected without polling", async () => {
+  let calls = 0;
+  const client = createBrightDataClient({
+    apiKey: "test-api-key",
+    fetchImpl: async () => {
+      calls += 1;
+      return new Response(JSON.stringify({ collection_id: "r".repeat(MAX_RESPONSE_ID_LENGTH + 1) }), { status: 200 });
+    },
+  });
+  await assert.rejects(
+    client.triggerAndPoll({ sourceSlug: "central-computer", collectorId: "c_demo", inputUrl: "https://www.centralcomputer.com/gpus" }),
+    (error) => error instanceof BrightDataError && error.code === "invalid_response" && error.responseId === undefined,
+  );
+  assert.equal(calls, 1);
 });

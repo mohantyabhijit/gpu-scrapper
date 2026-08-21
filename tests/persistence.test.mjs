@@ -233,3 +233,17 @@ test("persistence rejects a provider collector outside the source boundary", asy
   );
   assert.equal(db.rows("runs").length, 0);
 });
+
+test("persistence rejects a collector when the source has no registered collectors", async () => {
+  const db = new FakeDb();
+  await assert.rejects(
+    persistIngestion(db, batch("run-empty-boundary"), {
+      ...context,
+      runId: "run-empty-boundary",
+      source: { ...context.source, collectorIds: {}, collectorRoles: [] },
+      collectorId: "c_unregistered",
+    }),
+    /collectorId does not match source/,
+  );
+  assert.equal(db.rows("runs").length, 0);
+});

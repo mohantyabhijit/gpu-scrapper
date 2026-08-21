@@ -308,6 +308,28 @@ test("provider failure calls the sanitized failure callback exactly once", async
   }
 });
 
+test("post-trigger polling failure carries only the bounded response identity", async () => {
+  const restore = configureCentralComputer();
+  try {
+    const failures = [];
+    const run = createRefreshRunner({ BRIGHTDATA_API_KEY: "provider-secret" }, {
+      maxPollAttempts: 1,
+      fetchImpl: async (url) => url.includes("trigger")
+        ? new Response(JSON.stringify({ collection_id: "response-timeout" }), { status: 200 })
+        : new Response(JSON.stringify({ status: "pending", provider_secret: "do-not-leak" }), { status: 202 }),
+    }, {
+      now: () => new Date("2026-08-21T10:02:00.000Z"),
+      onFailure: async (input) => { failures.push(input); },
+    });
+    const result = await run({ sourceSlugs: ["central-computer"], role: "combined" });
+    assert.deepEqual(result.failed, [{ sourceSlug: "central-computer", code: "timeout" }]);
+    assert.equal(failures[0].responseId, "response-timeout");
+    assert.doesNotMatch(JSON.stringify(failures), /provider_secret|do-not-leak/);
+  } finally {
+    restore();
+  }
+});
+
 test("failure persistence exceptions become only persistence_error", async () => {
   const restore = configureCentralComputer();
   try {

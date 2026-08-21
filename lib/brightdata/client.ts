@@ -7,6 +7,7 @@ export const DEFAULT_MAX_POLL_ATTEMPTS = 5;
 export const MAX_TIMEOUT_MS = 30_000;
 export const MAX_POLL_INTERVAL_MS = 5_000;
 export const MAX_POLL_ATTEMPTS = 10;
+export const MAX_RESPONSE_ID_LENGTH = 256;
 export const MAX_PROVIDER_RUN_MS = MAX_TIMEOUT_MS * (1 + MAX_POLL_ATTEMPTS)
   + MAX_POLL_INTERVAL_MS * (MAX_POLL_ATTEMPTS - 1);
 
@@ -39,25 +40,29 @@ export type BrightDataErrorCode = "not_configured" | "invalid_response" | "provi
 export class BrightDataError extends Error {
   readonly code: BrightDataErrorCode;
   readonly status?: number;
+  /** Safe provider identity, when trigger succeeded before the failure. */
+  readonly responseId?: string;
 
   constructor(
     code: BrightDataErrorCode,
     message: string,
     status?: number,
+    responseId?: string,
   ) {
     super(message);
     this.code = code;
     this.status = status;
+    this.responseId = responseId;
     this.name = "BrightDataError";
   }
 }
 
 function responseIdFrom(payload: unknown): string | undefined {
-  if (typeof payload === "string" && payload.trim()) return payload.trim();
+  if (typeof payload === "string" && payload.trim().length <= MAX_RESPONSE_ID_LENGTH) return payload.trim() || undefined;
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return undefined;
   const record = payload as Record<string, unknown>;
   for (const key of ["collection_id", "response_id", "responseId", "snapshot_id", "snapshotId", "id"]) {
-    if (typeof record[key] === "string" && record[key].trim()) return record[key].trim();
+    if (typeof record[key] === "string" && record[key].trim() && record[key].trim().length <= MAX_RESPONSE_ID_LENGTH) return record[key].trim();
   }
   return undefined;
 }
@@ -138,14 +143,22 @@ export function createBrightDataClient(options: BrightDataClientOptions = {}) {
 
     for (let attempt = 1; attempt <= maxPollAttempts; attempt += 1) {
       if (attempt > 1) await sleep(pollIntervalMs);
-      const polled = await request(`/dca/dataset?id=${encodeURIComponent(responseId)}`, { method: "GET" });
+      let polled: { response: Response; payload: unknown };
+      try {
+        polled = await request(`/dca/dataset?id=${encodeURIComponent(responseId)}`, { method: "GET" });
+      } catch (error) {
+        if (error instanceof BrightDataError) {
+          throw new BrightDataError(error.code, error.message, error.status, responseId);
+        }
+        throw new BrightDataError("provider_error", "Bright Data dataset could not be completed", undefined, responseId);
+      }
       const rows = rowsFrom(polled.payload);
       if (rows) return { sourceSlug: trigger.sourceSlug, collectorId: trigger.collectorId, responseId, rows, attempts: attempt };
       if (!isPending(polled.payload, polled.response)) {
-        throw new BrightDataError("invalid_response", "Bright Data returned an unusable dataset response");
+        throw new BrightDataError("invalid_response", "Bright Data returned an unusable dataset response", undefined, responseId);
       }
     }
-    throw new BrightDataError("timeout", "Bright Data dataset did not complete within the polling limit");
+    throw new BrightDataError("timeout", "Bright Data dataset did not complete within the polling limit", undefined, responseId);
   }
 
   return { triggerAndPoll };

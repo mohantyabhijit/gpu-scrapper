@@ -69,6 +69,7 @@ export type RefreshFailureInput = {
   source: SourceDefinition;
   sourceSlug: SourceSlug;
   collectorId: string;
+  responseId?: string;
   code: RefreshFailureCode;
   failedAt: string;
 };
@@ -195,6 +196,7 @@ export function createRefreshRunner(
             sourceSlug: source.sourceSlug,
             collectorId: source.collectorId,
             code,
+            ...(error instanceof BrightDataError && error.responseId ? { responseId: error.responseId } : {}),
             failedAt: (runnerOptions.now ?? (() => new Date()))().toISOString(),
           });
         } catch {
@@ -252,6 +254,7 @@ export function createRefreshRunner(
             sourceSlug: source.sourceSlug,
             collectorId: source.collectorId,
             code,
+            ...(error instanceof BrightDataError && error.responseId ? { responseId: error.responseId } : {}),
             failedAt: (runnerOptions.now ?? (() => new Date()))().toISOString(),
           });
         } catch {

@@ -38,6 +38,12 @@ const invalidRow = {
 
 const context = {
   sourceSlug: "central-computer",
+  source: {
+    ...sourceRegistry["central-computer"],
+    enabled: true,
+    collectorIds: { combined: "c_persist" },
+    collectorRoles: ["combined"],
+  },
   collectorId: "c_persist",
   responseId: "response-persist",
   startedAt: "2026-08-21T09:59:00.000Z",
@@ -131,15 +137,23 @@ test("provider failure persistence preserves last-known-good fields and is idemp
     FROM offers WHERE source_slug = 'central-computer'
   `;
   const failure = {
-    source: sourceRegistry["central-computer"],
+    source: {
+      ...sourceRegistry["central-computer"],
+      enabled: true,
+      collectorIds: { combined: "c_failure" },
+      collectorRoles: ["combined"],
+    },
     sourceSlug: "central-computer",
     collectorId: "c_failure",
+    responseId: "response-failure",
     code: "timeout",
     failedAt: "2026-08-21T12:00:00.000Z",
   };
   const first = await persistSourceFailure(fixture.db, failure);
   const second = await persistSourceFailure(fixture.db, failure);
   assert.equal(first.runId, second.runId);
+  const later = await persistSourceFailure(fixture.db, { ...failure, failedAt: "2026-08-21T12:30:00.000Z" });
+  assert.equal(first.runId, later.runId);
   const after = await fixture.sql`
     SELECT price_minor, availability, product_url, observed_at, updated_at, health
     FROM offers WHERE source_slug = 'central-computer'
@@ -157,8 +171,13 @@ test("provider failure persistence preserves last-known-good fields and is idemp
     accepted_count: 0,
     validation_summary: JSON.stringify({ failureCode: "timeout" }),
     collector_id: "c_failure",
-    response_id: null,
+    response_id: "response-failure",
   });
+
+  const preTrigger = { ...failure, responseId: undefined, code: "provider_error" };
+  const preTriggerFirst = await persistSourceFailure(fixture.db, preTrigger);
+  const preTriggerSecond = await persistSourceFailure(fixture.db, { ...preTrigger, failedAt: "2026-08-21T13:00:00.000Z" });
+  assert.equal(preTriggerFirst.runId, preTriggerSecond.runId);
 
   await persistIngestion(fixture.db, batch("pg-failure-recovery", [validRow]), { ...context, runId: "pg-failure-recovery" });
   const recovered = await fixture.sql`SELECT health FROM offers WHERE source_slug = 'central-computer'`;

@@ -2,6 +2,7 @@ import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { eq } from "drizzle-orm";
 import * as schema from "../../db/schema.ts";
 import { getSource, isKnownSource, type CollectorId, type CollectorRole, type SourceDefinition, type SourceRole, type SourceSlug } from "../../config/sources.ts";
+import { MAX_RESPONSE_ID_LENGTH } from "../brightdata/client.ts";
 import type { IngestionResult } from "../ingest.ts";
 import type { RefreshFailureCode, RefreshFailureInput } from "../brightdata/refresh.ts";
 
@@ -30,7 +31,7 @@ export type PersistenceResult = {
   status: "healthy" | "degraded" | "empty";
 };
 
-export type SourceFailurePersistenceInput = Pick<RefreshFailureInput, "source" | "sourceSlug" | "collectorId" | "code" | "failedAt">;
+export type SourceFailurePersistenceInput = Pick<RefreshFailureInput, "source" | "sourceSlug" | "collectorId" | "responseId" | "code" | "failedAt">;
 
 export type SourceFailurePersistenceResult = {
   runId: string;
@@ -103,7 +104,12 @@ function safeFailureCode(code: unknown): RefreshFailureCode {
 
 /** Bounded deterministic identity for one persisted provider failure. */
 async function failureRunId(input: SourceFailurePersistenceInput, code: RefreshFailureCode): Promise<string> {
-  const identity = `${input.sourceSlug}\u0000${input.collectorId}\u0000${code}\u0000${input.failedAt}`;
+  // Trigger failures with a known response collapse by provider response;
+  // pre-trigger failures collapse by source, collector, and safe error code.
+  // This intentionally keeps one degraded evidence row for repeated retries.
+  const identity = input.responseId
+    ? `response\u0000${input.sourceSlug}\u0000${input.collectorId}\u0000${input.responseId}`
+    : `failure\u0000${input.sourceSlug}\u0000${input.collectorId}\u0000${code}`;
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(identity));
   const hash = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
   const source = input.sourceSlug.replace(/[^a-zA-Z0-9._-]+/g, "-").slice(0, 64) || "source";
@@ -114,7 +120,7 @@ function assertCollectorBelongsToSource(source: SourceDefinition, collectorId: s
   if (collectorId === undefined) return;
   if (!/^c_[A-Za-z0-9_-]{2,127}$/.test(collectorId)) throw new Error("collectorId is invalid");
   const registered = Object.values(source.collectorIds).filter((id): id is CollectorId => typeof id === "string");
-  if (registered.length > 0 && !registered.includes(collectorId as CollectorId)) {
+  if (!registered.includes(collectorId as CollectorId)) {
     throw new Error("collectorId does not match source");
   }
 }
@@ -328,6 +334,9 @@ export async function persistSourceFailure(
 ): Promise<SourceFailurePersistenceResult> {
   if (!input.sourceSlug.trim()) throw new Error("sourceSlug is required");
   if (!input.collectorId.trim()) throw new Error("collectorId is required");
+  if (input.responseId !== undefined && (!input.responseId.trim() || input.responseId.length > MAX_RESPONSE_ID_LENGTH)) {
+    throw new Error("responseId is invalid");
+  }
   if (!input.failedAt.trim()) throw new Error("failedAt is required");
   if (input.source.slug !== input.sourceSlug) throw new Error("source metadata does not match sourceSlug");
   const code = safeFailureCode(input.code);
@@ -341,7 +350,7 @@ export async function persistSourceFailure(
       runId,
       sourceSlug: input.sourceSlug,
       collectorId: input.collectorId,
-      responseId: null,
+      responseId: input.responseId ?? null,
       market: input.source.region,
       currency: input.source.currency,
       status: "degraded",
@@ -358,7 +367,7 @@ export async function persistSourceFailure(
         rejectedCount: 0,
         finishedAt: input.failedAt,
         collectorId: input.collectorId,
-        responseId: null,
+        responseId: input.responseId ?? null,
         validationSummary: summary,
       },
     });
