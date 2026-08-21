@@ -29,7 +29,7 @@ function json(payload: unknown, status = 200, headers: HeadersInit = {}) {
 async function persistCompletedRun(input: RefreshCompletionInput): Promise<void> {
   // Keep the Cloudflare binding import server-only and lazy so injected runner
   // tests do not need a worker runtime. Every completed provider run crosses
-  // the same validator/normalizer/D1 boundary before the route reports it.
+  // the same validator, normalizer, and PostgreSQL boundary before the route reports it.
   const [{ getDb }, { ingestRows }, { persistIngestion }] = await Promise.all([
     import("../../../db/index.ts"),
     import("../../../lib/ingest.ts"),

@@ -74,7 +74,7 @@ class FakeDb {
     return new FakeUpdate(this, table);
   }
   async batch(queries) {
-    if (!queries.length) throw new Error("D1 batches must contain at least one statement");
+    if (!queries.length) throw new Error("transactions must contain at least one statement");
     const snapshot = structuredClone(this.tables);
     this.batches += 1;
     try {
@@ -197,7 +197,7 @@ test("replaying the same batch is idempotent and keeps last-known-good offers", 
   assert.equal(db.rows("offers")[0].health, "healthy");
 });
 
-test("D1 batch rollback does not leave partial catalog state", async () => {
+test("transaction rollback does not leave partial catalog state", async () => {
   const db = new FakeDb();
   db.failTable = "offers";
   await assert.rejects(persistIngestion(db, batch("run-rollback"), { ...context, runId: "run-rollback" }));

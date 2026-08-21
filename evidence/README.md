@@ -43,5 +43,5 @@ for accidental private data before adding it to a commit or submission.
 No live Bright Data create/run/heal evidence is committed yet. Until a real
 authenticated flow is completed, keep the corresponding evidence rows marked
 `pending` in [the evidence matrix](../docs/evidence-matrix.md). A sanitized
-summary is not proof of a live collector, a successful D1 write, a scheduled
+summary is not proof of a live collector, a successful PostgreSQL write, a scheduled
 run, or same-ID healing by itself.

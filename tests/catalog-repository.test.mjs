@@ -25,7 +25,7 @@ const validRow = {
   vramGb: 16,
 };
 
-test("maps a normalized D1 row to one market-local storefront offer", () => {
+test("maps a normalized PostgreSQL row to one market-local storefront offer", () => {
   const offer = mapPostgresOffer(validRow, undefined, new Date("2026-08-21T12:00:00.000Z"));
   assert.ok(offer);
   assert.equal(offer.market, "us");
@@ -71,7 +71,7 @@ test("rejects cross-market currency and untrusted retailer rows", () => {
   assert.equal(mapPostgresOffer({ ...validRow, sourceOnboardingStatus: "pending" }), undefined);
 });
 
-test("loadCatalog uses injected D1 rows and reports real counts", async () => {
+test("loadCatalog uses injected PostgreSQL rows and reports real counts", async () => {
   const calls = [];
   const snapshot = await loadCatalog({
     market: "us",
@@ -124,14 +124,14 @@ test("pending runtime countries stay in the ledger but not the selector", async 
   assert.equal(snapshot.marketPacks.some((market) => market.slug === "australia"), true);
 });
 
-test("loadCatalog falls back to fixtures when D1 is empty or unavailable", async () => {
+test("loadCatalog falls back to fixtures when PostgreSQL is empty or unavailable", async () => {
   const empty = await loadCatalog({ query: async () => [] });
   assert.equal(empty.source, "fixture");
   assert.equal(empty.liveOfferCount, null);
   assert.equal(empty.fallbackReason, "database-empty");
   assert.ok(empty.offers.length > 0);
 
-  const unavailable = await loadCatalog({ query: async () => { throw new Error("D1 unavailable"); } });
+  const unavailable = await loadCatalog({ query: async () => { throw new Error("PostgreSQL unavailable"); } });
   assert.equal(unavailable.source, "fixture");
   assert.equal(unavailable.liveOfferCount, null);
   assert.equal(unavailable.fallbackReason, "database-unavailable");

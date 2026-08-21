@@ -258,7 +258,7 @@ test("persistence failures become a sanitized source error", async () => {
       sleep: async () => {},
     }, {
       onComplete: async () => {
-        throw new Error("D1 provider body secret");
+        throw new Error("database provider body secret");
       },
     });
     const result = await run({ sourceSlugs: ["central-computer"], role: "combined" });
@@ -283,7 +283,7 @@ test("route sanitizes an unexpected persistence exception", async () => {
     replayGuard: async () => true,
     rateGuard: async () => ({ acquired: true, retryAfterSeconds: 0, complete: async () => { rateCompletions += 1; } }),
     runner: async () => {
-      throw new Error("D1 provider body secret");
+      throw new Error("database provider body secret");
     },
   });
   assert.equal(response.status, 503);
@@ -386,7 +386,7 @@ test("route sanitizes a rate-cooldown completion failure after provider success"
     environment: { RASTER_INGEST_HMAC_SECRET: "refresh-secret", BRIGHTDATA_API_KEY: "provider-secret" },
     nowSeconds: 1700000000,
     replayGuard: async () => ({ acquired: true, complete: async () => {}, release: async () => {} }),
-    rateGuard: async () => ({ acquired: true, retryAfterSeconds: 0, complete: async () => { throw new Error("D1 cooldown detail"); } }),
+    rateGuard: async () => ({ acquired: true, retryAfterSeconds: 0, complete: async () => { throw new Error("database cooldown detail"); } }),
     runner: async () => ({
       requested: ["central-computer"],
       completed: [{ sourceSlug: "central-computer", collectorId: "c_demo", responseId: "r_demo", rowCount: 1, attempts: 1 }],

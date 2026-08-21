@@ -153,7 +153,7 @@ export const sourceRegistry = {
   },
 } satisfies Record<string, SourceDefinition>;
 
-/** Runtime source IDs are D1-owned; the static registry is only the fallback. */
+/** Runtime source IDs are PostgreSQL-owned; the static registry is only the fallback. */
 export type SourceSlug = string;
 export const SOURCE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const MAX_SOURCE_SLUG_LENGTH = 64;

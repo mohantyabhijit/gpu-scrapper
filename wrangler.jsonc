@@ -13,14 +13,6 @@
 		"not_found_handling": "none",
 		"binding": "ASSETS"
 	},
-	"d1_databases": [
-		{
-			"binding": "DB",
-			"database_name": "raster-gpu-market",
-			"database_id": "517c7bd4-4e28-4b58-89e7-5869d17d92e9",
-			"migrations_dir": "drizzle"
-		}
-	],
 	"observability": {
 		"enabled": true
 	},
