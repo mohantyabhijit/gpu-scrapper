@@ -10,7 +10,8 @@
 - [x] Search, filters, currency grouping, freshness, source attribution, and
       outbound links pass manual keyboard/browser QA at desktop and 390px.
 - [x] Automated axe scan reports zero violations across four deployed routes.
-- [ ] A retained responsive screenshot is attached to the submission evidence.
+- [x] A retained 390 × 844 CSS-pixel responsive screenshot is attached at
+      `evidence/screenshots/production-home-mobile-390x844.png`.
 - [ ] Last-known-good behavior is visible for a failed/stale source.
 - [x] README, architecture, evidence matrix, and demo script are current for
       the explicitly fixture-backed baseline.

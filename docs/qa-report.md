@@ -47,12 +47,13 @@ still a separate release gate.
 | Retailer exits | Pass | Fixture cards preserve the expected public Micro Center and B&H HTTPS destinations and open them with `target="_blank" rel="noreferrer"`. |
 | Portfolio isolation | Pass | `/` and `/data-health` remain portfolio routes; only `/scrapper/` is proxied to Raster. |
 | Protected API | Pass | Unsigned `POST /scrapper/api/refresh` returns sanitized `401 {"error":"unauthorized"}`. |
-| Screenshot artifact | Skip | The in-app browser completed DOM, interaction, viewport, and console checks but its screenshot capture returned no image. No screenshot is claimed in this report. |
+| Screenshot artifact | Pass | `evidence/screenshots/production-home-mobile-390x844.png` captures the deployed home at an emulated 390 × 844 CSS-pixel iPhone viewport (3× PNG); all three navigation links and hero copy are visible without clipping. |
 
 No browser console warnings or errors were recorded across the final production
 route pass. The page exposes semantic headings, labelled controls, navigation,
 regions, status text, exact timestamps, and visible fixture/live disclosures.
-A retained responsive screenshot remains part of final submission polish.
+The responsive artifact was visually inspected after capture; it complements
+the exact viewport/overflow measurements above.
 
 ## Known honest limitations
 
