@@ -6,7 +6,7 @@ Verified on 2026-08-21 against
 
 ## Automated gates
 
-- 59/59 unit, migration, ingestion, auth, replay, Country Pack, and healing
+- 63/63 unit, migration, ingestion, auth, replay, retry-safety, Country Pack, and healing
   evidence tests pass.
 - 5/5 production server-render tests pass.
 - TypeScript, ESLint, `git diff --check`, the deployment dry run, and the

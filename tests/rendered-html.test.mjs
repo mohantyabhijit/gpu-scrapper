@@ -109,5 +109,6 @@ test("publishes judge-facing data health without fabricating live state", async 
   assert.match(html, /same-ID rerun/);
   assert.match(html, /Current evidence state: pending/);
   assert.match(html, /brightdata\.com/);
+  assert.doesNotMatch(html, /Self-heal proved|Proven · same ID/i);
   assert.doesNotMatch(html, /c_gpu_|collectors online/i);
 });

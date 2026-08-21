@@ -9,7 +9,8 @@ import {
 } from "../../../lib/brightdata/refresh.ts";
 import type { RawOffer } from "../../../scrapers/contracts.ts";
 import { getSource, isKnownSource } from "../../../config/sources.ts";
-import type { ReplayGuard } from "../../../lib/d1/replay.ts";
+import { replayAcquired, releaseReplayClaim, type ReplayGuard, type ReplayClaim } from "../../../lib/d1/replay.ts";
+import { readBoundedBody, RequestBodyTooLargeError } from "../../../lib/http/bounded-body.ts";
 
 function runtimeEnvironment(): RefreshEnvironment {
   const runtime = globalThis as typeof globalThis & { RASTER_ENV?: RefreshEnvironment };
@@ -60,7 +61,13 @@ export async function handleRefreshRequest(
     replayGuard?: ReplayGuard;
   },
 ): Promise<Response> {
-  const body = await request.text();
+  let body: string;
+  try {
+    body = await readBoundedBody(request, 8 * 1024);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) return json({ error: "request_too_large" }, 413);
+    return json({ error: "request_unavailable" }, 400);
+  }
   const timestamp = request.headers.get("x-raster-timestamp");
   const authenticated = await authenticateRefreshRequest(
     timestamp,
@@ -83,8 +90,10 @@ export async function handleRefreshRequest(
     return json({ error: "bright_data_not_configured", requested: parsed.sourceSlugs }, 503);
   }
 
+  let replayClaim: boolean | ReplayClaim | undefined;
   try {
-    if (!timestamp || !await (dependencies.replayGuard ?? runtimeReplayGuard())("refresh", timestamp, body)) {
+    replayClaim = timestamp ? await (dependencies.replayGuard ?? runtimeReplayGuard())("refresh", timestamp, body) : false;
+    if (!timestamp || !replayAcquired(replayClaim)) {
       return json({ error: "replayed_request" }, 409);
     }
     const runner = dependencies.runner ?? createRefreshRunner(
@@ -93,8 +102,11 @@ export async function handleRefreshRequest(
       { onComplete: persistCompletedRun, resolveSource: dependencies.resolveSource ?? runtimeSourceResolver() },
     );
     const result = await runner(parsed);
-    return json(result, result.completed.length > 0 || result.notConfigured.length > 0 ? 200 : 502);
+    const accepted = result.completed.length > 0 || result.notConfigured.length > 0;
+    if (!accepted) await releaseReplayClaim(replayClaim);
+    return json(result, accepted ? 200 : 502);
   } catch {
+    await releaseReplayClaim(replayClaim);
     return json({ error: "refresh_unavailable" }, 503);
   }
 }

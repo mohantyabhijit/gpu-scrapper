@@ -94,7 +94,7 @@ h1 em,h2 em { color:var(--lime); font-style:normal; }
 .heal-timeline li { padding:8px 10px; border:1px solid #4f6149; color:#aeb8a8; font:10px ui-monospace,SFMono-Regular,Menlo,monospace; text-transform:uppercase; letter-spacing:.06em; }
 .heal-timeline li strong { color:inherit; }
 .heal-timeline li small { display:block; margin-top:6px; color:#8f998a; font-size:8px; letter-spacing:.03em; }
-.heal-timeline .heal-stage-proven { color:var(--lime); border-color:#5f7b54; background:#b9ef6a0b; }
+.heal-timeline .heal-stage-recorded { color:var(--orange); border-color:#795a41; background:#f2a15f0b; }
 .heal-timeline .heal-stage-pending { color:#777f77; border-color:#353b34; }
 .heal-timeline li[aria-current="step"] { color:var(--orange); border-color:#795a41; }
 .heal-proof-summary dl { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; margin:20px 0 0; }

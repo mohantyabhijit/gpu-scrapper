@@ -117,14 +117,14 @@ export default async function DataHealth() {
   const displayedChecks: readonly HealthCheck[] = withCatalogState.map((check) => check.key === "self-heal" && healing
     ? {
       ...check,
-      state: healing.complete ? "Proven · same ID" : `${healing.events.length}/7 stages recorded`,
-      tone: healing.complete ? "ready" : "pending",
+      state: healing.complete ? "Recorded · same ID" : `${healing.events.length}/7 stages recorded`,
+      tone: "pending",
       detail: healing.complete
-        ? `The full recovery finished on ${healing.sourceSlug} without changing Collector ${healing.collectorId}.`
+        ? `The operator ledger records a full sequence on ${healing.sourceSlug} without changing Collector ${healing.collectorId}; provider attestation is still required before this becomes proof.`
         : `Append-only evidence has reached ${healingLabels[healing.events.at(-1)!.stage]}; ${healing.nextStage ? healingLabels[healing.nextStage] : "completion"} is next.`,
       evidence: [
         { kind: "provider", label: healing.collectorId },
-        { kind: "policy", label: healing.complete ? "7/7 stages proved" : `${healing.events.length}/7 stages` },
+        { kind: "policy", label: healing.complete ? "7/7 events recorded" : `${healing.events.length}/7 stages` },
       ],
     }
     : check);
@@ -259,7 +259,7 @@ export default async function DataHealth() {
               const event = healing?.events[index];
               const current = !healing?.complete && healing?.nextStage === stage;
               return (
-                <li key={stage} className={event ? "heal-stage-proven" : "heal-stage-pending"} {...(current ? { "aria-current": "step" as const } : {})}>
+                <li key={stage} className={event ? "heal-stage-recorded" : "heal-stage-pending"} {...(current ? { "aria-current": "step" as const } : {})}>
                   <strong>{event ? "✓" : index + 1}</strong> {healingLabels[stage]}
                   {event ? <small>{healingTime.format(new Date(event.occurredAt))} UTC</small> : null}
                 </li>
@@ -268,7 +268,7 @@ export default async function DataHealth() {
           </ol>
           {healing ? (
             <div className="heal-proof-summary">
-              <p><strong>{healing.complete ? "Self-heal proved." : "Live rehearsal in progress."}</strong> Source <code>{healing.sourceSlug}</code> remains bound to <code>{healing.collectorId}</code> across every recorded stage.</p>
+              <p><strong>{healing.complete ? "Operator timeline complete; provider proof pending." : "Live rehearsal in progress."}</strong> Source <code>{healing.sourceSlug}</code> remains bound to <code>{healing.collectorId}</code> across every recorded stage. A verified provider attestation and artifact hashes are required before Raster calls this proved.</p>
               <dl>
                 <div><dt>Session</dt><dd>{healing.sessionId}</dd></div>
                 <div><dt>Collector</dt><dd>{healing.collectorId}</dd></div>

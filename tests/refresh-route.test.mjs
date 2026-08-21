@@ -287,6 +287,97 @@ test("route sanitizes an unexpected persistence exception", async () => {
   assert.deepEqual(await response.json(), { error: "refresh_unavailable" });
 });
 
+test("route releases a claimed receipt after failure so the signed request can be retried", async () => {
+  const body = JSON.stringify({ sourceSlugs: ["central-computer"], role: "combined" });
+  const request = await signedRequest(body, "refresh-secret");
+  let releases = 0;
+  const response = await handleRefreshRequest(request, {
+    environment: {
+      RASTER_INGEST_HMAC_SECRET: "refresh-secret",
+      BRIGHTDATA_API_KEY: "provider-secret",
+    },
+    nowSeconds: 1700000000,
+    replayGuard: async () => ({
+      acquired: true,
+      release: async () => { releases += 1; },
+    }),
+    runner: async () => {
+      throw new Error("transient provider failure");
+    },
+  });
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), { error: "refresh_unavailable" });
+  assert.equal(releases, 1);
+});
+
+test("route retains a claimed receipt after success", async () => {
+  const body = JSON.stringify({ sourceSlugs: ["central-computer"], role: "combined" });
+  const request = await signedRequest(body, "refresh-secret");
+  let releases = 0;
+  const response = await handleRefreshRequest(request, {
+    environment: {
+      RASTER_INGEST_HMAC_SECRET: "refresh-secret",
+      BRIGHTDATA_API_KEY: "provider-secret",
+    },
+    nowSeconds: 1700000000,
+    replayGuard: async () => ({
+      acquired: true,
+      release: async () => { releases += 1; },
+    }),
+    runner: async () => ({
+      requested: ["central-computer"],
+      completed: [{ sourceSlug: "central-computer", collectorId: "c_demo", responseId: "r_demo", rowCount: 1, attempts: 1 }],
+      notConfigured: [],
+      failed: [],
+    }),
+  });
+  assert.equal(response.status, 200);
+  assert.equal(releases, 0);
+});
+
+test("route releases a claimed receipt when every source reports a transient failure", async () => {
+  const body = JSON.stringify({ sourceSlugs: ["central-computer"], role: "combined" });
+  const request = await signedRequest(body, "refresh-secret");
+  let releases = 0;
+  const response = await handleRefreshRequest(request, {
+    environment: {
+      RASTER_INGEST_HMAC_SECRET: "refresh-secret",
+      BRIGHTDATA_API_KEY: "provider-secret",
+    },
+    nowSeconds: 1700000000,
+    replayGuard: async () => ({
+      acquired: true,
+      release: async () => { releases += 1; },
+    }),
+    runner: async () => ({
+      requested: ["central-computer"],
+      completed: [],
+      notConfigured: [],
+      failed: [{ sourceSlug: "central-computer", code: "provider_error" }],
+    }),
+  });
+  assert.equal(response.status, 502);
+  assert.equal(releases, 1);
+});
+
+test("route rejects an oversized body before authentication or provider execution", async () => {
+  const body = JSON.stringify({ sourceSlugs: ["central-computer"], role: "combined", padding: "x".repeat(9_000) });
+  const request = await signedRequest(body, "refresh-secret");
+  let runs = 0;
+  const response = await handleRefreshRequest(request, {
+    environment: {
+      RASTER_INGEST_HMAC_SECRET: "refresh-secret",
+      BRIGHTDATA_API_KEY: "provider-secret",
+    },
+    nowSeconds: 1700000000,
+    replayGuard: async () => true,
+    runner: async () => { runs += 1; throw new Error("must not run"); },
+  });
+  assert.equal(response.status, 413);
+  assert.deepEqual(await response.json(), { error: "request_too_large" });
+  assert.equal(runs, 0);
+});
+
 test("route rejects an authenticated replay before provider execution", async () => {
   const body = JSON.stringify({ sourceSlugs: ["central-computer"], role: "combined" });
   const request = await signedRequest(body, "refresh-secret");

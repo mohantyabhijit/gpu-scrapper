@@ -4,7 +4,8 @@ import {
   recordHealingEvent,
 } from "../../../lib/d1/healing-evidence.ts";
 import type { RasterDatabase } from "../../../lib/d1/repository.ts";
-import type { ReplayGuard } from "../../../lib/d1/replay.ts";
+import { replayAcquired, releaseReplayClaim, type ReplayGuard, type ReplayClaim } from "../../../lib/d1/replay.ts";
+import { readBoundedBody, RequestBodyTooLargeError } from "../../../lib/http/bounded-body.ts";
 
 type Environment = { RASTER_INGEST_HMAC_SECRET?: string };
 
@@ -29,8 +30,13 @@ type Dependencies = {
 };
 
 export async function handleHealEvidenceRequest(request: Request, dependencies: Dependencies): Promise<Response> {
-  const body = await request.text();
-  if (body.length > 32 * 1024) return json({ error: "request_too_large" }, 413);
+  let body: string;
+  try {
+    body = await readBoundedBody(request, 32 * 1024);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) return json({ error: "request_too_large" }, 413);
+    return json({ error: "request_unavailable" }, 400);
+  }
   const timestamp = request.headers.get("x-raster-timestamp");
   const authenticated = await authenticateRefreshRequest(
     timestamp,
@@ -42,14 +48,17 @@ export async function handleHealEvidenceRequest(request: Request, dependencies: 
   if (!authenticated) return json({ error: "unauthorized" }, 401);
   let parsed: unknown;
   try { parsed = JSON.parse(body); } catch { return json({ error: "Request body is invalid JSON" }, 400); }
+  let replayClaim: boolean | ReplayClaim | undefined;
   try {
     const db = dependencies.db ?? (await import("../../../db/index.ts")).getDb();
-    if (!timestamp || !await (dependencies.replayGuard ?? (await import("../../../lib/d1/replay.ts")).createReplayGuard(db))("heal-evidence", timestamp, body)) {
+    replayClaim = timestamp ? await (dependencies.replayGuard ?? (await import("../../../lib/d1/replay.ts")).createReplayGuard(db))("heal-evidence", timestamp, body) : false;
+    if (!timestamp || !replayAcquired(replayClaim)) {
       return json({ error: "replayed_request" }, 409);
     }
     const result = await (dependencies.recordEvent ?? recordHealingEvent)(db, parsed, dependencies.now ?? new Date());
     return json(result);
   } catch (error) {
+    await releaseReplayClaim(replayClaim);
     if (error instanceof HealingEvidenceValidationError) return json({ error: error.message }, 400);
     return json({ error: "heal_evidence_unavailable" }, 503);
   }
