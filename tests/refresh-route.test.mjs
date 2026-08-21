@@ -221,6 +221,133 @@ test("completed live-like rows reach the injected ingestion boundary with safe r
   }
 });
 
+test("the same provider response keeps one run identity across handling times", async () => {
+  const restore = configureCentralComputer();
+  try {
+    const runAt = async (observedAt) => {
+      const run = createRefreshRunner({ BRIGHTDATA_API_KEY: "provider-secret" }, {
+        fetchImpl: mockProvider([validRow]),
+        pollIntervalMs: 0,
+        sleep: async () => {},
+      }, { now: () => new Date(observedAt) });
+      return run({ sourceSlugs: ["central-computer"], role: "combined" });
+    };
+    const first = await runAt("2026-08-21T10:00:00.000Z");
+    const second = await runAt("2026-08-21T11:00:00.000Z");
+    assert.equal(first.completed[0].responseId, second.completed[0].responseId);
+    assert.equal(first.completed[0].runId, second.completed[0].runId);
+    assert.notEqual(first.completed[0].observedAt, second.completed[0].observedAt);
+  } finally {
+    restore();
+  }
+});
+
+test("different provider response IDs produce different bounded run identities", async () => {
+  const restore = configureCentralComputer();
+  try {
+    let responseNumber = 0;
+    const run = createRefreshRunner({ BRIGHTDATA_API_KEY: "provider-secret" }, {
+      fetchImpl: async (url, init) => {
+        if (init?.method === "POST") {
+          responseNumber += 1;
+          return new Response(JSON.stringify({ collection_id: `response-${responseNumber}` }), { status: 200 });
+        }
+        return new Response(JSON.stringify({ data: [validRow] }), { status: 200 });
+      },
+      pollIntervalMs: 0,
+      sleep: async () => {},
+    });
+    const first = await run({ sourceSlugs: ["central-computer"], role: "combined" });
+    const second = await run({ sourceSlugs: ["central-computer"], role: "combined" });
+    assert.notEqual(first.completed[0].runId, second.completed[0].runId);
+    assert.ok(first.completed[0].runId.length <= 200);
+    assert.ok(second.completed[0].runId.length <= 200);
+  } finally {
+    restore();
+  }
+});
+
+test("provider failure calls the sanitized failure callback exactly once", async () => {
+  const restore = configureCentralComputer();
+  try {
+    const failures = [];
+    const run = createRefreshRunner({ BRIGHTDATA_API_KEY: "provider-secret" }, {
+      fetchImpl: async () => new Response(JSON.stringify({ provider_secret: "do-not-leak" }), { status: 503 }),
+      pollIntervalMs: 0,
+      sleep: async () => {},
+    }, {
+      now: () => new Date("2026-08-21T10:02:00.000Z"),
+      onFailure: async (input) => { failures.push(input); },
+    });
+    const result = await run({ sourceSlugs: ["central-computer"], role: "combined" });
+    assert.deepEqual(result.failed, [{ sourceSlug: "central-computer", code: "provider_error" }]);
+    assert.equal(failures.length, 1);
+    assert.deepEqual(Object.keys(failures[0]).sort(), ["code", "collectorId", "failedAt", "source", "sourceSlug"]);
+    assert.equal(failures[0].code, "provider_error");
+    assert.equal(failures[0].failedAt, "2026-08-21T10:02:00.000Z");
+    assert.doesNotMatch(JSON.stringify(failures), /provider_secret|do-not-leak/);
+  } finally {
+    restore();
+  }
+});
+
+test("failure persistence exceptions become only persistence_error", async () => {
+  const restore = configureCentralComputer();
+  try {
+    const run = createRefreshRunner({ BRIGHTDATA_API_KEY: "provider-secret" }, {
+      fetchImpl: async () => new Response("provider body secret", { status: 429 }),
+      pollIntervalMs: 0,
+      sleep: async () => {},
+    }, {
+      onFailure: async () => { throw new Error("database provider body secret"); },
+    });
+    const result = await run({ sourceSlugs: ["central-computer"], role: "combined" });
+    assert.deepEqual(result.failed, [{ sourceSlug: "central-computer", code: "persistence_error" }]);
+    assert.doesNotMatch(JSON.stringify(result), /provider body secret|provider-secret/);
+  } finally {
+    restore();
+  }
+});
+
+test("route wires injected failure persistence into its runner factory", async () => {
+  const body = JSON.stringify({ sourceSlugs: ["central-computer"], role: "combined" });
+  const request = await signedRequest(body, "refresh-secret");
+  const failures = [];
+  const response = await handleRefreshRequest(request, {
+    environment: { RASTER_INGEST_HMAC_SECRET: "refresh-secret", BRIGHTDATA_API_KEY: "provider-secret" },
+    nowSeconds: 1700000000,
+    replayGuard: async () => true,
+    onFailure: async (input) => { failures.push(input); },
+    runnerFactory: (_environment, _clientOptions, options) => {
+      assert.equal(typeof options.onFailure, "function");
+      return async () => {
+        await options.onFailure({
+          source: sourceRegistry["central-computer"],
+          sourceSlug: "central-computer",
+          collectorId: "c_demo",
+          code: "provider_error",
+          failedAt: "2026-08-21T10:03:00.000Z",
+        });
+        return {
+          requested: ["central-computer"],
+          completed: [],
+          notConfigured: [],
+          failed: [{ sourceSlug: "central-computer", code: "provider_error" }],
+        };
+      };
+    },
+  });
+  assert.equal(response.status, 502);
+  assert.deepEqual(await response.json(), {
+    requested: ["central-computer"],
+    completed: [],
+    notConfigured: [],
+    failed: [{ sourceSlug: "central-computer", code: "provider_error" }],
+  });
+  assert.equal(failures.length, 1);
+  assert.equal(failures[0].code, "provider_error");
+});
+
 test("completed rows quarantine invalid output before persistence", async () => {
   const restore = configureCentralComputer();
   try {

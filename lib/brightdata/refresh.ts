@@ -40,7 +40,7 @@ export type RefreshResult = {
   requested: SourceSlug[];
   completed: RefreshSuccess[];
   notConfigured: SourceSlug[];
-  failed: Array<{ sourceSlug: SourceSlug; code: string }>;
+  failed: Array<{ sourceSlug: SourceSlug; code: RefreshFailureCode }>;
 };
 
 export class RefreshRequestError extends Error {}
@@ -57,8 +57,27 @@ export type RefreshCompletionInput = {
 
 export type RefreshCompletion = (input: RefreshCompletionInput) => void | Promise<void>;
 
+export type RefreshFailureCode =
+  | "not_configured"
+  | "invalid_response"
+  | "provider_error"
+  | "timeout"
+  | "persistence_error";
+
+/** Deliberately excludes provider payloads, exception messages, and secrets. */
+export type RefreshFailureInput = {
+  source: SourceDefinition;
+  sourceSlug: SourceSlug;
+  collectorId: string;
+  code: RefreshFailureCode;
+  failedAt: string;
+};
+
+export type RefreshFailure = (input: RefreshFailureInput) => void | Promise<void>;
+
 export type RefreshRunnerOptions = {
   onComplete?: RefreshCompletion;
+  onFailure?: RefreshFailure;
   now?: () => Date;
   resolveSource?: SourceResolver;
 };
@@ -117,13 +136,22 @@ export async function authenticateRefreshRequest(
   return different === 0;
 }
 
-function safeRunId(sourceSlug: SourceSlug, responseId: string, observedAt: string): string {
-  const suffix = `${sourceSlug}-${responseId}-${observedAt}`
+function safeRunPart(value: string, fallback: string): string {
+  const part = value
     .replace(/[^a-zA-Z0-9._-]+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "")
-    .slice(0, 180);
-  return `run-${suffix || sourceSlug}`;
+    .slice(0, 64);
+  return part || fallback;
+}
+
+async function safeRunId(sourceSlug: SourceSlug, responseId: string): Promise<string> {
+  // The complete immutable identity is hashed so long or adversarial response
+  // IDs cannot collide merely because their bounded display prefix matches.
+  const identity = `${sourceSlug}\u0000${responseId}`;
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(identity));
+  const hash = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `run-${safeRunPart(sourceSlug, "source")}-${safeRunPart(responseId, "response")}-${hash.slice(0, 24)}`;
 }
 
 export function createRefreshRunner(
@@ -155,7 +183,21 @@ export function createRefreshRunner(
       client = createBrightDataClient({ ...clientOptions, apiKey: environment.BRIGHTDATA_API_KEY });
     } catch (error) {
       const code = error instanceof BrightDataError ? error.code : "not_configured";
-      for (const source of configured) failed.push({ sourceSlug: source.sourceSlug, code });
+      for (const source of configured) {
+        let failureCode: RefreshFailureCode = code;
+        try {
+          await runnerOptions.onFailure?.({
+            source: source.source,
+            sourceSlug: source.sourceSlug,
+            collectorId: source.collectorId,
+            code,
+            failedAt: (runnerOptions.now ?? (() => new Date()))().toISOString(),
+          });
+        } catch {
+          failureCode = "persistence_error";
+        }
+        failed.push({ sourceSlug: source.sourceSlug, code: failureCode });
+      }
       return { requested: request.sourceSlugs, completed, notConfigured, failed };
     }
     for (const source of configured) {
@@ -166,7 +208,7 @@ export function createRefreshRunner(
           inputUrl: source.inputUrl,
         });
         const observedAt = (runnerOptions.now ?? (() => new Date()))().toISOString();
-        const runId = safeRunId(source.sourceSlug, run.responseId, observedAt);
+        const runId = await safeRunId(source.sourceSlug, run.responseId);
         try {
           await runnerOptions.onComplete?.({
             sourceSlug: source.sourceSlug,
@@ -191,10 +233,20 @@ export function createRefreshRunner(
           attempts: run.attempts,
         });
       } catch (error) {
-        failed.push({
-          sourceSlug: source.sourceSlug,
-          code: error instanceof BrightDataError ? error.code : "provider_error",
-        });
+        const code: RefreshFailureCode = error instanceof BrightDataError ? error.code : "provider_error";
+        let failureCode: RefreshFailureCode = code;
+        try {
+          await runnerOptions.onFailure?.({
+            source: source.source,
+            sourceSlug: source.sourceSlug,
+            collectorId: source.collectorId,
+            code,
+            failedAt: (runnerOptions.now ?? (() => new Date()))().toISOString(),
+          });
+        } catch {
+          failureCode = "persistence_error";
+        }
+        failed.push({ sourceSlug: source.sourceSlug, code: failureCode });
       }
     }
     return { requested: request.sourceSlugs, completed, notConfigured, failed };

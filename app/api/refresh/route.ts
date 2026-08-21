@@ -5,6 +5,7 @@ import {
   RefreshRequestError,
   type RefreshCompletionInput,
   type RefreshEnvironment,
+  type RefreshFailure,
   type SourceResolver,
 } from "../../../lib/brightdata/refresh.ts";
 import type { RawOffer } from "../../../scrapers/contracts.ts";
@@ -51,12 +52,24 @@ async function persistCompletedRun(input: RefreshCompletionInput): Promise<void>
   });
 }
 
+async function persistFailedRun(input: Parameters<RefreshFailure>[0]): Promise<void> {
+  // Keep the failure boundary server-only and lazy for the same reason as the
+  // success path: injected runner tests must not load a database binding.
+  const [{ getDb }, { persistSourceFailure }] = await Promise.all([
+    import("../../../db/index.ts"),
+    import("../../../lib/postgres/repository.ts"),
+  ]);
+  await persistSourceFailure(getDb(), input);
+}
+
 export async function handleRefreshRequest(
   request: Request,
   dependencies: {
     environment: RefreshEnvironment;
     nowSeconds?: number;
     runner?: ReturnType<typeof createRefreshRunner>;
+    runnerFactory?: typeof createRefreshRunner;
+    onFailure?: RefreshFailure;
     resolveSource?: SourceResolver;
     replayGuard?: ReplayGuard;
     rateGuard?: SourceRateGuard;
@@ -108,10 +121,15 @@ export async function handleRefreshRequest(
         { "Retry-After": String(rateClaim.retryAfterSeconds) },
       );
     }
-    const runner = dependencies.runner ?? createRefreshRunner(
+    const createRunner = dependencies.runnerFactory ?? createRefreshRunner;
+    const runner = dependencies.runner ?? createRunner(
       dependencies.environment,
       {},
-      { onComplete: persistCompletedRun, resolveSource: dependencies.resolveSource ?? runtimeSourceResolver() },
+      {
+        onComplete: persistCompletedRun,
+        onFailure: dependencies.onFailure ?? persistFailedRun,
+        resolveSource: dependencies.resolveSource ?? runtimeSourceResolver(),
+      },
     );
     const result = await runner(parsed);
     const accepted = result.failed.length === 0 && (result.completed.length > 0 || result.notConfigured.length > 0);

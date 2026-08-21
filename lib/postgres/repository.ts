@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import * as schema from "../../db/schema.ts";
 import { getSource, isKnownSource, type CollectorId, type CollectorRole, type SourceDefinition, type SourceRole, type SourceSlug } from "../../config/sources.ts";
 import type { IngestionResult } from "../ingest.ts";
+import type { RefreshFailureCode, RefreshFailureInput } from "../brightdata/refresh.ts";
 
 export type RasterDatabase = PostgresJsDatabase<typeof schema>;
 type RasterStatement = PromiseLike<unknown>;
@@ -24,6 +25,13 @@ export type PersistenceResult = {
   observationsAttempted: number;
   quarantinedAttempted: number;
   status: "healthy" | "degraded" | "empty";
+};
+
+export type SourceFailurePersistenceInput = Pick<RefreshFailureInput, "source" | "sourceSlug" | "collectorId" | "code" | "failedAt">;
+
+export type SourceFailurePersistenceResult = {
+  runId: string;
+  status: "degraded";
 };
 
 function parseJson<T>(value: unknown, fallback: T): T {
@@ -74,6 +82,33 @@ function validationSummary(result: IngestionResult): string {
     for (const code of row.reasonCodes) codes.set(code, (codes.get(code) ?? 0) + 1);
   }
   return JSON.stringify(Object.fromEntries(codes));
+}
+
+const safeFailureCodes = new Set<RefreshFailureCode>([
+  "not_configured",
+  "invalid_response",
+  "provider_error",
+  "timeout",
+  "persistence_error",
+]);
+
+function safeFailureCode(code: unknown): RefreshFailureCode {
+  return typeof code === "string" && safeFailureCodes.has(code as RefreshFailureCode)
+    ? code as RefreshFailureCode
+    : "provider_error";
+}
+
+/** Bounded deterministic identity for one persisted provider failure. */
+function failureRunId(input: SourceFailurePersistenceInput, code: RefreshFailureCode): string {
+  const identity = `${input.sourceSlug}\u0000${input.collectorId}\u0000${code}\u0000${input.failedAt}`;
+  let hash = BigInt("14695981039346656037");
+  const prime = BigInt("1099511628211");
+  for (let index = 0; index < identity.length; index += 1) {
+    hash ^= BigInt(identity.charCodeAt(index));
+    hash = BigInt.asUintN(64, hash * prime);
+  }
+  const source = input.sourceSlug.replace(/[^a-zA-Z0-9._-]+/g, "-").slice(0, 64) || "source";
+  return `failure-${source}-${hash.toString(16).padStart(16, "0")}`;
 }
 
 function assertBatchBelongsToSource(result: IngestionResult, context: PersistenceContext): void {
@@ -242,10 +277,11 @@ function runAndQuarantineUpserts(
 function degradedOfferUpdate(
   db: RasterDatabase,
   sourceSlug: SourceSlug,
-  observedAt: string,
 ): RasterStatement {
   return db.update(schema.offers)
-    .set({ health: "degraded", updatedAt: observedAt })
+    // Keep every last-known-good value, including its observation and update
+    // timestamps; only source health changes after a provider failure.
+    .set({ health: "degraded" })
     .where(eq(schema.offers.sourceSlug, sourceSlug));
 }
 
@@ -260,12 +296,56 @@ function buildPersistenceStatements(
   if (status === "degraded") {
     // Degrade the previous snapshot first; accepted rows in this run are then
     // restored to healthy by their upserts below.
-    statements.push(degradedOfferUpdate(db, context.sourceSlug, context.observedAt));
+    statements.push(degradedOfferUpdate(db, context.sourceSlug));
   }
   statements.push(...productUpserts(db, result, context.observedAt));
   statements.push(...offerAndObservationUpserts(db, result, context.runId));
   statements.push(...runAndQuarantineUpserts(db, result, { ...context, source }, status));
   return statements;
+}
+
+/**
+ * Persist a provider/client failure without replacing the source's last
+ * successful offer snapshot. The failure run identity is deterministic for
+ * the sanitized failure input, making retries an idempotent upsert.
+ */
+export async function persistSourceFailure(
+  db: RasterDatabase,
+  input: SourceFailurePersistenceInput,
+): Promise<SourceFailurePersistenceResult> {
+  if (!input.sourceSlug.trim()) throw new Error("sourceSlug is required");
+  if (!input.collectorId.trim()) throw new Error("collectorId is required");
+  if (!input.failedAt.trim()) throw new Error("failedAt is required");
+  if (input.source.slug !== input.sourceSlug) throw new Error("source metadata does not match sourceSlug");
+  const code = safeFailureCode(input.code);
+  const runId = failureRunId(input, code);
+  const summary = JSON.stringify({ failureCode: code });
+  await db.transaction(async (tx) => {
+    await sourceUpsert(tx as RasterDatabase, input.source);
+    await degradedOfferUpdate(tx as RasterDatabase, input.sourceSlug);
+    await tx.insert(schema.collectorRuns).values({
+      runId,
+      sourceSlug: input.sourceSlug,
+      market: input.source.region,
+      currency: input.source.currency,
+      status: "degraded",
+      acceptedCount: 0,
+      rejectedCount: 0,
+      startedAt: input.failedAt,
+      finishedAt: input.failedAt,
+      validationSummary: summary,
+    }).onConflictDoUpdate({
+      target: schema.collectorRuns.runId,
+      set: {
+        status: "degraded",
+        acceptedCount: 0,
+        rejectedCount: 0,
+        finishedAt: input.failedAt,
+        validationSummary: summary,
+      },
+    });
+  });
+  return { runId, status: "degraded" };
 }
 
 /** Persist the complete normalized run in one hosted PostgreSQL transaction. */

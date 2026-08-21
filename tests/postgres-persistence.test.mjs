@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { ingestRows } from "../lib/ingest.ts";
-import { persistIngestion } from "../lib/postgres/repository.ts";
+import { persistIngestion, persistSourceFailure } from "../lib/postgres/repository.ts";
+import { sourceRegistry } from "../config/sources.ts";
 import { createPostgresTestDatabase } from "./postgres-test-db.mjs";
 
 let fixture;
@@ -117,4 +118,43 @@ test("PostgreSQL persistence rolls back every statement after a mid-transaction 
       (SELECT count(*) FROM collector_runs)::int AS runs
   `;
   assert.deepEqual(rows[0], before[0]);
+});
+
+test("provider failure persistence preserves last-known-good fields and is idempotent", async () => {
+  await persistIngestion(fixture.db, batch("pg-failure-seed", [validRow]), { ...context, runId: "pg-failure-seed" });
+  const before = await fixture.sql`
+    SELECT price_minor, availability, product_url, observed_at, updated_at
+    FROM offers WHERE source_slug = 'central-computer'
+  `;
+  const failure = {
+    source: sourceRegistry["central-computer"],
+    sourceSlug: "central-computer",
+    collectorId: "c_failure",
+    code: "timeout",
+    failedAt: "2026-08-21T12:00:00.000Z",
+  };
+  const first = await persistSourceFailure(fixture.db, failure);
+  const second = await persistSourceFailure(fixture.db, failure);
+  assert.equal(first.runId, second.runId);
+  const after = await fixture.sql`
+    SELECT price_minor, availability, product_url, observed_at, updated_at, health
+    FROM offers WHERE source_slug = 'central-computer'
+  `;
+  assert.deepEqual(after[0], { ...before[0], health: "degraded" });
+  const runs = await fixture.sql`
+    SELECT count(*)::int AS count, status, accepted_count, validation_summary
+    FROM collector_runs
+    WHERE run_id = ${first.runId}
+    GROUP BY status, accepted_count, validation_summary
+  `;
+  assert.deepEqual(runs[0], {
+    count: 1,
+    status: "degraded",
+    accepted_count: 0,
+    validation_summary: JSON.stringify({ failureCode: "timeout" }),
+  });
+
+  await persistIngestion(fixture.db, batch("pg-failure-recovery", [validRow]), { ...context, runId: "pg-failure-recovery" });
+  const recovered = await fixture.sql`SELECT health FROM offers WHERE source_slug = 'central-computer'`;
+  assert.equal(recovered[0].health, "healthy");
 });
