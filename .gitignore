@@ -1,0 +1,60 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+*.tsbuildinfo
+
+# next.js
+/.next/
+/.next/**
+/.vinext/
+/out/
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (only the names-only example is safe to publish)
+.env*
+!.env.example
+!.env.example.*
+
+# local secrets and provider output
+.secrets/
+*.secret
+/evidence/raw/
+/evidence/private/
+/evidence/**/*.raw.json
+/evidence/**/*.private.json
+/outputs/
+
+# vercel
+.vercel
+
+/dist/
+/dist/**
+/.wrangler/
+/.wrangler/**
+/outputs/
+/work/
+
+# local reports and logs
+*.log
+*.trace
+*.har

@@ -1,0 +1,180 @@
+/**
+ * Public source manifest. Collector IDs are deliberately absent until a
+ * source passes the organizer's long-tail and pre-built-coverage checks.
+ * Keep credentials out of this file; the live runner resolves them from its
+ * secret store.
+ */
+
+export type SourceRole = "primary" | "secondary" | "backup";
+export type MarketRegion = "US" | "UK" | "IN" | "SG";
+export type Currency = "USD" | "GBP" | "INR" | "SGD";
+export type CollectorRole = "discovery" | "pdp" | "combined";
+export type CollectorId = `c_${string}`;
+
+/**
+ * IDs are keyed by the Scraper Studio role so a source can grow from one
+ * combined collector into discovery + PDP without changing its source slug.
+ * Empty objects are intentional until the authenticated pre-built-library and
+ * public-data gates pass and a real collector is created.
+ */
+export type CollectorIds = Partial<Record<CollectorRole, CollectorId>>;
+
+export type SourceDefinition = {
+  slug: string;
+  displayName: string;
+  role: SourceRole;
+  region: MarketRegion;
+  currency: Currency;
+  baseUrl: string;
+  allowedHosts: readonly string[];
+  catalogUrl: string;
+  enabled: boolean;
+  collectorIds: CollectorIds;
+  collectorRoles: readonly CollectorRole[];
+};
+
+export const sourceRegistry = {
+  "central-computer": {
+    slug: "central-computer",
+    displayName: "Central Computers",
+    role: "primary",
+    region: "US",
+    currency: "USD",
+    baseUrl: "https://www.centralcomputer.com",
+    allowedHosts: ["centralcomputer.com", "www.centralcomputer.com"],
+    catalogUrl: "https://www.centralcomputer.com/all-products/hardware/video-cards/video-cards.html",
+    enabled: false,
+    collectorIds: {},
+    collectorRoles: ["combined"],
+  },
+  "micro-center": {
+    slug: "micro-center",
+    displayName: "Micro Center",
+    role: "secondary",
+    region: "US",
+    currency: "USD",
+    baseUrl: "https://www.microcenter.com",
+    allowedHosts: ["microcenter.com", "www.microcenter.com"],
+    catalogUrl: "https://www.microcenter.com/site/products/graphics-cards.aspx",
+    enabled: false,
+    collectorIds: {},
+    collectorRoles: ["combined"],
+  },
+  "overclockers-uk": {
+    slug: "overclockers-uk",
+    displayName: "Overclockers UK",
+    role: "primary",
+    region: "UK",
+    currency: "GBP",
+    baseUrl: "https://www.overclockers.co.uk",
+    allowedHosts: ["overclockers.co.uk", "www.overclockers.co.uk"],
+    catalogUrl: "https://www.overclockers.co.uk/pc-components/graphics-cards",
+    enabled: false,
+    collectorIds: {},
+    collectorRoles: ["combined"],
+  },
+  ccl: {
+    slug: "ccl",
+    displayName: "CCL Computers",
+    role: "secondary",
+    region: "UK",
+    currency: "GBP",
+    baseUrl: "https://www.cclonline.com",
+    allowedHosts: ["cclonline.com", "www.cclonline.com"],
+    catalogUrl: "https://www.cclonline.com/pc-components/graphics-cards/",
+    enabled: false,
+    collectorIds: {},
+    collectorRoles: ["combined"],
+  },
+  "md-computers": {
+    slug: "md-computers",
+    displayName: "MDComputers",
+    role: "primary",
+    region: "IN",
+    currency: "INR",
+    baseUrl: "https://mdcomputers.in",
+    allowedHosts: ["mdcomputers.in", "www.mdcomputers.in"],
+    catalogUrl: "https://mdcomputers.in/catalog/graphics-card/nvidia",
+    enabled: false,
+    collectorIds: {},
+    collectorRoles: ["combined"],
+  },
+  "scl-gaming": {
+    slug: "scl-gaming",
+    displayName: "SCL Gaming",
+    role: "secondary",
+    region: "IN",
+    currency: "INR",
+    baseUrl: "https://sclgaming.in",
+    allowedHosts: ["sclgaming.in", "www.sclgaming.in"],
+    catalogUrl: "https://sclgaming.in/product-category/graphics-card/",
+    enabled: false,
+    collectorIds: {},
+    collectorRoles: ["combined"],
+  },
+  dynacore: {
+    slug: "dynacore",
+    displayName: "Dynacore Technologies",
+    role: "primary",
+    region: "SG",
+    currency: "SGD",
+    baseUrl: "https://dynacoretech.com",
+    allowedHosts: ["dynacoretech.com", "www.dynacoretech.com"],
+    catalogUrl: "https://dynacoretech.com/collections/all/graphics-card",
+    enabled: false,
+    collectorIds: {},
+    collectorRoles: ["combined"],
+  },
+  "electronics-crazy": {
+    slug: "electronics-crazy",
+    displayName: "ElectronicsCrazy.sg",
+    role: "secondary",
+    region: "SG",
+    currency: "SGD",
+    baseUrl: "https://www.electronicscrazy.sg",
+    allowedHosts: ["electronicscrazy.sg", "www.electronicscrazy.sg"],
+    catalogUrl: "https://www.electronicscrazy.sg/gaming-gadgets/gaming-graphics-cards/",
+    enabled: false,
+    collectorIds: {},
+    collectorRoles: ["combined"],
+  },
+  bizgram: {
+    slug: "bizgram",
+    displayName: "Bizgram Asia",
+    role: "backup",
+    region: "SG",
+    currency: "SGD",
+    baseUrl: "https://www.bizgram.com",
+    allowedHosts: ["bizgram.com", "www.bizgram.com"],
+    catalogUrl: "https://www.bizgram.com/product-category/graphic-card/",
+    enabled: false,
+    collectorIds: {},
+    collectorRoles: ["combined"],
+  },
+} satisfies Record<string, SourceDefinition>;
+
+export type SourceSlug = keyof typeof sourceRegistry;
+
+export function getSource(slug: string): SourceDefinition {
+  const source = sourceRegistry[slug as SourceSlug];
+  if (!source) throw new Error(`Unknown source slug: ${slug}`);
+  return source;
+}
+
+export function isKnownSource(slug: string): slug is SourceSlug {
+  return slug in sourceRegistry;
+}
+
+export function sourceHostIsAllowed(slug: string, url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "https:") return false;
+  const source = getSource(slug);
+  return source.allowedHosts.some(
+    (host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`),
+  );
+}
