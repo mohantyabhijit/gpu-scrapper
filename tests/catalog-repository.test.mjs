@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { classifyFreshness, loadCatalog, mapPostgresOffer } from "../lib/d1/catalog.ts";
+import { classifyFreshness, loadCatalog, mapPostgresOffer } from "../lib/postgres/catalog.ts";
 
 const validRow = {
   offerKey: "central-computer:rtx-5080-1",

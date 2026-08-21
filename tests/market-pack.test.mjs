@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { handleMarketPackRequest } from "../app/api/market-packs/route.ts";
 import * as schema from "../db/schema.ts";
-import { MarketPackValidationError, upsertMarketPack, validateMarketPack } from "../lib/d1/market-packs.ts";
+import { MarketPackValidationError, upsertMarketPack, validateMarketPack } from "../lib/postgres/market-packs.ts";
 import { signatureFor, runMarketPack } from "../scripts/sign-market-pack.mjs";
 
 const valid = {

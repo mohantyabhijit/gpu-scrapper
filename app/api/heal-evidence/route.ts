@@ -2,9 +2,9 @@ import { authenticateRefreshRequest } from "../../../lib/brightdata/refresh.ts";
 import {
   HealingEvidenceValidationError,
   recordHealingEvent,
-} from "../../../lib/d1/healing-evidence.ts";
-import type { RasterDatabase } from "../../../lib/d1/repository.ts";
-import { completeReplayClaim, replayAcquired, releaseReplayClaim, type ReplayGuard, type ReplayClaim } from "../../../lib/d1/replay.ts";
+} from "../../../lib/postgres/healing-evidence.ts";
+import type { RasterDatabase } from "../../../lib/postgres/repository.ts";
+import { completeReplayClaim, replayAcquired, releaseReplayClaim, type ReplayGuard, type ReplayClaim } from "../../../lib/postgres/replay.ts";
 import { readBoundedBody, RequestBodyTooLargeError } from "../../../lib/http/bounded-body.ts";
 
 type Environment = { RASTER_INGEST_HMAC_SECRET?: string };
@@ -51,7 +51,7 @@ export async function handleHealEvidenceRequest(request: Request, dependencies: 
   let replayClaim: boolean | ReplayClaim | undefined;
   try {
     const db = dependencies.db ?? (await import("../../../db/index.ts")).getDb();
-    replayClaim = timestamp ? await (dependencies.replayGuard ?? (await import("../../../lib/d1/replay.ts")).createReplayGuard(db))("heal-evidence", timestamp, body) : false;
+    replayClaim = timestamp ? await (dependencies.replayGuard ?? (await import("../../../lib/postgres/replay.ts")).createReplayGuard(db))("heal-evidence", timestamp, body) : false;
     if (!timestamp || !replayAcquired(replayClaim)) {
       return json({ error: "replayed_request" }, 409);
     }

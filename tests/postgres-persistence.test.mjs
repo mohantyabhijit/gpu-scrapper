@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { ingestRows } from "../lib/ingest.ts";
-import { persistIngestion } from "../lib/d1/repository.ts";
+import { persistIngestion } from "../lib/postgres/repository.ts";
 import { createPostgresTestDatabase } from "./postgres-test-db.mjs";
 
 let fixture;

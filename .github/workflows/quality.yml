@@ -71,7 +71,10 @@ jobs:
       - name: Type-check
         run: npx tsc --noEmit
 
-      - name: Unit, migration, and security tests
+      - name: Verify deterministic PostgreSQL migrations
+        run: npm run db:check
+
+      - name: Unit and security tests
         run: npm run test:unit
 
       - name: PostgreSQL integration tests

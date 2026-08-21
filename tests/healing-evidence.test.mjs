@@ -1,9 +1,5 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
-import { DatabaseSync } from "node:sqlite";
-import { drizzle } from "drizzle-orm/d1";
-import * as schema from "../db/schema.ts";
 import {
   HealingEvidenceValidationError,
   HEALING_STAGES,
@@ -11,9 +7,10 @@ import {
   nextHealingStage,
   recordHealingEvent,
   validateHealingEvent,
-} from "../lib/d1/healing-evidence.ts";
+} from "../lib/postgres/healing-evidence.ts";
 import { handleHealEvidenceRequest } from "../app/api/heal-evidence/route.ts";
 import { runHealEvent, signatureFor } from "../scripts/sign-heal-event.mjs";
+import { createSqliteTestDatabase } from "./sqlite-test-db.mjs";
 
 const healthy = {
   sessionId: "heal-example-japan-20260821",
@@ -38,35 +35,7 @@ function healRequest(body, secret = "heal-evidence-secret", timestamp = "1700000
 }
 
 async function realHealingDatabase() {
-  const sqlite = new DatabaseSync(":memory:");
-  for (const migration of [
-    "0000_cuddly_kylun.sql",
-    "0001_mute_ted_forrester.sql",
-    "0002_eager_prodigy.sql",
-    "0003_light_mandrill.sql",
-    "0004_giant_madame_masque.sql",
-    "0005_freeze_ready_country_pack.sql",
-  ]) sqlite.exec(await readFile(new URL(`../drizzle/${migration}`, import.meta.url), "utf8"));
-  const prepared = (sql) => ({
-    bind(...params) {
-      const statement = sqlite.prepare(sql);
-      return {
-        async first(column) {
-          const row = statement.get(...params);
-          return column && row ? row[column] : row;
-        },
-        async all() { return { results: statement.all(...params), success: true, meta: {} }; },
-        async run() { statement.run(...params); return { success: true, meta: {} }; },
-        async raw() { return statement.all(...params).map((row) => Object.values(row)); },
-      };
-    },
-  });
-  const d1 = {
-    prepare: prepared,
-    async batch(statements) { return Promise.all(statements.map((statement) => statement.run())); },
-    async exec(sql) { sqlite.exec(sql); return { count: 0, duration: 0 }; },
-  };
-  return { sqlite, db: drizzle(d1, { schema }) };
+  return createSqliteTestDatabase();
 }
 
 test("healing stages encode the complete same-ID demonstration", () => {

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { loadCatalog } from "../../lib/d1/catalog";
+import { loadCatalog } from "../../lib/postgres/catalog";
 
 export default async function HowItWorks() {
   const snapshot = await loadCatalog();

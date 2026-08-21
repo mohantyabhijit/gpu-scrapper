@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import type { RasterDatabase } from "../../../lib/d1/repository.ts";
+import type { RasterDatabase } from "../../../lib/postgres/repository.ts";
 
 const noStoreHeaders = { "cache-control": "no-store", "content-type": "application/json" };
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatPrice, getMarket, markets, type Offer } from "./catalog";
-import { loadCatalog } from "../lib/d1/catalog";
+import { loadCatalog } from "../lib/postgres/catalog";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 type FilterKey = "q" | "gpu" | "source" | "availability" | "sort";

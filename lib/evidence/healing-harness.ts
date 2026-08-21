@@ -50,7 +50,7 @@ export const REQUIRED_DOWNSTREAM_PATHS = [
   "lib/brightdata/refresh.ts",
   "app/api/refresh/route.ts",
   "lib/ingest.ts",
-  "lib/d1/repository.ts",
+  "lib/postgres/repository.ts",
   "app/page.tsx",
 ] as const;
 

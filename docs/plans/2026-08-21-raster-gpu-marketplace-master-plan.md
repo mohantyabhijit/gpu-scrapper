@@ -290,7 +290,7 @@ P0 is the judge-ready slice: a four-market storefront and contracts, two healthy
 
 - **Goal:** Convert validated source rows into auditable current offers and price history without erasing good data on failure.
 - **Requirements:** R14-R16, R22.
-- **Files:** `gpuverse/.openai/hosting.json`, `gpuverse/vite.config.ts`, `gpuverse/db/schema.ts`, `gpuverse/db/index.ts`, `gpuverse/drizzle/*.sql`, `gpuverse/lib/normalize/gpu.ts`, `gpuverse/lib/ingest.ts`, `gpuverse/tests/normalization.test.ts`, `gpuverse/tests/ingestion.test.ts`.
+- **Files:** `gpuverse/.openai/hosting.json`, `gpuverse/vite.config.ts`, `gpuverse/db/schema.ts`, `gpuverse/db/index.ts`, `gpuverse/drizzle-postgres/*.sql`, `gpuverse/lib/normalize/gpu.ts`, `gpuverse/lib/ingest.ts`, `gpuverse/tests/normalization.test.ts`, `gpuverse/tests/ingestion.test.ts`.
 - **Approach:** Provision hosted PostgreSQL behind a private Hyperdrive/VPC binding, configure Worker and local/test behavior, apply migrations before first ingestion, then implement canonical identity matching with MPN-first rules, minor-unit prices, explicit currencies, deterministic run/checksum keys, transactional upserts, append-only observations, and quarantine. Keep source titles and URLs for auditability.
 - **Test scenarios:**
   1. Two naming variants with the same public MPN map to one product and two offers.

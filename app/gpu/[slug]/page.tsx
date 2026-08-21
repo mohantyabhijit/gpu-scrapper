@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatPrice as formatCurrencyPrice, getMarket, markets, models, type Currency } from "../../catalog";
-import { loadCatalog } from "../../../lib/d1/catalog";
+import { loadCatalog } from "../../../lib/postgres/catalog";
 
 export function generateStaticParams() {
   return models.map((model) => ({ slug: model.slug }));

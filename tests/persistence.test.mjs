@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { ingestRows } from "../lib/ingest.ts";
-import { persistIngestion } from "../lib/d1/repository.ts";
+import { persistIngestion } from "../lib/postgres/repository.ts";
 import * as schema from "../db/schema.ts";
 
 class FakeInsert {

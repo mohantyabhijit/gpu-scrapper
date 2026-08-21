@@ -1,32 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
-import { DatabaseSync } from "node:sqlite";
-import { drizzle } from "drizzle-orm/d1";
-import * as schema from "../db/schema.ts";
-import { createReplayGuard, createSourceRateGuard } from "../lib/d1/replay.ts";
+import { createReplayGuard, createSourceRateGuard } from "../lib/postgres/replay.ts";
+import { createSqliteTestDatabase } from "./sqlite-test-db.mjs";
 
 async function realReplayDatabase() {
-  const sqlite = new DatabaseSync(":memory:");
-  for (const migration of ["0000_cuddly_kylun.sql", "0001_mute_ted_forrester.sql", "0002_eager_prodigy.sql", "0003_light_mandrill.sql"]) {
-    sqlite.exec(await readFile(new URL(`../drizzle/${migration}`, import.meta.url), "utf8"));
-  }
-  const d1 = {
-    prepare(sql) {
-      return { bind(...params) {
-        const statement = sqlite.prepare(sql);
-        return {
-          async first(column) { const row = statement.get(...params); return column && row ? row[column] : row; },
-          async all() { return { results: statement.all(...params), success: true, meta: {} }; },
-          async run() { statement.run(...params); return { success: true, meta: {} }; },
-          async raw() { return statement.all(...params).map((row) => Object.values(row)); },
-        };
-      } };
-    },
-    async batch(statements) { return Promise.all(statements.map((statement) => statement.run())); },
-    async exec(sql) { sqlite.exec(sql); return { count: 0, duration: 0 }; },
-  };
-  return { sqlite, db: drizzle(d1, { schema }) };
+  return createSqliteTestDatabase();
 }
 
 function replayDatabase({ inserted = true, existingExpiresAt } = {}) {

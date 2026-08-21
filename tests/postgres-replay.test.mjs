@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { createPostgresTestDatabase } from "./postgres-test-db.mjs";
-import { createReplayGuard, createSourceRateGuard } from "../lib/d1/replay.ts";
+import { createReplayGuard, createSourceRateGuard } from "../lib/postgres/replay.ts";
 
 let fixture;
 

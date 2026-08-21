@@ -9,7 +9,7 @@ import {
 } from "../../../lib/brightdata/refresh.ts";
 import type { RawOffer } from "../../../scrapers/contracts.ts";
 import { getSource, isKnownSource } from "../../../config/sources.ts";
-import { completeReplayClaim, replayAcquired, releaseReplayClaim, type RateClaim, type ReplayGuard, type ReplayClaim, type SourceRateGuard } from "../../../lib/d1/replay.ts";
+import { completeReplayClaim, replayAcquired, releaseReplayClaim, type RateClaim, type ReplayGuard, type ReplayClaim, type SourceRateGuard } from "../../../lib/postgres/replay.ts";
 import { readBoundedBody, RequestBodyTooLargeError } from "../../../lib/http/bounded-body.ts";
 
 function runtimeEnvironment(): RefreshEnvironment {
@@ -33,7 +33,7 @@ async function persistCompletedRun(input: RefreshCompletionInput): Promise<void>
   const [{ getDb }, { ingestRows }, { persistIngestion }] = await Promise.all([
     import("../../../db/index.ts"),
     import("../../../lib/ingest.ts"),
-    import("../../../lib/d1/repository.ts"),
+    import("../../../lib/postgres/repository.ts"),
   ]);
   const result = ingestRows(input.rows as RawOffer[], {
     runId: input.runId,
@@ -135,7 +135,7 @@ function runtimeSourceResolver(): SourceResolver {
     try {
       const [{ getDb }, { createPostgresSourceResolver }] = await Promise.all([
         import("../../../db/index.ts"),
-        import("../../../lib/d1/repository.ts"),
+        import("../../../lib/postgres/repository.ts"),
       ]);
       return createPostgresSourceResolver(getDb())(slug);
     } catch {
@@ -148,7 +148,7 @@ function runtimeReplayGuard(): ReplayGuard {
   return async (route, timestamp, body) => {
     const [{ getDb }, { createReplayGuard }] = await Promise.all([
       import("../../../db/index.ts"),
-      import("../../../lib/d1/replay.ts"),
+      import("../../../lib/postgres/replay.ts"),
     ]);
     return createReplayGuard(getDb())(route, timestamp, body);
   };
@@ -160,7 +160,7 @@ function runtimeSourceRateGuard(): SourceRateGuard {
   return async (sourceSlug) => {
     const [{ getDb }, { createSourceRateGuard }] = await Promise.all([
       import("../../../db/index.ts"),
-      import("../../../lib/d1/replay.ts"),
+      import("../../../lib/postgres/replay.ts"),
     ]);
     return createSourceRateGuard(getDb())(sourceSlug);
   };

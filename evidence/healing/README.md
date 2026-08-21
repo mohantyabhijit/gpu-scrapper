@@ -42,7 +42,7 @@ config/sources.ts
 lib/brightdata/refresh.ts
 app/api/refresh/route.ts
 lib/ingest.ts
-lib/d1/repository.ts
+lib/postgres/repository.ts
 app/page.tsx
 ```
 
@@ -60,7 +60,7 @@ node --experimental-strip-types scripts/check-source-health.ts \
   --consumer lib/brightdata/refresh.ts \
   --consumer app/api/refresh/route.ts \
   --consumer lib/ingest.ts \
-  --consumer lib/d1/repository.ts \
+  --consumer lib/postgres/repository.ts \
   --consumer app/page.tsx \
   --output evidence/healing/baseline.json
 ```

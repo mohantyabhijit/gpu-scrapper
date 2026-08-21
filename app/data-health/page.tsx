@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { MarketDefinition } from "../../config/markets";
-import { loadCatalog, loadHealingEvidence } from "../../lib/d1/catalog";
-import { HEALING_STAGES, type HealingStage } from "../../lib/d1/healing-evidence";
+import { loadCatalog, loadHealingEvidence } from "../../lib/postgres/catalog";
+import { HEALING_STAGES, type HealingStage } from "../../lib/postgres/healing-evidence";
 
 type HealthTone = "ready" | "pending" | "planned";
 type EvidenceKind = "fixture" | "provider" | "policy";
