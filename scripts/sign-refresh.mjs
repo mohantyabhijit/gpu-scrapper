@@ -7,6 +7,24 @@ export const REFRESH_SLICES = Object.freeze({
   "sg-dynacore": Object.freeze({ market: "SG", sourceSlug: "dynacore" }),
 });
 
+const SAFE_SOURCE_SLUGS = new Set(Object.values(REFRESH_SLICES).map(({ sourceSlug }) => sourceSlug));
+const SAFE_CODES = new Set([
+  "bright_data_not_configured",
+  "database_error",
+  "invalid_response",
+  "internal_error",
+  "not_configured",
+  "persistence_error",
+  "provider_error",
+  "refresh_unavailable",
+  "replayed_request",
+  "request_too_large",
+  "source_rate_limited",
+  "timeout",
+  "unauthorized",
+]);
+const SAFE_STATUSES = new Set(["completed", "empty", "failed", "not_configured", "partial", "pending", "ok"]);
+
 // Server bound: 6m15s provider work + 1m validation/persistence margin.
 export const MAX_TIMEOUT_MS = 435_000;
 
@@ -65,19 +83,22 @@ function safeResponseSummary(text) {
     return { response: "non_object" };
   }
   const listLength = (value) => Array.isArray(value) ? value.length : undefined;
+  const safeSourceSlug = (value) => typeof value === "string" && SAFE_SOURCE_SLUGS.has(value) ? value : undefined;
+  const safeCode = (value) => typeof value === "string" && SAFE_CODES.has(value) ? value : "unknown_error";
+  const safeObservedAt = (value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value) ? value : undefined;
   if (["requested", "completed", "notConfigured", "failed"].some((key) => key in parsed)) {
     const completed = Array.isArray(parsed.completed) ? parsed.completed : [];
     const failed = Array.isArray(parsed.failed) ? parsed.failed : [];
     const notConfigured = Array.isArray(parsed.notConfigured) ? parsed.notConfigured : [];
     const safeCompleted = completed.slice(0, 1).map((item) => ({
-      source_slug: typeof item?.sourceSlug === "string" ? item.sourceSlug.slice(0, 64) : undefined,
+      source_slug: safeSourceSlug(item?.sourceSlug),
       rows: Number.isSafeInteger(item?.rowCount) ? item.rowCount : undefined,
-      observed_at: typeof item?.observedAt === "string" ? item.observedAt.slice(0, 40) : undefined,
+      observed_at: safeObservedAt(item?.observedAt),
       attempts: Number.isSafeInteger(item?.attempts) ? item.attempts : undefined,
     }));
     const safeFailures = failed.slice(0, 1).map((item) => ({
-      source_slug: typeof item?.sourceSlug === "string" ? item.sourceSlug.slice(0, 64) : undefined,
-      code: typeof item?.code === "string" ? item.code.replace(/[^a-z0-9_-]/gi, "").slice(0, 64) : undefined,
+      source_slug: safeSourceSlug(item?.sourceSlug),
+      code: safeCode(item?.code),
     }));
     return {
       status: failed.length > 0 ? "failed" : completed.length > 0 ? "completed" : notConfigured.length > 0 ? "not_configured" : "empty",
@@ -91,7 +112,6 @@ function safeResponseSummary(text) {
     };
   }
   const allowedKeys = ["error", "status", "rows", "valid_rows", "quarantined_rows", "duration_ms"];
-  const safeErrorCodes = new Set(["bright_data_not_configured", "refresh_unavailable", "source_rate_limited", "replayed_request", "unauthorized", "request_too_large"]);
   const safeValue = (value) => {
     if (typeof value === "boolean") return value;
     if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
@@ -101,7 +121,7 @@ function safeResponseSummary(text) {
   return Object.fromEntries(
     allowedKeys
       .filter((key) => Object.hasOwn(parsed, key))
-      .map((key) => [key, key === "error" ? (safeErrorCodes.has(parsed[key]) ? parsed[key] : "unknown_error") : safeValue(parsed[key])])
+      .map((key) => [key, key === "error" ? safeCode(parsed[key]) : key === "status" ? (SAFE_STATUSES.has(parsed[key]) ? parsed[key] : "unknown_status") : safeValue(parsed[key])])
       .filter(([, value]) => value !== undefined),
   );
 }

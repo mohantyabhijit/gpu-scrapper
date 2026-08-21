@@ -41,6 +41,27 @@ test("workflow schedules every baseline market as an independently locked slice"
   assert.ok(MAX_TIMEOUT_MS >= MAX_PROVIDER_RUN_MS + 60_000);
 });
 
+test("workflow gates production secrets and pins deterministic setup", async () => {
+  const workflow = await readFile(new URL("../.github/workflows/collect.yml", import.meta.url), "utf8");
+  assert.match(workflow, /if: \$\{\{ github\.ref == 'refs\/heads\/main' && \(github\.event_name == 'schedule' \|\| github\.event_name == 'workflow_dispatch'\) \}\}/);
+  assert.match(workflow, /environment: raster-production/);
+  assert.match(workflow, /timeout-minutes: (?:1[0-9]|[2-9][0-9])/);
+  assert.match(workflow, /fail-fast: false/);
+  assert.match(workflow, /cancel-in-progress: false/);
+  assert.match(workflow, /actions\/setup-node@820762786026740c76f36085b0efc47a31fe5020/);
+  assert.match(workflow, /node-version: 22\.13\.0/);
+  assert.match(workflow, /npm ci --ignore-scripts/);
+  assert.doesNotMatch(workflow, /^\s+(?:pull_request|push):/m);
+
+  const actionRefs = [...workflow.matchAll(/uses:\s+[^@]+@([^\s#]+)/g)].map((match) => match[1]);
+  assert.ok(actionRefs.length > 0);
+  for (const ref of actionRefs) assert.match(ref, /^[0-9a-f]{40}$/);
+
+  const summary = workflow.slice(workflow.indexOf("- name: Publish safe job summary"));
+  assert.doesNotMatch(summary, /secrets\./);
+  assert.doesNotMatch(workflow, /\n{4}env:\n {6}RASTER_REFRESH_URL:/);
+});
+
 test("refresh sends one signed request and returns only safe response fields", async () => {
   let request;
   const summary = await runRefresh({
@@ -89,4 +110,47 @@ test("refresh rejects non-HTTPS URLs and never exposes provider error bodies", a
   assert.equal(failure.summary.http_status, 502);
   assert.equal(failure.summary.error, "unknown_error");
   assert.doesNotMatch(JSON.stringify(failure.summary), /provider secret body/);
+});
+
+test("structured partial failures are bounded to safe slugs, codes, and counts", async () => {
+  let failure;
+  try {
+    await runRefresh({
+      url: "https://raster.example.test/api/refresh",
+      slice: "uk-overclockers-uk",
+      secret: "offline-test-secret-value",
+      fetchImpl: async () => new Response(JSON.stringify({
+        requested: ["overclockers-uk"],
+        completed: [{ sourceSlug: "overclockers-uk", rowCount: 4, observedAt: "secret-observed-at", attempts: 2 }],
+        notConfigured: [],
+        failed: [{ sourceSlug: "overclockers-uk", code: "provider_secret_body", rawProviderBody: "Bearer super-secret-value" }],
+        authorization: "Bearer super-secret-value",
+      }), { status: 502 }),
+    });
+    assert.fail("expected a sanitized response error");
+  } catch (error) {
+    failure = error;
+  }
+  assert.ok(failure instanceof RefreshResponseError);
+  const serialized = JSON.stringify(failure.summary);
+  assert.doesNotMatch(serialized, /secret-observed-at|provider_secret_body|super-secret-value|rawProviderBody|authorization/i);
+  assert.deepEqual(failure.summary.failures, [{ source_slug: "overclockers-uk", code: "unknown_error" }]);
+  assert.equal(failure.summary.completed_sources[0].source_slug, "overclockers-uk");
+  assert.equal(failure.summary.completed_sources[0].rows, 4);
+  assert.equal(failure.summary.failed, 1);
+});
+
+test("aborted refreshes fail with a bounded redacted error", async () => {
+  await assert.rejects(
+    runRefresh({
+      url: "https://raster.example.test/api/refresh",
+      slice: "sg-dynacore",
+      secret: "offline-test-secret-value",
+      timeoutMs: 1_000,
+      fetchImpl: async (_url, { signal }) => new Promise((resolve, reject) => {
+        signal.addEventListener("abort", () => reject(new Error("provider secret timeout body")), { once: true });
+      }),
+    }),
+    (error) => error instanceof Error && error.message === "refresh request failed before a safe response was received",
+  );
 });
