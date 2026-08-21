@@ -50,7 +50,7 @@ test("replay guard starts with a processing lease and promotes successful work",
   const now = new Date("2026-08-21T12:00:00.000Z");
   const claim = await createReplayGuard(fixture.db, () => now)("refresh", "1787313600", "{}");
   assert.equal(claim.acquired, true);
-  assert.equal(fixture.calls.insertedValues.expiresAt, "2026-08-21T12:04:00.000Z");
+  assert.equal(fixture.calls.insertedValues.expiresAt, "2026-08-21T12:07:15.000Z");
   await claim.complete();
   assert.equal(fixture.calls.completedValues.expiresAt, "2026-08-21T12:10:00.000Z");
   assert.ok(parameterValues(fixture.calls.wheres.at(-1)).includes(now.toISOString()), "completion is fenced by its owner token");

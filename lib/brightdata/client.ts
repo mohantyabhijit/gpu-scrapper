@@ -7,6 +7,8 @@ export const DEFAULT_MAX_POLL_ATTEMPTS = 5;
 export const MAX_TIMEOUT_MS = 30_000;
 export const MAX_POLL_INTERVAL_MS = 5_000;
 export const MAX_POLL_ATTEMPTS = 10;
+export const MAX_PROVIDER_RUN_MS = MAX_TIMEOUT_MS * (1 + MAX_POLL_ATTEMPTS)
+  + MAX_POLL_INTERVAL_MS * (MAX_POLL_ATTEMPTS - 1);
 
 export type BrightDataClientOptions = {
   apiKey?: string;

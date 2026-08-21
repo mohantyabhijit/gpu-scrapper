@@ -90,6 +90,7 @@ test("refresh input only accepts bounded registered sources and no URLs", () => 
     role: "combined",
   });
   assert.throws(() => parseRefreshRequest({ sourceSlugs: ["central-computer", "central-computer"] }));
+  assert.throws(() => parseRefreshRequest({ sourceSlugs: ["central-computer", "custom-retailer"] }));
   assert.deepEqual(parseRefreshRequest({ sourceSlugs: ["custom-retailer"], role: "combined" }), {
     sourceSlugs: ["custom-retailer"],
     role: "combined",
@@ -369,32 +370,23 @@ test("route releases a claimed receipt when every source reports a transient fai
   assert.equal(completions, 0);
 });
 
-test("route keeps a mixed multi-source result retryable", async () => {
+test("route rejects a multi-source batch before claiming or provider execution", async () => {
   const body = JSON.stringify({ sourceSlugs: ["central-computer", "custom-retailer"], role: "combined" });
   const request = await signedRequest(body, "refresh-secret");
-  let releases = 0;
-  let completions = 0;
+  let claims = 0;
+  let runs = 0;
   const response = await handleRefreshRequest(request, {
     environment: {
       RASTER_INGEST_HMAC_SECRET: "refresh-secret",
       BRIGHTDATA_API_KEY: "provider-secret",
     },
     nowSeconds: 1700000000,
-    replayGuard: async () => ({
-      acquired: true,
-      complete: async () => { completions += 1; },
-      release: async () => { releases += 1; },
-    }),
-    runner: async () => ({
-      requested: ["central-computer", "custom-retailer"],
-      completed: [{ sourceSlug: "central-computer", collectorId: "c_demo", responseId: "r_demo", rowCount: 1, attempts: 1 }],
-      notConfigured: [],
-      failed: [{ sourceSlug: "custom-retailer", code: "provider_error" }],
-    }),
+    replayGuard: async () => { claims += 1; return true; },
+    runner: async () => { runs += 1; throw new Error("must not run"); },
   });
-  assert.equal(response.status, 502);
-  assert.equal(releases, 1);
-  assert.equal(completions, 0);
+  assert.equal(response.status, 400);
+  assert.equal(claims, 0);
+  assert.equal(runs, 0);
 });
 
 test("route rejects an oversized body before authentication or provider execution", async () => {

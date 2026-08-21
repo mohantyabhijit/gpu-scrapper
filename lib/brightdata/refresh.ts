@@ -14,7 +14,9 @@ import {
   type SourceSlug,
 } from "../../config/sources.ts";
 
-export const MAX_REFRESH_SOURCES = 4;
+// One signed request owns one source. Multi-site refreshes are dispatched as
+// independently signed slices so a slow retailer cannot outlive a batch lease.
+export const MAX_REFRESH_SOURCES = 1;
 export const REPLAY_WINDOW_SECONDS = 300;
 
 export type RefreshEnvironment = {

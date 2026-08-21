@@ -1,6 +1,7 @@
 import { and, eq, lt } from "drizzle-orm";
 import * as schema from "../../db/schema.ts";
 import type { RasterDatabase } from "./repository.ts";
+import { MAX_PROVIDER_RUN_MS } from "../brightdata/client.ts";
 
 export type ReplayClaim = {
   acquired: boolean;
@@ -37,10 +38,11 @@ export async function requestDigest(route: string, timestamp: string, body: stri
 export function createReplayGuard(db: RasterDatabase, now = () => new Date()): ReplayGuard {
   return async (route, timestamp, body) => {
     const createdAt = now();
-    // The signer accepts timestamps for five minutes. A four-minute processing
-    // lease prevents duplicate concurrent work but can still be reclaimed
-    // inside that window if best-effort failure cleanup cannot reach D1.
-    const leaseExpiresAt = new Date(createdAt.getTime() + 4 * 60 * 1000);
+    // Refresh requests contain one source. Its client-side trigger/poll bound
+    // is 6m15s; keep the claim for one extra minute for validation and D1.
+    // The HMAC itself expires sooner, so an identical signed request cannot
+    // reclaim this lease while the bounded owner may still be running.
+    const leaseExpiresAt = new Date(createdAt.getTime() + MAX_PROVIDER_RUN_MS + 60_000);
     const completedExpiresAt = new Date(createdAt.getTime() + 10 * 60 * 1000);
     const ownerToken = createdAt.toISOString();
     const key = await requestDigest(route, timestamp, body);
