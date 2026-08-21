@@ -1,4 +1,4 @@
-import { eq, lt } from "drizzle-orm";
+import { and, eq, lt } from "drizzle-orm";
 import * as schema from "../../db/schema.ts";
 import type { RasterDatabase } from "./repository.ts";
 
@@ -42,12 +42,13 @@ export function createReplayGuard(db: RasterDatabase, now = () => new Date()): R
     // inside that window if best-effort failure cleanup cannot reach D1.
     const leaseExpiresAt = new Date(createdAt.getTime() + 4 * 60 * 1000);
     const completedExpiresAt = new Date(createdAt.getTime() + 10 * 60 * 1000);
+    const ownerToken = createdAt.toISOString();
     const key = await requestDigest(route, timestamp, body);
     await db.delete(schema.requestReceipts).where(lt(schema.requestReceipts.expiresAt, createdAt.toISOString())).run();
     const inserted = await db.insert(schema.requestReceipts).values({
       key,
       route,
-      createdAt: createdAt.toISOString(),
+      createdAt: ownerToken,
       expiresAt: leaseExpiresAt.toISOString(),
     }).onConflictDoNothing({ target: schema.requestReceipts.key }).returning({ key: schema.requestReceipts.key }).get();
     return {
@@ -56,12 +57,20 @@ export function createReplayGuard(db: RasterDatabase, now = () => new Date()): R
         if (inserted) {
           await db.update(schema.requestReceipts)
             .set({ expiresAt: completedExpiresAt.toISOString() })
-            .where(eq(schema.requestReceipts.key, key))
+            .where(and(
+              eq(schema.requestReceipts.key, key),
+              eq(schema.requestReceipts.createdAt, ownerToken),
+            ))
             .run();
         }
       },
       release: async () => {
-        if (inserted) await db.delete(schema.requestReceipts).where(eq(schema.requestReceipts.key, key)).run();
+        if (inserted) {
+          await db.delete(schema.requestReceipts).where(and(
+            eq(schema.requestReceipts.key, key),
+            eq(schema.requestReceipts.createdAt, ownerToken),
+          )).run();
+        }
       },
     };
   };
