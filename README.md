@@ -28,6 +28,16 @@ the intended access pattern, has same-market overlap, and is not already
 covered by a Bright Data pre-built scraper. Region-specific discounts, tax, and
 shipping labels remain source claims and are never silently normalized away.
 
+## Judge-proof status
+
+The public repository currently contains the product contract, fixture-backed
+market experience, typed source registry, protected-refresh design, and QA
+scaffolding. Live custom Collector IDs, authenticated source eligibility,
+deployed D1 writes, same-ID healing, and a verified scheduled run remain
+release gates. They are intentionally marked `pending` in the
+[evidence matrix](docs/evidence-matrix.md); do not describe fixtures as live
+Scraper Studio output in the submission or video.
+
 ## Product boundary and data policy
 
 - Public catalog/product pages only. No login-walled, paywalled, personal, or

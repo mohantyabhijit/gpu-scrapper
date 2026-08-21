@@ -68,6 +68,29 @@ under the same Collector ID—without changing downstream code.
 Do not paste these drafts into the form until the claimed live collectors,
 schedule, D1 writes, and same-ID heal are proven in the evidence matrix.
 
+## Why Raster combines the organizer project patterns
+
+Raster is deliberately one coherent story built from four of the organizer’s
+strongest patterns:
+
+1. **Prompt-to-production pipeline:** a source-specific Scraper Studio
+   collector produces structured GPU rows, the protected route validates and
+   normalizes them, D1 stores current/history state, and the storefront renders
+   the result.
+2. **Set a goal and walk away:** the goal is a fresh, market-local catalog; a
+   scheduled GitHub Action signs one bounded refresh slice and publishes a
+   health summary without dashboard work.
+3. **Self-healing scraper (hero):** a controlled contract break is repaired with
+   `bdata scraper heal`, approved, and rerun under the exact same `c_*` ID while
+   downstream code stays unchanged.
+4. **Scrapers in CI:** the same signed path runs on schedule or manual dispatch,
+   validates output, fails safely, and preserves last-known-good data when a
+   source is degraded.
+
+These are implementation goals, not claims of completion. The submission form
+and video must use this language only after the corresponding rows in the
+evidence matrix have moved from `pending` to a dated proof link.
+
 ## Three-track winning proof
 
 - **Web-Slinger / Best Use of Bright Data:** show terminal-driven create, run,
@@ -79,6 +102,12 @@ schedule, D1 writes, and same-ID heal are proven in the evidence matrix.
   and readable public history.
 
 ## Required demo video (maximum 3 minutes)
+
+Record to a 2:50–2:55 target so edits, transitions, or encoding never push the
+final upload past the organizer’s hard three-minute limit. Use one continuous
+terminal/browser capture with a visible clock or chapter card; do not show
+private dashboards, account identities, `.env` files, API keys, or raw provider
+responses.
 
 1. **0:00–0:20 — About the project:** regional GPU-price fragmentation and the
    four-market product promise.

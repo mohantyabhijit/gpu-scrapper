@@ -14,6 +14,9 @@ artifact, commit, Action run, or public URL as each gate is completed.
 | Self-healing | Before/preview/after proof using same Collector ID | `evidence/healing/` | pending |
 | Scrapers in CI | Scheduled/manual workflow with green validation | `.github/workflows/collect.yml` and Action run | pending |
 | Downstream product | Normalized offers rendered in storefront | public URL and browser screenshots | pending |
+| Prompt-to-production | Collector output crosses validation, D1, and storefront boundaries | sanitized row, D1 run, public offer card | pending |
+| Goal/schedule | One bounded market/source slice runs unattended on schedule | `.github/workflows/collect.yml`, Action summary | pending |
+| Self-healing hero | Same `c_*` ID recovers after a controlled break | `evidence/healing/` before/preview/after set | pending |
 | Safety and honesty | Freshness, stale/degraded labels, source links, no checkout claim | storefront QA and README | baseline |
 
 ## Equal-weight judging scorecard

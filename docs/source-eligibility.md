@@ -68,6 +68,51 @@ and storefront must remain market-aware. A market should not be called healthy
 until two sources have three or more overlapping canonical models and the data
 contract passes on both.
 
+## Evidence template (copy once per candidate)
+
+Create a sanitized record such as
+`evidence/sources/<source-slug>-eligibility.md` only after the source has been
+reviewed. Keep the values below factual and dated; use `pending` rather than
+guessing. Never paste credentials, cookies, private contact details, or raw
+provider output.
+
+```yaml
+source_slug: central-computer
+market: US
+currency: USD
+catalog_url: https://www.centralcomputer.com/all-products/hardware/video-cards/video-cards.html
+checked_at_utc: YYYY-MM-DDThh:mm:ssZ
+reviewer: participant
+public_signed_out_access: pending
+terms_and_robots_review: pending
+bright_data_prebuilt_exclusion: pending
+overlap_models:
+  - model: pending
+    source_sku_or_mpn: pending
+    second_source: pending
+required_fields_observed:
+  title: pending
+  product_url: pending
+  price: pending
+  currency: pending
+  availability: pending
+  observed_at: pending
+price_semantics: pending
+bounded_probe: pending
+collector_roles:
+  combined: pending
+collector_ids:
+  combined: null
+  discovery: null
+  pdp: null
+decision: pending
+notes: ""
+```
+
+Every `collector_ids` value stays `null` until a real authenticated create/run
+flow returns a `c_*` ID. A pre-built-library search result is not enough: record
+the authenticated check and the reason the custom collector is needed.
+
 ## Data-handling notes
 
 - Keep original title, canonical URL, source SKU/MPN, currency, and attribution.

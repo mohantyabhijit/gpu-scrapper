@@ -40,7 +40,7 @@ minute timeout, and permissions are read-only.
 The signer sends this compact JSON body:
 
 ```json
-{"sourceSlugs":["central-computer"],"role":"combined"}
+{"market":"US","source_slug":"central-computer"}
 ```
 
 It adds:
@@ -51,8 +51,9 @@ It adds:
 - `Content-Type: application/json`.
 
 The route must reject a missing/invalid signature, a timestamp outside its
-five-minute replay window, an unknown source slug or collector role, and a request that is
-not HTTPS-authenticated. Signature comparison should be constant-time.
+five-minute replay window, an unknown market/source pair, and a request that is
+not HTTPS-authenticated. Signature comparison should be constant-time. The
+workflow signer and route must sign/verify the exact same body bytes.
 
 ## Local dry run of the signer
 
