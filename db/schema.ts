@@ -88,7 +88,10 @@ export const quarantinedRows = sqliteTable("quarantined_rows", {
   reasonCodes: text("reason_codes").notNull(),
   rowFingerprint: text("row_fingerprint").notNull(),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-}, (table) => [index("quarantine_run_idx").on(table.runId)]);
+}, (table) => [
+  index("quarantine_run_idx").on(table.runId),
+  uniqueIndex("quarantine_run_fingerprint_idx").on(table.runId, table.rowFingerprint),
+]);
 
 export type SourceRow = typeof sources.$inferSelect;
 export type ProductRow = typeof products.$inferSelect;

@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `quarantine_run_fingerprint_idx` ON `quarantined_rows` (`run_id`,`row_fingerprint`);
