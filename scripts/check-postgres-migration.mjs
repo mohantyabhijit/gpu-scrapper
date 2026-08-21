@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { readdir, readFile, stat } from "node:fs/promises";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
@@ -27,11 +27,26 @@ async function snapshot(relativePath) {
     entries.push(`${prefix}\0${createHash("sha256").update(bytes).digest("hex")}`);
   }
   await visit(absolutePath, relativePath);
-  return entries.sort().join("\n");
+  return new Map(entries.map((entry) => {
+    const separator = entry.indexOf("\0");
+    return [entry.slice(0, separator), entry.slice(separator + 1)];
+  }));
+}
+
+function headSnapshot() {
+  const output = execFileSync("git", ["ls-tree", "-r", "--name-only", "HEAD", "--", ...guardedPaths], { cwd: root, encoding: "utf8" });
+  const files = output.split("\n").map((file) => file.trim()).filter(Boolean);
+  return new Map(files.map((relativePath) => [relativePath, createHash("sha256").update(execFileSync("git", ["show", `HEAD:${relativePath}`], { cwd: root })).digest("hex")]));
 }
 
 async function takeSnapshot() {
-  return Promise.all(guardedPaths.map(async (relativePath) => [relativePath, await snapshot(relativePath)]));
+  const snapshots = await Promise.all(guardedPaths.map((relativePath) => snapshot(relativePath)));
+  return new Map(snapshots.flatMap((current) => [...current]));
+}
+
+function differences(actual, expected) {
+  const paths = new Set([...actual.keys(), ...expected.keys()]);
+  return [...paths].filter((relativePath) => actual.get(relativePath) !== expected.get(relativePath)).sort();
 }
 
 function runGenerate() {
@@ -46,10 +61,17 @@ function runGenerate() {
   });
 }
 
+const head = headSnapshot();
 const before = await takeSnapshot();
+const preexisting = differences(before, head);
+if (preexisting.length > 0) {
+  console.error(`Guarded PostgreSQL paths differ from HEAD before generation: ${preexisting.join(", ")}`);
+  console.error("Commit or revert guarded schema/config/migration changes before rerunning db:check.");
+  process.exit(1);
+}
 await runGenerate();
 const after = await takeSnapshot();
-const changed = after.filter(([, digest], index) => digest !== before[index][1]).map(([relativePath]) => relativePath);
+const changed = differences(after, before);
 if (changed.length > 0) {
   console.error(`PostgreSQL migration generation changed guarded paths: ${changed.join(", ")}`);
   console.error("Review the generated migration and commit it deliberately before rerunning db:check.");

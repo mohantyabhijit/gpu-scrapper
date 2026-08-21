@@ -54,14 +54,15 @@ export function createSqliteTestDatabase() {
       return {
         bind(...params) {
           const statement = sqlite.prepare(sql);
+          const sqliteParams = params.map((value) => typeof value === "boolean" ? (value ? 1 : 0) : value);
           return {
             async first(column) {
-              const row = statement.get(...params);
+              const row = statement.get(...sqliteParams);
               return column && row ? row[column] : row;
             },
-            async all() { return { results: statement.all(...params), success: true, meta: {} }; },
-            async run() { statement.run(...params); return { success: true, meta: {} }; },
-            async raw() { return statement.all(...params).map((row) => Object.values(row)); },
+            async all() { return { results: statement.all(...sqliteParams), success: true, meta: {} }; },
+            async run() { statement.run(...sqliteParams); return { success: true, meta: {} }; },
+            async raw() { return statement.all(...sqliteParams).map((row) => Object.values(row)); },
           };
         },
       };

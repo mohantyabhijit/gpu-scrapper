@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
-import { access, readdir, readFile } from "node:fs/promises";
+import { access, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
 import path from "node:path";
 import test from "node:test";
+import * as schema from "../db/schema.ts";
+import { createSqliteTestDatabase } from "./sqlite-test-db.mjs";
 
 const root = path.resolve(new URL("..", import.meta.url).pathname);
 const productionPath = ["lib", "d1"].join("/");
@@ -33,4 +36,65 @@ test("production imports and migration configuration are PostgreSQL-only", async
   assert.doesNotMatch(config, /(?:^|["'`])\.\/drizzle(?:["'`/])/m);
   await assert.rejects(access(path.join(root, "drizzle")));
   await assert.rejects(access(path.join(root, "examples", "d1")));
+});
+
+function runDbCheck() {
+  return spawnSync("npm", ["run", "db:check"], { cwd: root, encoding: "utf8" });
+}
+
+test("db:check rejects manually modified tracked migration and config files", async () => {
+  const migrationPath = path.join(root, "drizzle-postgres", "0000_freezing_gambit.sql");
+  const configPath = path.join(root, "drizzle.config.ts");
+  const migration = await readFile(migrationPath);
+  const config = await readFile(configPath);
+  try {
+    await writeFile(migrationPath, Buffer.concat([migration, Buffer.from("\n-- db:check regression\n")]));
+    let result = runDbCheck();
+    assert.notEqual(result.status, 0);
+    assert.match(`${result.stdout}\n${result.stderr}`, /differ from HEAD before generation/);
+
+    await writeFile(migrationPath, migration);
+    await writeFile(configPath, Buffer.concat([config, Buffer.from("\n// db:check regression\n")]));
+    result = runDbCheck();
+    assert.notEqual(result.status, 0);
+    assert.match(`${result.stdout}\n${result.stderr}`, /differ from HEAD before generation/);
+  } finally {
+    await writeFile(migrationPath, migration);
+    await writeFile(configPath, config);
+  }
+});
+
+test("db:check rejects an untracked PostgreSQL migration artifact", async () => {
+  const artifactPath = path.join(root, "drizzle-postgres", "db-check-untracked-artifact.sql");
+  try {
+    await writeFile(artifactPath, "-- untracked regression artifact\n");
+    const result = runDbCheck();
+    assert.notEqual(result.status, 0);
+    assert.match(`${result.stdout}\n${result.stderr}`, /differ from HEAD before generation/);
+  } finally {
+    await rm(artifactPath, { force: true });
+  }
+});
+
+test("SQLite test adapter normalizes PostgreSQL boolean binds", async () => {
+  const { db, sqlite } = createSqliteTestDatabase();
+  await db.insert(schema.sources).values({
+    slug: "adapter-source",
+    displayName: "Adapter Source",
+    market: "US",
+    region: "US",
+    currency: "USD",
+    baseUrl: "https://example.com",
+    enabled: true,
+  });
+  await db.insert(schema.sources).values({
+    slug: "adapter-source",
+    displayName: "Adapter Source",
+    market: "US",
+    region: "US",
+    currency: "USD",
+    baseUrl: "https://example.com",
+    enabled: false,
+  }).onConflictDoUpdate({ target: schema.sources.slug, set: { enabled: false } });
+  assert.equal(sqlite.prepare("SELECT enabled FROM sources WHERE slug = 'adapter-source'").get().enabled, 0);
 });
