@@ -421,3 +421,26 @@ test("route rejects an authenticated replay before provider execution", async ()
   assert.deepEqual(await response.json(), { error: "replayed_request" });
   assert.equal(runs, 0);
 });
+
+test("route atomically rate limits a fresh signed request for the same source", async () => {
+  const body = JSON.stringify({ sourceSlugs: ["central-computer"], role: "combined" });
+  const request = await signedRequest(body, "refresh-secret");
+  let runs = 0;
+  let replayReleases = 0;
+  const response = await handleRefreshRequest(request, {
+    environment: { RASTER_INGEST_HMAC_SECRET: "refresh-secret", BRIGHTDATA_API_KEY: "provider-secret" },
+    nowSeconds: 1700000000,
+    replayGuard: async () => ({
+      acquired: true,
+      complete: async () => {},
+      release: async () => { replayReleases += 1; },
+    }),
+    rateGuard: async () => ({ acquired: false, retryAfterSeconds: 125, complete: async () => {} }),
+    runner: async () => { runs += 1; throw new Error("must not run"); },
+  });
+  assert.equal(response.status, 429);
+  assert.equal(response.headers.get("retry-after"), "125");
+  assert.deepEqual(await response.json(), { error: "source_rate_limited", source: "central-computer" });
+  assert.equal(runs, 0);
+  assert.equal(replayReleases, 1);
+});

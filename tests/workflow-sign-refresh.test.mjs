@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
-import { createPayload, parseSlice, runRefresh, signatureFor } from "../scripts/sign-refresh.mjs";
+import { readFile } from "node:fs/promises";
+import { createPayload, MAX_TIMEOUT_MS, parseSlice, RefreshResponseError, runRefresh, signatureFor } from "../scripts/sign-refresh.mjs";
+import { MAX_PROVIDER_RUN_MS } from "../lib/brightdata/client.ts";
 import { parseRefreshRequest } from "../lib/brightdata/refresh.ts";
 
 test("refresh slices are allowlisted and role payloads stay deterministic", () => {
@@ -29,6 +31,16 @@ test("signature matches the documented timestamp.body HMAC", () => {
   assert.equal(signatureFor({ secret, timestamp, body }), expected);
 });
 
+test("workflow schedules every baseline market as an independently locked slice", async () => {
+  const workflow = await readFile(new URL("../.github/workflows/collect.yml", import.meta.url), "utf8");
+  for (const slice of ["us-central-computer", "uk-overclockers-uk", "in-md-computers", "sg-dynacore"]) {
+    assert.match(workflow, new RegExp(slice));
+  }
+  assert.match(workflow, /github\.event_name == 'schedule'/);
+  assert.match(workflow, /group: raster-refresh-\$\{\{ matrix\.slice \}\}/);
+  assert.ok(MAX_TIMEOUT_MS >= MAX_PROVIDER_RUN_MS + 60_000);
+});
+
 test("refresh sends one signed request and returns only safe response fields", async () => {
   let request;
   const summary = await runRefresh({
@@ -50,6 +62,9 @@ test("refresh sends one signed request and returns only safe response fields", a
   assert.equal(summary.completed, 1);
   assert.equal(summary.not_configured, 0);
   assert.equal("provider_key" in summary, false);
+  assert.equal(summary.status, "completed");
+  assert.equal(summary.rows, 4);
+  assert.deepEqual(summary.completed_sources, [{ source_slug: undefined, rows: 4, observed_at: undefined, attempts: undefined }]);
 });
 
 test("refresh rejects non-HTTPS URLs and never exposes provider error bodies", async () => {
@@ -57,13 +72,21 @@ test("refresh rejects non-HTTPS URLs and never exposes provider error bodies", a
     runRefresh({ url: "http://raster.example.test/api/refresh", slice: "sg-dynacore", secret: "offline-test-secret-value" }),
     /refresh URL must use HTTPS/,
   );
-  await assert.rejects(
-    runRefresh({
+  let failure;
+  try {
+    await runRefresh({
       url: "https://raster.example.test/api/refresh",
       slice: "sg-dynacore",
       secret: "offline-test-secret-value",
       fetchImpl: async () => new Response(JSON.stringify({ error: "provider secret body" }), { status: 502 }),
-    }),
-    (error) => error instanceof Error && error.message === "refresh route returned HTTP 502" && !error.message.includes("provider secret"),
-  );
+    });
+    assert.fail("expected a sanitized response error");
+  } catch (error) {
+    failure = error;
+  }
+  assert.ok(failure instanceof RefreshResponseError);
+  assert.equal(failure.message, "refresh route returned HTTP 502");
+  assert.equal(failure.summary.http_status, 502);
+  assert.equal(failure.summary.error, "unknown_error");
+  assert.doesNotMatch(JSON.stringify(failure.summary), /provider secret body/);
 });

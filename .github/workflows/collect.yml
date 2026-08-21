@@ -19,20 +19,23 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: raster-refresh
-  cancel-in-progress: false
-
 jobs:
   refresh:
     runs-on: ubuntu-latest
     timeout-minutes: 8
+    strategy:
+      fail-fast: false
+      matrix:
+        slice: ${{ fromJSON(github.event_name == 'schedule' && '["us-central-computer","uk-overclockers-uk","in-md-computers","sg-dynacore"]' || format('["{0}"]', inputs.slice)) }}
+    concurrency:
+      group: raster-refresh-${{ matrix.slice }}
+      cancel-in-progress: false
     permissions:
       contents: read
     env:
       RASTER_REFRESH_URL: ${{ secrets.RASTER_REFRESH_URL }}
       RASTER_INGEST_HMAC_SECRET: ${{ secrets.RASTER_INGEST_HMAC_SECRET }}
-      RASTER_REFRESH_SLICE: ${{ inputs.slice || 'us-central-computer' }}
+      RASTER_REFRESH_SLICE: ${{ matrix.slice }}
     steps:
       - name: Check out workflow code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

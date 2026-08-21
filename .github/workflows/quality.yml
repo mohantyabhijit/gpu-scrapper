@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
 
       - name: Use Node.js 22
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -35,10 +37,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          if git grep -nE -- '-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|(^|[^A-Z_])(api_key|token|secret)[[:space:]]*=[[:space:]]*[A-Za-z0-9_-]{20,}' -- . ':!package-lock.json'; then
+          pattern='-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|(^|[^A-Z_])(api[_-]?key|token|secret)[[:space:]]*[:=][[:space:]]*[A-Za-z0-9_-]{20,}|(BRIGHTDATA_API_KEY|api[_-]?key).{0,20}[0-9a-fA-F]{8}-[0-9a-fA-F-]{27,}'
+          if git grep -qE -- "$pattern" -- . ':!package-lock.json'; then
             echo '::error::probable secret material found in tracked source'
             exit 1
           fi
+          while IFS= read -r commit; do
+            if git grep -qE "$pattern" "$commit" -- . ':!package-lock.json'; then
+              echo "::error::probable secret material found in Git history at $commit"
+              exit 1
+            fi
+          done < <(git rev-list --all)
 
       - name: Lint
         run: npm run lint
@@ -51,3 +60,13 @@ jobs:
 
       - name: Production render tests
         run: npm run test:render
+
+      - name: Scan built assets and evidence filenames safely
+        shell: bash
+        run: |
+          set -euo pipefail
+          pattern='-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|(^|[^A-Z_])(api[_-]?key|token|secret)[[:space:]]*[:=][[:space:]]*[A-Za-z0-9_-]{20,}|(BRIGHTDATA_API_KEY|api[_-]?key).{0,20}[0-9a-fA-F]{8}-[0-9a-fA-F-]{27,}'
+          if grep -RIlE --exclude='package-lock.json' "$pattern" dist evidence docs public 2>/dev/null | grep -q .; then
+            echo '::error::probable secret material found in build or evidence output'
+            exit 1
+          fi

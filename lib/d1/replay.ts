@@ -11,6 +11,14 @@ export type ReplayClaim = {
 
 export type ReplayGuard = (route: string, timestamp: string, body: string) => Promise<boolean | ReplayClaim>;
 
+export type RateClaim = {
+  acquired: boolean;
+  retryAfterSeconds: number;
+  complete: () => Promise<void>;
+};
+
+export type SourceRateGuard = (sourceSlug: string) => Promise<RateClaim>;
+
 export function replayAcquired(claim: boolean | ReplayClaim): boolean {
   return typeof claim === "boolean" ? claim : claim.acquired;
 }
@@ -73,6 +81,49 @@ export function createReplayGuard(db: RasterDatabase, now = () => new Date()): R
             eq(schema.requestReceipts.createdAt, ownerToken),
           )).run();
         }
+      },
+    };
+  };
+}
+
+/** Atomically allow one provider run per source, then hold a short cooldown. */
+export function createSourceRateGuard(
+  db: RasterDatabase,
+  now = () => new Date(),
+  cooldownMs = 60_000,
+): SourceRateGuard {
+  return async (sourceSlug) => {
+    const createdAt = now();
+    const ownerToken = createdAt.toISOString();
+    const key = await requestDigest("refresh-rate", "0", sourceSlug);
+    const leaseExpiresAt = new Date(createdAt.getTime() + MAX_PROVIDER_RUN_MS + 60_000);
+    await db.delete(schema.requestReceipts).where(lt(schema.requestReceipts.expiresAt, createdAt.toISOString())).run();
+    const inserted = await db.insert(schema.requestReceipts).values({
+      key,
+      route: "refresh-rate",
+      createdAt: ownerToken,
+      expiresAt: leaseExpiresAt.toISOString(),
+    }).onConflictDoNothing({ target: schema.requestReceipts.key }).returning({ key: schema.requestReceipts.key }).get();
+    const existing = inserted ? undefined : await db.select({ expiresAt: schema.requestReceipts.expiresAt })
+      .from(schema.requestReceipts)
+      .where(eq(schema.requestReceipts.key, key))
+      .get();
+    const retryAfterSeconds = existing
+      ? Math.max(1, Math.ceil((new Date(existing.expiresAt).getTime() - createdAt.getTime()) / 1_000))
+      : 0;
+    return {
+      acquired: Boolean(inserted),
+      retryAfterSeconds,
+      complete: async () => {
+        if (!inserted) return;
+        const cooldownExpiresAt = new Date(now().getTime() + cooldownMs).toISOString();
+        await db.update(schema.requestReceipts)
+          .set({ expiresAt: cooldownExpiresAt })
+          .where(and(
+            eq(schema.requestReceipts.key, key),
+            eq(schema.requestReceipts.createdAt, ownerToken),
+          ))
+          .run();
       },
     };
   };

@@ -9,7 +9,7 @@ import {
 } from "../../../lib/brightdata/refresh.ts";
 import type { RawOffer } from "../../../scrapers/contracts.ts";
 import { getSource, isKnownSource } from "../../../config/sources.ts";
-import { completeReplayClaim, replayAcquired, releaseReplayClaim, type ReplayGuard, type ReplayClaim } from "../../../lib/d1/replay.ts";
+import { completeReplayClaim, replayAcquired, releaseReplayClaim, type RateClaim, type ReplayGuard, type ReplayClaim, type SourceRateGuard } from "../../../lib/d1/replay.ts";
 import { readBoundedBody, RequestBodyTooLargeError } from "../../../lib/http/bounded-body.ts";
 
 function runtimeEnvironment(): RefreshEnvironment {
@@ -22,8 +22,8 @@ function runtimeEnvironment(): RefreshEnvironment {
   };
 }
 
-function json(payload: unknown, status = 200) {
-  return Response.json(payload, { status, headers: { "Cache-Control": "no-store" } });
+function json(payload: unknown, status = 200, headers: HeadersInit = {}) {
+  return Response.json(payload, { status, headers: { "Cache-Control": "no-store", ...headers } });
 }
 
 async function persistCompletedRun(input: RefreshCompletionInput): Promise<void> {
@@ -59,6 +59,7 @@ export async function handleRefreshRequest(
     runner?: ReturnType<typeof createRefreshRunner>;
     resolveSource?: SourceResolver;
     replayGuard?: ReplayGuard;
+    rateGuard?: SourceRateGuard;
   },
 ): Promise<Response> {
   let body: string;
@@ -91,10 +92,21 @@ export async function handleRefreshRequest(
   }
 
   let replayClaim: boolean | ReplayClaim | undefined;
+  let rateClaim: RateClaim | undefined;
   try {
     replayClaim = timestamp ? await (dependencies.replayGuard ?? runtimeReplayGuard())("refresh", timestamp, body) : false;
     if (!timestamp || !replayAcquired(replayClaim)) {
       return json({ error: "replayed_request" }, 409);
+    }
+    const rateGuard = dependencies.rateGuard ?? (dependencies.replayGuard ? allowSourceRate : runtimeSourceRateGuard());
+    rateClaim = await rateGuard(parsed.sourceSlugs[0]);
+    if (!rateClaim.acquired) {
+      await releaseReplayClaim(replayClaim);
+      return json(
+        { error: "source_rate_limited", source: parsed.sourceSlugs[0] },
+        429,
+        { "Retry-After": String(rateClaim.retryAfterSeconds) },
+      );
     }
     const runner = dependencies.runner ?? createRefreshRunner(
       dependencies.environment,
@@ -105,9 +117,11 @@ export async function handleRefreshRequest(
     const accepted = result.failed.length === 0 && (result.completed.length > 0 || result.notConfigured.length > 0);
     if (!accepted) await releaseReplayClaim(replayClaim);
     else await completeReplayClaim(replayClaim);
+    await rateClaim.complete();
     return json(result, accepted ? 200 : 502);
   } catch {
     await releaseReplayClaim(replayClaim);
+    try { await rateClaim?.complete(); } catch { /* preserve the sanitized route error */ }
     return json({ error: "refresh_unavailable" }, 503);
   }
 }
@@ -137,5 +151,17 @@ function runtimeReplayGuard(): ReplayGuard {
       import("../../../lib/d1/replay.ts"),
     ]);
     return createReplayGuard(getDb())(route, timestamp, body);
+  };
+}
+
+const allowSourceRate: SourceRateGuard = async () => ({ acquired: true, retryAfterSeconds: 0, complete: async () => {} });
+
+function runtimeSourceRateGuard(): SourceRateGuard {
+  return async (sourceSlug) => {
+    const [{ getDb }, { createSourceRateGuard }] = await Promise.all([
+      import("../../../db/index.ts"),
+      import("../../../lib/d1/replay.ts"),
+    ]);
+    return createSourceRateGuard(getDb())(sourceSlug);
   };
 }

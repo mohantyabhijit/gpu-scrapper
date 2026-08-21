@@ -7,7 +7,16 @@ export const REFRESH_SLICES = Object.freeze({
   "sg-dynacore": Object.freeze({ market: "SG", sourceSlug: "dynacore" }),
 });
 
-export const MAX_TIMEOUT_MS = 120_000;
+// Server bound: 6m15s provider work + 1m validation/persistence margin.
+export const MAX_TIMEOUT_MS = 435_000;
+
+export class RefreshResponseError extends Error {
+  constructor(status, summary) {
+    super(`refresh route returned HTTP ${status}`);
+    this.name = "RefreshResponseError";
+    this.summary = summary;
+  }
+}
 
 export function parseSlice(value) {
   const slice = REFRESH_SLICES[value];
@@ -57,14 +66,32 @@ function safeResponseSummary(text) {
   }
   const listLength = (value) => Array.isArray(value) ? value.length : undefined;
   if (["requested", "completed", "notConfigured", "failed"].some((key) => key in parsed)) {
+    const completed = Array.isArray(parsed.completed) ? parsed.completed : [];
+    const failed = Array.isArray(parsed.failed) ? parsed.failed : [];
+    const notConfigured = Array.isArray(parsed.notConfigured) ? parsed.notConfigured : [];
+    const safeCompleted = completed.slice(0, 1).map((item) => ({
+      source_slug: typeof item?.sourceSlug === "string" ? item.sourceSlug.slice(0, 64) : undefined,
+      rows: Number.isSafeInteger(item?.rowCount) ? item.rowCount : undefined,
+      observed_at: typeof item?.observedAt === "string" ? item.observedAt.slice(0, 40) : undefined,
+      attempts: Number.isSafeInteger(item?.attempts) ? item.attempts : undefined,
+    }));
+    const safeFailures = failed.slice(0, 1).map((item) => ({
+      source_slug: typeof item?.sourceSlug === "string" ? item.sourceSlug.slice(0, 64) : undefined,
+      code: typeof item?.code === "string" ? item.code.replace(/[^a-z0-9_-]/gi, "").slice(0, 64) : undefined,
+    }));
     return {
+      status: failed.length > 0 ? "failed" : completed.length > 0 ? "completed" : notConfigured.length > 0 ? "not_configured" : "empty",
       requested: listLength(parsed.requested),
       completed: listLength(parsed.completed),
       not_configured: listLength(parsed.notConfigured),
       failed: listLength(parsed.failed),
+      rows: safeCompleted.reduce((total, item) => total + (item.rows ?? 0), 0),
+      completed_sources: safeCompleted,
+      failures: safeFailures,
     };
   }
   const allowedKeys = ["error", "status", "rows", "valid_rows", "quarantined_rows", "duration_ms"];
+  const safeErrorCodes = new Set(["bright_data_not_configured", "refresh_unavailable", "source_rate_limited", "replayed_request", "unauthorized", "request_too_large"]);
   const safeValue = (value) => {
     if (typeof value === "boolean") return value;
     if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
@@ -74,7 +101,7 @@ function safeResponseSummary(text) {
   return Object.fromEntries(
     allowedKeys
       .filter((key) => Object.hasOwn(parsed, key))
-      .map((key) => [key, safeValue(parsed[key])])
+      .map((key) => [key, key === "error" ? (safeErrorCodes.has(parsed[key]) ? parsed[key] : "unknown_error") : safeValue(parsed[key])])
       .filter(([, value]) => value !== undefined),
   );
 }
@@ -110,11 +137,11 @@ export async function runRefresh({ url, slice, secret, timeoutMs = MAX_TIMEOUT_M
       ...safeResponseSummary(responseText),
     };
     if (!response.ok) {
-      throw new Error(`refresh route returned HTTP ${response.status}`);
+      throw new RefreshResponseError(response.status, result);
     }
     return result;
   } catch (error) {
-    if (error instanceof Error && error.message.startsWith("refresh route returned HTTP")) throw error;
+    if (error instanceof RefreshResponseError) throw error;
     throw new Error("refresh request failed before a safe response was received");
   } finally {
     clearTimeout(timer);
@@ -135,6 +162,7 @@ function main() {
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   main().catch((error) => {
+    if (error instanceof RefreshResponseError) process.stdout.write(`${JSON.stringify(error.summary)}\n`);
     process.stderr.write(`${error instanceof Error ? error.message : "refresh request failed"}\n`);
     process.exitCode = 1;
   });

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createReplayGuard } from "../lib/d1/replay.ts";
+import { createReplayGuard, createSourceRateGuard } from "../lib/d1/replay.ts";
 
 function replayDatabase({ inserted = true } = {}) {
   const calls = { deletes: 0, insertedValues: undefined, completedValues: undefined, wheres: [] };
@@ -62,4 +62,18 @@ test("replay guard releases an acquired processing lease", async () => {
   await claim.release();
   assert.equal(fixture.calls.deletes, 2, "one expiry purge plus one claim release");
   assert.ok(parameterValues(fixture.calls.wheres.at(-1)).includes("2026-08-21T12:00:00.000Z"), "release is fenced by its owner token");
+});
+
+test("source rate guard leases one provider run then holds a completion cooldown", async () => {
+  const fixture = replayDatabase();
+  let now = new Date("2026-08-21T12:00:00.000Z");
+  const claim = await createSourceRateGuard(fixture.db, () => now)("central-computer");
+  assert.equal(claim.acquired, true);
+  assert.equal(claim.retryAfterSeconds, 0);
+  assert.equal(fixture.calls.insertedValues.route, "refresh-rate");
+  assert.equal(fixture.calls.insertedValues.expiresAt, "2026-08-21T12:07:15.000Z");
+  now = new Date("2026-08-21T12:03:00.000Z");
+  await claim.complete();
+  assert.equal(fixture.calls.completedValues.expiresAt, "2026-08-21T12:04:00.000Z");
+  assert.ok(parameterValues(fixture.calls.wheres.at(-1)).includes("2026-08-21T12:00:00.000Z"), "cooldown completion is owner fenced");
 });
