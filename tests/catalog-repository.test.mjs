@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { loadCatalog, mapD1Offer } from "../lib/d1/catalog.ts";
+import { classifyFreshness, loadCatalog, mapD1Offer } from "../lib/d1/catalog.ts";
 
 const validRow = {
   offerKey: "central-computer:rtx-5080-1",
@@ -26,15 +26,41 @@ const validRow = {
 };
 
 test("maps a normalized D1 row to one market-local storefront offer", () => {
-  const offer = mapD1Offer(validRow);
+  const offer = mapD1Offer(validRow, undefined, new Date("2026-08-21T12:00:00.000Z"));
   assert.ok(offer);
   assert.equal(offer.market, "us");
   assert.equal(offer.currency, "USD");
   assert.equal(offer.price, 1099.99);
   assert.equal(offer.brand, "ASUS");
   assert.equal(offer.vram, "16 GB VRAM");
-  assert.match(offer.freshness, /live · observed 21 Aug 2026/);
+  assert.equal(offer.observedAt, validRow.observedAt);
+  assert.match(offer.freshness, /fresh · observed 21 Aug 2026, 10:00 UTC/);
+  assert.equal(offer.freshnessState, "fresh");
+  assert.equal(offer.healthState, "healthy");
   assert.equal(offer.freshnessTone, "fresh");
+});
+
+test("freshness uses explicit 24 and 48 hour UTC thresholds", () => {
+  const now = new Date("2026-08-21T12:00:00.000Z");
+  assert.equal(classifyFreshness("2026-08-20T12:00:00.000Z", now), "fresh");
+  assert.equal(classifyFreshness("2026-08-20T11:59:59.999Z", now), "aging");
+  assert.equal(classifyFreshness("2026-08-19T12:00:00.000Z", now), "aging");
+  assert.equal(classifyFreshness("2026-08-19T11:59:59.999Z", now), "stale");
+  assert.equal(classifyFreshness("2026-08-21T12:06:00.000Z", now), undefined);
+});
+
+test("availability and source health remain separate signals", () => {
+  const now = new Date("2026-08-21T12:00:00.000Z");
+  const unavailable = mapD1Offer({ ...validRow, availability: "out_of_stock" }, undefined, now);
+  assert.equal(unavailable.availability, "Unavailable");
+  assert.equal(unavailable.healthState, "unavailable");
+  assert.equal(unavailable.freshnessState, "fresh");
+
+  const degraded = mapD1Offer({ ...validRow, health: "degraded", observedAt: "2026-08-19T10:00:00.000Z" }, undefined, now);
+  assert.equal(degraded.availability, "In stock");
+  assert.equal(degraded.healthState, "degraded");
+  assert.equal(degraded.freshnessState, "stale");
+  assert.match(degraded.note, /last-known-good/);
 });
 
 test("rejects cross-market currency and untrusted retailer rows", () => {

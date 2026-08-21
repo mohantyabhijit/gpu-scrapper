@@ -29,6 +29,11 @@ test("server-renders the Raster market-local fixture desk", async () => {
   assert.match(html, /href="\/scrapper\/gpu\/rtx-5070-ti\?market=us"/);
   assert.match(html, /name="market"/);
   assert.match(html, /name="q"/);
+  assert.match(html, /name="gpu"/);
+  assert.match(html, /name="source"/);
+  assert.match(html, /name="sort"/);
+  assert.match(html, /dateTime="2026-08-21T10:00:00.000Z"/);
+  assert.match(html, /fixture source/i);
   assert.match(html, /href="\/scrapper\/how-it-works"/);
   assert.doesNotMatch(html, /collectors online|c_gpu_|verified feed/i);
   assert.doesNotMatch(html, /Your site is taking shape|Building your site|Starter Project/);
@@ -66,8 +71,26 @@ test("supports URL-owned filtering and market-local model detail routes", async 
   assert.match(detailHtml, /GeForce RTX 5070 Ti/);
   assert.match(detailHtml, /India/);
   assert.match(detailHtml, /Compare board partners/);
-  assert.match(detailHtml, /Lowest fixture in this market/);
+  assert.match(detailHtml, /Lowest available fixture in this market/);
+  assert.match(detailHtml, /Source health:\s*(?:<!-- -->)?fixture/);
+  assert.match(detailHtml, /dateTime="2026-08-21T10:20:00.000Z"/);
   assert.doesNotMatch(detailHtml, /USD|GBP|SGD/);
+});
+
+test("supports multi-select GPU and retailer filters, sorting, and removable chips", async () => {
+  const response = await render("/?market=us&gpu=rtx-5070-ti&gpu=rtx-5080&source=micro-center&sort=price-high");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /Active:/);
+  assert.match(html, /GeForce RTX 5070 Ti/);
+  assert.match(html, /GeForce RTX 5080/);
+  assert.match(html, /Micro Center/);
+  assert.match(html, /Sort: price high/);
+  assert.match(html, /Clear all/);
+  assert.match(html, /1(?:<!-- -->)?\s*(?:<!-- -->)?offer/);
+  assert.doesNotMatch(html, /PNY XLR8 Gaming/);
+  assert.match(html, /gpu=rtx-5080/);
+  assert.match(html, /source=micro-center(?:&|&amp;)sort=price-high(?:&|&amp;)gpu=rtx-5080(?:&|&amp;)market=us#offers/);
 });
 
 test("publishes an honest method page", async () => {

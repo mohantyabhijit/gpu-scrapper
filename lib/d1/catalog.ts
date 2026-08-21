@@ -59,6 +59,9 @@ const observedDateFormatter = new Intl.DateTimeFormat("en-GB", {
   day: "2-digit",
   month: "short",
   year: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
   timeZone: "UTC",
 });
 
@@ -78,11 +81,21 @@ function observedLabel(value: string): string | undefined {
   return observedDateFormatter.format(date);
 }
 
-function availability(value: string, health: string): Offer["availability"] {
-  if (health !== "healthy") return "Stale check";
+function availability(value: string): Offer["availability"] {
   if (value === "in_stock") return "In stock";
   if (value === "preorder") return "Low stock";
-  return "Stale check";
+  if (value === "out_of_stock") return "Unavailable";
+  return "Unknown";
+}
+
+export function classifyFreshness(observedAt: string, now = new Date()): Offer["freshnessState"] | undefined {
+  const observed = new Date(observedAt);
+  if (Number.isNaN(observed.getTime())) return undefined;
+  const ageMs = now.getTime() - observed.getTime();
+  if (ageMs < -5 * 60 * 1000) return undefined;
+  if (ageMs <= 24 * 60 * 60 * 1000) return "fresh";
+  if (ageMs <= 48 * 60 * 60 * 1000) return "aging";
+  return "stale";
 }
 
 /**
@@ -90,11 +103,12 @@ function availability(value: string, health: string): Offer["availability"] {
  * Invalid or cross-market rows are rejected here so callers cannot compare
  * mismatched currencies even if a database contains a bad historical row.
  */
-export function mapD1Offer(row: D1CatalogRow, definitions: readonly MarketDefinition[] = Object.values(marketRegistry)): Offer | undefined {
+export function mapD1Offer(row: D1CatalogRow, definitions: readonly MarketDefinition[] = Object.values(marketRegistry), now = new Date()): Offer | undefined {
   const marketCode = viewMarketCode(row.offerMarket);
   const market = definitions.find((definition) => definition.code === marketCode);
   const currency = viewCurrency(row.offerCurrency.toUpperCase());
   const observed = observedLabel(row.observedAt);
+  const freshnessState = classifyFreshness(row.observedAt, now);
   const sourceSlug = row.sourceSlug.trim();
   const productUrl = row.productUrl.trim();
   const sourceMarket = viewMarketCode(row.sourceMarket);
@@ -120,13 +134,16 @@ export function mapD1Offer(row: D1CatalogRow, definitions: readonly MarketDefini
   }
   if (!productUrl || !trustedUrl) return undefined;
   if (!row.offerKey.trim() || !row.title.trim() || !row.productModel.trim()) return undefined;
-  if (!Number.isSafeInteger(row.priceMinor) || row.priceMinor <= 0 || !observed) return undefined;
+  if (!Number.isSafeInteger(row.priceMinor) || row.priceMinor <= 0 || !observed || !freshnessState) return undefined;
   if (row.health !== "healthy" && row.health !== "degraded") return undefined;
 
-  const stale = row.health !== "healthy";
+  const degraded = row.health !== "healthy";
+  const offerAvailability = availability(row.availability);
+  const healthState = degraded ? "degraded" : offerAvailability === "Unavailable" ? "unavailable" : "healthy";
   const boardPartner = row.boardPartner?.trim() || "Unspecified board partner";
   const vram = row.vramGb && row.vramGb > 0 ? `${row.vramGb} GB VRAM` : "VRAM not listed";
-  const freshness = stale ? `live · degraded · observed ${observed}` : `live · observed ${observed}`;
+  const freshness = `${freshnessState} · observed ${observed} UTC`;
+  const freshnessTone = degraded || freshnessState === "stale" ? "stale" : freshnessState === "aging" ? "watch" : "fresh";
 
   return {
     id: row.offerKey,
@@ -138,11 +155,14 @@ export function mapD1Offer(row: D1CatalogRow, definitions: readonly MarketDefini
     source: row.sourceDisplayName.trim() || sourceSlug,
     price: row.priceMinor / 100,
     currency,
-    availability: availability(row.availability, row.health),
+    availability: offerAvailability,
+    observedAt: row.observedAt,
     freshness,
-    freshnessTone: stale ? "stale" : "fresh",
+    freshnessState,
+    freshnessTone,
+    healthState,
     productUrl,
-    note: stale ? "Live normalized row; last-known-good state" : "Live normalized row; verify at retailer",
+    note: degraded ? "Live normalized row; degraded source, last-known-good state" : "Live normalized row; verify at retailer",
   };
 }
 
