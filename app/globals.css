@@ -106,7 +106,7 @@ h1 em,h2 em { color:var(--lime); font-style:normal; }
 }
 .health-legend { display:grid; grid-template-columns:1fr 2fr; gap:8%; align-items:center; padding:34px 8%; border-bottom:1px solid var(--line); background:#0d100f; }
 .health-legend h2 { margin:0; font:500 clamp(25px,3vw,38px)/1.05 Georgia,serif; letter-spacing:-.05em; }
-.health-legend dl { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:0; }
+.health-legend dl { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin:0; }
 .health-legend dl>div { min-width:0; padding:15px; border:1px solid var(--line); background:var(--panel); }
 .health-legend dt { margin-bottom:8px; color:#7f887e; font:10px ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.1em; text-transform:uppercase; }
 .health-legend dd { display:flex; align-items:flex-start; gap:8px; margin:0; color:#d1d4ce; font-size:12px; line-height:1.45; }
@@ -123,6 +123,7 @@ h1 em,h2 em { color:var(--lime); font-style:normal; }
 .evidence-chip a { color:inherit; text-decoration:underline; text-underline-offset:3px; }
 @media (max-width:850px) {
   .health-legend { grid-template-columns:1fr; gap:22px; padding:30px 6%; }
+  .health-legend dl { grid-template-columns:repeat(2,1fr); }
 }
 @media (max-width:520px) {
   .health-legend { padding:28px 5%; }

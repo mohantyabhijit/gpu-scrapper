@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { markets, type Market } from "../catalog";
+import { loadCatalog } from "../../lib/d1/catalog";
 
 type HealthTone = "ready" | "pending" | "planned";
 type EvidenceKind = "fixture" | "provider" | "policy";
@@ -79,13 +80,34 @@ const pipelineChecks: readonly HealthCheck[] = [
   },
 ];
 
-export default function DataHealth() {
+export default async function DataHealth() {
+  const snapshot = await loadCatalog();
+  const liveRead = snapshot.source === "d1";
+  const liveRowsLabel = liveRead
+    ? `${snapshot.liveOfferCount ?? snapshot.offers.length} normalized D1 rows`
+    : snapshot.fallbackReason === "database-empty"
+      ? "pending · no normalized rows"
+      : "pending · DB read unavailable";
+  const displayedChecks: readonly HealthCheck[] = liveRead
+    ? pipelineChecks.map((check) => check.key === "fixture-catalog"
+      ? {
+        ...check,
+        label: "D1 normalized offers",
+        state: `${snapshot.liveOfferCount ?? snapshot.offers.length} rows read`,
+        detail: "Rows passed the market, currency, source, URL, and timestamp checks before entering the storefront.",
+        evidence: [
+          { kind: "provider", label: "D1 read" },
+          { kind: "policy", label: "Schema validated" },
+        ],
+      }
+      : check)
+    : pipelineChecks;
   return (
     <main className="site-shell health-page">
       <div className="demo-banner" role="note">
         <span className="pulse-dot" aria-hidden="true" />
-        <strong>FIXTURE CATALOG</strong>
-        <span>Health here describes the current demo state; it does not claim a live scrape or production freshness.</span>
+        <strong>{liveRead ? "D1 NORMALIZED READ" : "FIXTURE CATALOG"}</strong>
+        <span>{liveRead ? `${liveRowsLabel}. Collector execution status remains separate and is not inferred from a database read.` : "Health here describes the current demo state; it does not claim a live scrape or production freshness."}</span>
       </div>
 
       <header className="topbar">
@@ -109,7 +131,7 @@ export default function DataHealth() {
         </div>
         <div className="health-stamp" aria-label="Live collectors not configured">
           <span className="stamp-ring" aria-hidden="true" />
-          <strong>NO LIVE<br />RUN CLAIMED</strong>
+          <strong>{liveRead ? "D1 ROWS<br />READ" : "NO LIVE<br />RUN CLAIMED"}</strong>
           <small>honesty is a feature</small>
         </div>
       </section>
@@ -122,7 +144,7 @@ export default function DataHealth() {
         <dl>
           <div>
             <dt>Current UI</dt>
-            <dd><span className="legend-dot legend-fixture" aria-hidden="true" /> fixture rows only</dd>
+            <dd><span className="legend-dot legend-fixture" aria-hidden="true" /> {liveRead ? "D1 normalized rows" : "fixture rows only"}</dd>
           </div>
           <div>
             <dt>Live provider</dt>
@@ -131,6 +153,10 @@ export default function DataHealth() {
           <div>
             <dt>Publish rule</dt>
             <dd><span className="legend-dot legend-policy" aria-hidden="true" /> same-ID rerun + schema validation</dd>
+          </div>
+          <div>
+            <dt>Normalized rows</dt>
+            <dd data-live-count={liveRead ? snapshot.liveOfferCount ?? 0 : "pending"}><span className={`legend-dot ${liveRead ? "legend-fixture" : "legend-pending"}`} aria-hidden="true" /> {liveRowsLabel}</dd>
           </div>
         </dl>
       </section>
@@ -155,7 +181,7 @@ export default function DataHealth() {
                 <h3>{info.label}</h3>
                 <p>Market-local offers only</p>
                 <strong>{info.currency}</strong>
-                <small>{note}</small>
+                <small>{liveRead ? "D1 row · observed timestamp shown per offer" : note}</small>
               </article>
             );
           })}
@@ -171,7 +197,7 @@ export default function DataHealth() {
           <p className="section-note">Pending states stay visible<br />until evidence exists</p>
         </div>
         <div className="pipeline-list">
-          {pipelineChecks.map((check) => (
+          {displayedChecks.map((check) => (
             <article className="pipeline-row" key={check.key} data-status-key={check.key} data-health-tone={check.tone}>
               <span className={`pipeline-mark pipeline-${check.tone}`} aria-hidden="true">{check.tone === "ready" ? "✓" : "·"}</span>
               <div className="pipeline-copy">
