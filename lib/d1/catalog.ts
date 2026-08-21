@@ -1,31 +1,11 @@
 import { isKnownSource, sourceHostIsAllowed, type SourceSlug } from "../../config/sources.ts";
 import * as schema from "../../db/schema.ts";
 import { offers as fixtureOffers, type Currency, type Market, type Offer } from "../../app/catalog.ts";
+import { marketCurrency, marketForCode, marketRegistry } from "../../config/markets.ts";
 import type { DrizzleD1Database } from "drizzle-orm/d1";
 import { and, eq } from "drizzle-orm";
 
 type CatalogDatabase = DrizzleD1Database<typeof schema>;
-
-const VIEW_MARKETS = {
-  us: "US",
-  uk: "UK",
-  india: "IN",
-  singapore: "SG",
-} as const satisfies Record<Market, string>;
-
-const VIEW_CURRENCIES = {
-  us: "USD",
-  uk: "GBP",
-  india: "INR",
-  singapore: "SGD",
-} as const satisfies Record<Market, Currency>;
-
-const VIEW_MARKET_BY_DB_CODE = {
-  US: "us",
-  UK: "uk",
-  IN: "india",
-  SG: "singapore",
-} as const satisfies Record<string, Market>;
 
 type D1CatalogRow = {
   readonly offerKey: string;
@@ -55,10 +35,17 @@ export type CatalogSnapshot = {
   readonly fallbackReason?: "database-unavailable" | "database-empty" | "database-no-valid-rows";
 };
 
-export type CatalogQuery = (market?: Market) => Promise<readonly D1CatalogRow[]>;
+export type CatalogQuery = (market?: Market, modelSlug?: string) => Promise<readonly D1CatalogRow[]>;
+
+const observedDateFormatter = new Intl.DateTimeFormat("en-GB", {
+  day: "2-digit",
+  month: "short",
+  year: "numeric",
+  timeZone: "UTC",
+});
 
 function viewMarket(value: string): Market | undefined {
-  return VIEW_MARKET_BY_DB_CODE[value.toUpperCase() as keyof typeof VIEW_MARKET_BY_DB_CODE];
+  return marketForCode(value)?.slug;
 }
 
 function viewCurrency(value: string): Currency | undefined {
@@ -68,12 +55,7 @@ function viewCurrency(value: string): Currency | undefined {
 function observedLabel(value: string): string | undefined {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return undefined;
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(date);
+  return observedDateFormatter.format(date);
 }
 
 function availability(value: string, health: string): Offer["availability"] {
@@ -91,7 +73,7 @@ function availability(value: string, health: string): Offer["availability"] {
 export function mapD1Offer(row: D1CatalogRow): Offer | undefined {
   const market = viewMarket(row.offerMarket);
   const currency = viewCurrency(row.offerCurrency.toUpperCase());
-  const expectedCurrency = market ? VIEW_CURRENCIES[market] : undefined;
+  const expectedCurrency = market ? marketRegistry[market].currency : undefined;
   const observed = observedLabel(row.observedAt);
   const sourceSlug = row.sourceSlug.trim();
   const productUrl = row.productUrl.trim();
@@ -129,7 +111,7 @@ export function mapD1Offer(row: D1CatalogRow): Offer | undefined {
   };
 }
 
-async function queryD1Rows(db: CatalogDatabase, market?: Market): Promise<readonly D1CatalogRow[]> {
+async function queryD1Rows(db: CatalogDatabase, market?: Market, modelSlug?: string): Promise<readonly D1CatalogRow[]> {
   const selection = db.select({
     offerKey: schema.offers.offerKey,
     sourceSlug: schema.offers.sourceSlug,
@@ -152,10 +134,26 @@ async function queryD1Rows(db: CatalogDatabase, market?: Market): Promise<readon
     .innerJoin(schema.products, eq(schema.offers.productIdentityKey, schema.products.identityKey))
     .innerJoin(schema.sources, eq(schema.offers.sourceSlug, schema.sources.slug));
 
-  const rows = market
-    ? await selection.where(and(eq(schema.offers.market, VIEW_MARKETS[market]), eq(schema.offers.currency, VIEW_CURRENCIES[market]))).all()
-    : await selection.all();
-  return rows as unknown as readonly D1CatalogRow[];
+  const marketCode = market ? marketRegistry[market].code : undefined;
+  const currency = marketCode ? marketCurrency(marketCode) : undefined;
+  let rows: readonly D1CatalogRow[];
+  if (market && marketCode && currency && modelSlug) {
+    rows = await selection.where(and(
+      eq(schema.offers.market, marketCode),
+      eq(schema.offers.currency, currency),
+      eq(schema.products.slug, modelSlug),
+    )).all() as unknown as readonly D1CatalogRow[];
+  } else if (market && marketCode && currency) {
+    rows = await selection.where(and(
+      eq(schema.offers.market, marketCode),
+      eq(schema.offers.currency, currency),
+    )).all() as unknown as readonly D1CatalogRow[];
+  } else if (modelSlug) {
+    rows = await selection.where(eq(schema.products.slug, modelSlug)).all() as unknown as readonly D1CatalogRow[];
+  } else {
+    rows = await selection.all() as unknown as readonly D1CatalogRow[];
+  }
+  return rows;
 }
 
 function fixtureSnapshot(reason?: CatalogSnapshot["fallbackReason"]): CatalogSnapshot {
@@ -174,6 +172,7 @@ function fixtureSnapshot(reason?: CatalogSnapshot["fallbackReason"]): CatalogSna
  */
 export async function loadCatalog(options: {
   market?: Market;
+  modelSlug?: string;
   query?: CatalogQuery;
 } = {}): Promise<CatalogSnapshot> {
   let query = options.query;
@@ -181,14 +180,14 @@ export async function loadCatalog(options: {
     try {
       const { getDb } = await import("../../db/index.ts");
       const db = getDb();
-      query = (market) => queryD1Rows(db, market);
+      query = (market, modelSlug) => queryD1Rows(db, market, modelSlug);
     } catch {
       return fixtureSnapshot("database-unavailable");
     }
   }
 
   try {
-    const rows = await query(options.market);
+    const rows = await query(options.market, options.modelSlug);
     const mapped = rows.map(mapD1Offer).filter((offer): offer is Offer => Boolean(offer));
     if (mapped.length === 0) {
       return fixtureSnapshot(rows.length > 0 ? "database-no-valid-rows" : "database-empty");

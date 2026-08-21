@@ -11,7 +11,7 @@ export default async function GpuDetail({ params, searchParams }: { params: Prom
   const query = searchParams ? await searchParams : {};
   const market = getMarket(Array.isArray(query.market) ? query.market[0] : query.market);
   const marketInfo = markets[market];
-  const snapshot = await loadCatalog({ market });
+  const snapshot = await loadCatalog({ market, modelSlug: slug });
   const modelOffers = snapshot.offers.filter((offer) => offer.modelSlug === slug && offer.market === market && offer.currency === marketInfo.currency);
   const fixtureModel = models.find((item) => item.slug === slug);
   const model = fixtureModel ?? (modelOffers[0] ? { slug, name: modelOffers[0].model, vram: modelOffers[0].vram } : undefined);

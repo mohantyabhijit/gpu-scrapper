@@ -1,19 +1,15 @@
 import { isKnownSource, sourceHostIsAllowed, type SourceSlug } from "../config/sources.ts";
+import {
+  MARKET_CURRENCIES,
+  marketCurrency,
+  type MarketCode,
+  type MarketCurrency,
+} from "../config/markets.ts";
 
-/** Currency is part of the market contract, not a presentation concern. */
-export const MARKET_CURRENCIES = {
-  US: "USD",
-  UK: "GBP",
-  IN: "INR",
-  SG: "SGD",
-} as const;
+export { MARKET_CURRENCIES, marketCurrency };
+export type { MarketCurrency };
 
-export type Market = keyof typeof MARKET_CURRENCIES;
-export type MarketCurrency = (typeof MARKET_CURRENCIES)[Market];
-
-export function marketCurrency(market: string): MarketCurrency | undefined {
-  return MARKET_CURRENCIES[market.toUpperCase() as Market];
-}
+export type Market = MarketCode;
 
 export const AVAILABILITIES = [
   "in_stock",

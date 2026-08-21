@@ -73,7 +73,7 @@ function safeResponseSummary(text) {
   };
   return Object.fromEntries(
     allowedKeys
-      .filter((key) => Object.prototype.hasOwnProperty.call(parsed, key))
+      .filter((key) => Object.hasOwn(parsed, key))
       .map((key) => [key, safeValue(parsed[key])])
       .filter(([, value]) => value !== undefined),
   );

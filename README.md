@@ -28,6 +28,13 @@ the intended access pattern, has same-market overlap, and is not already
 covered by a Bright Data pre-built scraper. Region-specific discounts, tax, and
 shipping labels remain source claims and are never silently normalized away.
 
+Country support is registry-driven. `config/markets.ts` is the single source of
+truth for route slugs, country codes, local currencies, formatting, and the
+selector. A new country becomes visible after an operator adds its market
+definition, approves at least one public source in `config/sources.ts`, and
+passes the collector contract. Raster never accepts arbitrary runtime countries
+or currencies that could bypass the source and public-data gates.
+
 ## Judge-proof status
 
 The public repository currently contains the product contract, fixture-backed

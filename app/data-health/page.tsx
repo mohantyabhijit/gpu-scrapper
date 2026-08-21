@@ -120,7 +120,7 @@ export default async function DataHealth() {
           <Link href="/how-it-works">How it works</Link>
           <Link href="/data-health" aria-current="page">Data health</Link>
         </nav>
-        <span className="status-chip"><span className="status-dot" aria-hidden="true" /> fixture view</span>
+        <span className="status-chip"><span className="status-dot" aria-hidden="true" /> {liveRead ? "d1 view" : "fixture view"}</span>
       </header>
 
       <section className="health-hero">
@@ -131,7 +131,7 @@ export default async function DataHealth() {
         </div>
         <div className="health-stamp" aria-label="Live collectors not configured">
           <span className="stamp-ring" aria-hidden="true" />
-          <strong>{liveRead ? "D1 ROWS<br />READ" : "NO LIVE<br />RUN CLAIMED"}</strong>
+          <strong>{liveRead ? <>D1 ROWS<br />READ</> : <>NO LIVE<br />RUN CLAIMED</>}</strong>
           <small>honesty is a feature</small>
         </div>
       </section>
@@ -176,7 +176,7 @@ export default async function DataHealth() {
               <article className="market-health-card" key={market} data-health-tone={tone}>
                 <div className="health-card-top">
                   <span className="health-icon" aria-hidden="true">{info.symbol}</span>
-                  <span className="state-pill state-fixture">fixture ready</span>
+                  <span className="state-pill state-fixture">{liveRead ? "d1 ready" : "fixture ready"}</span>
                 </div>
                 <h3>{info.label}</h3>
                 <p>Market-local offers only</p>
@@ -234,7 +234,7 @@ export default async function DataHealth() {
 
       <footer className="site-footer">
         <Link href="/" className="brand"><span className="brand-mark" aria-hidden="true">R</span><span>raster<span className="brand-dot">.</span></span></Link>
-        <span>Fixture health · no live run claimed</span>
+        <span>{liveRead ? "D1 catalog health · provider run tracked separately" : "Fixture health · no live run claimed"}</span>
         <Link href="/#offers">Back to offers ↗</Link>
       </footer>
     </main>

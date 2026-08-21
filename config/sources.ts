@@ -6,8 +6,8 @@
  */
 
 export type SourceRole = "primary" | "secondary" | "backup";
-export type MarketRegion = "US" | "UK" | "IN" | "SG";
-export type Currency = "USD" | "GBP" | "INR" | "SGD";
+export type MarketRegion = MarketCode;
+export type Currency = MarketCurrency;
 export type CollectorRole = "discovery" | "pdp" | "combined";
 export type CollectorId = `c_${string}`;
 
@@ -178,3 +178,4 @@ export function sourceHostIsAllowed(slug: string, url: string): boolean {
     (host) => parsed.hostname === host || parsed.hostname.endsWith(`.${host}`),
   );
 }
+import type { MarketCode, MarketCurrency } from "./markets.ts";

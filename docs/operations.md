@@ -35,6 +35,23 @@ manually while source eligibility and Bright Data pre-built-library exclusion
 are still being verified. Concurrency is serialized, the job has an eight
 minute timeout, and permissions are read-only.
 
+## Onboarding another country
+
+Country expansion is configuration-driven but intentionally not open-ended at
+runtime. To add a market safely:
+
+1. Add its route slug, ISO-style market code, currency, locale, and symbol to
+   `config/markets.ts`.
+2. Add public retailer candidates to `config/sources.ts` and complete the
+   source-eligibility checklist before enabling any of them.
+3. Create and run a source-specific custom Scraper Studio collector, record its
+   real `c_*` ID, and validate its output against the shared contract.
+4. Add the scheduled/manual refresh slice and verify market-local D1 reads.
+
+The selector, validation, currency formatting, and D1 query layer all derive
+from the market registry. Arbitrary request parameters cannot create a new
+country or currency and cannot bypass the allowlisted sources.
+
 ## Signing contract
 
 The signer sends this compact JSON body:

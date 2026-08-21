@@ -41,11 +41,20 @@ test("rejects cross-market currency and untrusted retailer rows", () => {
 });
 
 test("loadCatalog uses injected D1 rows and reports real counts", async () => {
-  const snapshot = await loadCatalog({ query: async () => [validRow] });
+  const calls = [];
+  const snapshot = await loadCatalog({
+    market: "us",
+    modelSlug: "rtx-5080",
+    query: async (...args) => {
+      calls.push(args);
+      return [validRow];
+    },
+  });
   assert.equal(snapshot.source, "d1");
   assert.equal(snapshot.liveOfferCount, 1);
   assert.equal(snapshot.rejectedRows, 0);
   assert.equal(snapshot.offers[0].id, validRow.offerKey);
+  assert.deepEqual(calls, [["us", "rtx-5080"]]);
 });
 
 test("loadCatalog falls back to fixtures when D1 is empty or unavailable", async () => {

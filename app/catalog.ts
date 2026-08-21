@@ -1,6 +1,13 @@
 export type Availability = "In stock" | "Low stock" | "Stale check";
-export type Market = "us" | "uk" | "india" | "singapore";
-export type Currency = "USD" | "GBP" | "INR" | "SGD";
+import {
+  marketRegistry,
+  marketSlug,
+  type MarketCurrency,
+  type MarketSlug,
+} from "../config/markets.ts";
+
+export type Market = MarketSlug;
+export type Currency = MarketCurrency;
 
 export type Offer = {
   id: string;
@@ -19,12 +26,7 @@ export type Offer = {
   note: string;
 };
 
-export const markets: Record<Market, { label: string; currency: Currency; locale: string; symbol: string }> = {
-  us: { label: "United States", currency: "USD", locale: "en-US", symbol: "$" },
-  uk: { label: "United Kingdom", currency: "GBP", locale: "en-GB", symbol: "£" },
-  india: { label: "India", currency: "INR", locale: "en-IN", symbol: "₹" },
-  singapore: { label: "Singapore", currency: "SGD", locale: "en-SG", symbol: "S$" },
-};
+export const markets = marketRegistry;
 
 export const offers: Offer[] = [
   { id: "us-microcenter-5070ti", market: "us", modelSlug: "rtx-5070-ti", model: "GeForce RTX 5070 Ti", brand: "ASUS TUF Gaming", vram: "16 GB GDDR7", source: "Micro Center", price: 749.99, currency: "USD", availability: "In stock", freshness: "fixture · today", freshnessTone: "fresh", productUrl: "https://www.microcenter.com/product/688528/asus-nvidia-geforce-rtx-5070-ti-tuf-gaming-overclocked-triple-fan-16gb-gddr7-pcie-50-graphics-card", note: "Demo fixture; verify at retailer" },
@@ -38,7 +40,7 @@ export const offers: Offer[] = [
 ];
 
 export function getMarket(value: string | undefined): Market {
-  return value === "uk" || value === "india" || value === "singapore" ? value : "us";
+  return marketSlug(value);
 }
 export function getMarketOffers(market: Market) { return offers.filter((offer) => offer.market === market); }
 export function getModelOffers(slug: string, market: Market) { return offers.filter((offer) => offer.modelSlug === slug && offer.market === market); }
