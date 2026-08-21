@@ -18,8 +18,8 @@ terms, or Bright Data coverage are approved.
 | IN / INR | MDComputers | <https://mdcomputers.in/catalog/graphics-card/nvidia> | `md-computers` | primary | Public India catalog with NVIDIA series/category paths and model-level listings. |
 | IN / INR | SCL Gaming | <https://sclgaming.in/product-category/graphics-card/> | `scl-gaming` | secondary | Public category with brand filters and model-level GPU listings in INR. |
 | SG / SGD | Dynacore Technologies | <https://dynacoretech.com/collections/all/graphics-card> | `dynacore` | primary | Singapore specialist catalog; public GPU product pages expose model/MPN-style signals. |
-| SG / SGD | ElectronicsCrazy.sg | <https://www.electronicscrazy.sg/gaming-gadgets/gaming-graphics-cards/> | `electronics-crazy` | secondary | Public Singapore gaming GPU category with brand/model paths and local fulfilment claims. |
-| SG / SGD | Bizgram Asia | <https://www.bizgram.com/product-category/graphic-card/> | `bizgram` | backup | Public Singapore graphics-card category with a broad legacy/current catalog. |
+| SG / SGD | Tradezone SG | <https://tradezone.sg/product-category/pc-related/pc-parts/graphic-card/> | `tradezone` | secondary | Public specialist category with 11 current GPU listings, local SGD prices, availability signals, and RTX 5070/5080/5090 overlap with Dynacore. |
+| SG / SGD | TechDeals | <https://www.techdeals.com.sg/collections/graphics-card-1> | `tech-deals` | backup | Public Singapore GPU collection with current NVIDIA and AMD models, local SGD prices, stock labels, and a crawlable catalog policy. |
 
 These are candidates, not enabled sources. The shortlist intentionally favors
 regional or specialist catalogs so Raster can satisfy the organizer’s “long
@@ -30,10 +30,15 @@ is covered, replace it rather than building against the pre-built collector.
 
 ### Access verification note
 
-A plain local `curl` probe on 2026-08-21 returned HTTP 403 for several
-candidate catalogs (including Central Computers, Micro Center, Overclockers UK,
-CCL, MDComputers, and SCL Gaming) while Dynacore, ElectronicsCrazy.sg, and
-Bizgram returned HTTP 200. This is not an eligibility decision: bot controls can
+A bounded source review on 2026-08-21 found that Dynacore, Tradezone, and
+TechDeals expose signed-out public GPU catalogs. Dynacore and TechDeals robots
+policies allow their unfiltered catalog paths while excluding transactional and
+account surfaces; Tradezone excludes WooCommerce logs, cart actions, and admin
+paths but not the GPU category. An authenticated Bright Data pipeline-name
+check returned no match for `dynacore`, `tradezone`, or `techdeals`. These are
+necessary signals, not a completed collector decision: a successful custom
+create/run contract and model-overlap check are still required. Several other
+market candidates returned HTTP 403 to a plain local client. Bot controls can
 legitimately reject a simple client while Bright Data may have an approved
 collection path. It is a reason to perform bounded authenticated checks and
 review terms/robots before enabling a source, not to retry aggressively.
@@ -132,4 +137,5 @@ reason. Do not include private correspondence or provider credentials.
 
 | Date | Source | Decision | Reason |
 | --- | --- | --- | --- |
-| — | — | — | No execution-time rejection recorded yet. |
+| 2026-08-21 | ElectronicsCrazy.sg | reject | Its effective `User-agent: *` policy disallows the catalog path, so Raster will not collect it. |
+| 2026-08-21 | Bizgram Asia | replace | Public and crawl-delayed, but the visible catalog is materially older and offers weaker current-model overlap than Tradezone or TechDeals. |
