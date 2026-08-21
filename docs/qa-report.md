@@ -12,6 +12,9 @@ Verified on 2026-08-21 against
 - 6/6 production server-render tests pass.
 - TypeScript, ESLint, `git diff --check`, the deployment dry run, and the
   repository secret scan pass.
+- `axe-core 4.11.4` reports zero automatically detected violations across the
+  deployed home, method, health, and representative product-detail routes;
+  this complements, rather than replaces, the manual keyboard checks below.
 - The GitHub push `Raster quality` run for commit `2c3710d` passes, and
   `actionlint v1.7.12` accepts the scheduled and quality workflows.
 - Remote D1 contains all five applied migrations and the expected production
@@ -49,8 +52,7 @@ still a separate release gate.
 No browser console warnings or errors were recorded across the final production
 route pass. The page exposes semantic headings, labelled controls, navigation,
 regions, status text, exact timestamps, and visible fixture/live disclosures.
-A formal automated accessibility scan and a retained responsive screenshot
-remain part of final submission polish.
+A retained responsive screenshot remains part of final submission polish.
 
 ## Known honest limitations
 

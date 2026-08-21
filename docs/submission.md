@@ -9,8 +9,8 @@
 - [ ] Scheduled/manual GitHub Action has completed and fed D1/storefront.
 - [x] Search, filters, currency grouping, freshness, source attribution, and
       outbound links pass manual keyboard/browser QA at desktop and 390px.
-- [ ] Formal automated accessibility scan and retained responsive screenshot
-      are attached to the submission evidence.
+- [x] Automated axe scan reports zero violations across four deployed routes.
+- [ ] A retained responsive screenshot is attached to the submission evidence.
 - [ ] Last-known-good behavior is visible for a failed/stale source.
 - [x] README, architecture, evidence matrix, and demo script are current for
       the explicitly fixture-backed baseline.
