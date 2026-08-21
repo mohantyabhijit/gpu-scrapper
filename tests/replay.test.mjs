@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createReplayGuard, createSourceRateGuard } from "../lib/d1/replay.ts";
 
-function replayDatabase({ inserted = true } = {}) {
+function replayDatabase({ inserted = true, existingExpiresAt } = {}) {
   const calls = { deletes: 0, insertedValues: undefined, completedValues: undefined, wheres: [] };
   return {
     calls,
@@ -33,6 +33,11 @@ function replayDatabase({ inserted = true } = {}) {
             return { where(condition) { calls.wheres.push(condition); return { async run() {} }; } };
           },
         };
+      },
+      select() {
+        return { from() { return { where() { return { async get() {
+          return existingExpiresAt ? { expiresAt: existingExpiresAt } : undefined;
+        } }; } }; } };
       },
     },
   };
@@ -76,4 +81,17 @@ test("source rate guard leases one provider run then holds a completion cooldown
   await claim.complete();
   assert.equal(fixture.calls.completedValues.expiresAt, "2026-08-21T12:04:00.000Z");
   assert.ok(parameterValues(fixture.calls.wheres.at(-1)).includes("2026-08-21T12:00:00.000Z"), "cooldown completion is owner fenced");
+});
+
+test("source rate guard denies a conflicting persistent lease with bounded retry timing", async () => {
+  const fixture = replayDatabase({ inserted: false, existingExpiresAt: "2026-08-21T12:02:00.000Z" });
+  const claim = await createSourceRateGuard(
+    fixture.db,
+    () => new Date("2026-08-21T12:00:00.000Z"),
+  )("central-computer");
+  assert.equal(claim.acquired, false);
+  assert.equal(claim.retryAfterSeconds, 120);
+  assert.equal(fixture.calls.deletes, 1, "expired receipts are purged before the atomic insert");
+  await claim.complete();
+  assert.equal(fixture.calls.completedValues, undefined, "a non-owner cannot alter the existing lease");
 });

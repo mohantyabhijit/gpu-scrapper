@@ -273,6 +273,7 @@ test("persistence failures become a sanitized source error", async () => {
 test("route sanitizes an unexpected persistence exception", async () => {
   const body = JSON.stringify({ sourceSlugs: ["central-computer"], role: "combined" });
   const request = await signedRequest(body, "refresh-secret");
+  let rateCompletions = 0;
   const response = await handleRefreshRequest(request, {
     environment: {
       RASTER_INGEST_HMAC_SECRET: "refresh-secret",
@@ -280,12 +281,14 @@ test("route sanitizes an unexpected persistence exception", async () => {
     },
     nowSeconds: 1700000000,
     replayGuard: async () => true,
+    rateGuard: async () => ({ acquired: true, retryAfterSeconds: 0, complete: async () => { rateCompletions += 1; } }),
     runner: async () => {
       throw new Error("D1 provider body secret");
     },
   });
   assert.equal(response.status, 503);
   assert.deepEqual(await response.json(), { error: "refresh_unavailable" });
+  assert.equal(rateCompletions, 1);
 });
 
 test("route releases a claimed receipt after failure so the signed request can be retried", async () => {
@@ -319,6 +322,7 @@ test("route retains a claimed receipt after success", async () => {
   const request = await signedRequest(body, "refresh-secret");
   let releases = 0;
   let completions = 0;
+  let rateCompletions = 0;
   const response = await handleRefreshRequest(request, {
     environment: {
       RASTER_INGEST_HMAC_SECRET: "refresh-secret",
@@ -330,6 +334,7 @@ test("route retains a claimed receipt after success", async () => {
       complete: async () => { completions += 1; },
       release: async () => { releases += 1; },
     }),
+    rateGuard: async () => ({ acquired: true, retryAfterSeconds: 0, complete: async () => { rateCompletions += 1; } }),
     runner: async () => ({
       requested: ["central-computer"],
       completed: [{ sourceSlug: "central-computer", collectorId: "c_demo", responseId: "r_demo", rowCount: 1, attempts: 1 }],
@@ -340,6 +345,7 @@ test("route retains a claimed receipt after success", async () => {
   assert.equal(response.status, 200);
   assert.equal(releases, 0);
   assert.equal(completions, 1);
+  assert.equal(rateCompletions, 1);
 });
 
 test("route releases a claimed receipt when every source reports a transient failure", async () => {
@@ -347,6 +353,7 @@ test("route releases a claimed receipt when every source reports a transient fai
   const request = await signedRequest(body, "refresh-secret");
   let releases = 0;
   let completions = 0;
+  let rateCompletions = 0;
   const response = await handleRefreshRequest(request, {
     environment: {
       RASTER_INGEST_HMAC_SECRET: "refresh-secret",
@@ -358,6 +365,7 @@ test("route releases a claimed receipt when every source reports a transient fai
       complete: async () => { completions += 1; },
       release: async () => { releases += 1; },
     }),
+    rateGuard: async () => ({ acquired: true, retryAfterSeconds: 0, complete: async () => { rateCompletions += 1; } }),
     runner: async () => ({
       requested: ["central-computer"],
       completed: [],
@@ -368,6 +376,26 @@ test("route releases a claimed receipt when every source reports a transient fai
   assert.equal(response.status, 502);
   assert.equal(releases, 1);
   assert.equal(completions, 0);
+  assert.equal(rateCompletions, 1);
+});
+
+test("route sanitizes a rate-cooldown completion failure after provider success", async () => {
+  const body = JSON.stringify({ sourceSlugs: ["central-computer"], role: "combined" });
+  const request = await signedRequest(body, "refresh-secret");
+  const response = await handleRefreshRequest(request, {
+    environment: { RASTER_INGEST_HMAC_SECRET: "refresh-secret", BRIGHTDATA_API_KEY: "provider-secret" },
+    nowSeconds: 1700000000,
+    replayGuard: async () => ({ acquired: true, complete: async () => {}, release: async () => {} }),
+    rateGuard: async () => ({ acquired: true, retryAfterSeconds: 0, complete: async () => { throw new Error("D1 cooldown detail"); } }),
+    runner: async () => ({
+      requested: ["central-computer"],
+      completed: [{ sourceSlug: "central-computer", collectorId: "c_demo", responseId: "r_demo", rowCount: 1, attempts: 1 }],
+      notConfigured: [],
+      failed: [],
+    }),
+  });
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), { error: "refresh_unavailable" });
 });
 
 test("route rejects a multi-source batch before claiming or provider execution", async () => {

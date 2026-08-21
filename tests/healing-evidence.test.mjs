@@ -7,7 +7,7 @@ import {
   validateHealingEvent,
 } from "../lib/d1/healing-evidence.ts";
 import { handleHealEvidenceRequest } from "../app/api/heal-evidence/route.ts";
-import { signatureFor } from "../scripts/sign-heal-event.mjs";
+import { runHealEvent, signatureFor } from "../scripts/sign-heal-event.mjs";
 
 const healthy = {
   sessionId: "heal-example-japan-20260821",
@@ -86,4 +86,18 @@ test("heal evidence route authenticates, blocks replay, and returns a safe summa
     nowSeconds: 1700000000,
   });
   assert.equal(unauthorized.status, 401);
+});
+
+test("heal evidence signer refuses to transmit privileged signatures over HTTP", async () => {
+  let calls = 0;
+  await assert.rejects(
+    runHealEvent({
+      url: "http://raster.test/api/heal-evidence",
+      eventJson: JSON.stringify(healthy),
+      secret: "heal-evidence-secret",
+      fetchImpl: async () => { calls += 1; throw new Error("must not send"); },
+    }),
+    /must use HTTPS/,
+  );
+  assert.equal(calls, 0);
 });

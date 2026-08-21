@@ -5,8 +5,10 @@ export function signatureFor({ secret, timestamp, body }) {
 }
 
 export async function runHealEvent({ url, eventJson, secret, fetchImpl = fetch, now = Date.now }) {
+  const endpoint = new URL(url);
+  if (endpoint.protocol !== "https:") throw new Error("heal evidence URL must use HTTPS");
   const timestamp = Math.floor(now() / 1000);
-  const response = await fetchImpl(url, {
+  const response = await fetchImpl(endpoint, {
     method: "POST",
     headers: {
       "content-type": "application/json",

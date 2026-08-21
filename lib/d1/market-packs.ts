@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import * as schema from "../../db/schema.ts";
 import { marketRegistry } from "../../config/markets.ts";
 import { sourceRegistry } from "../../config/sources.ts";
+import { isSafeEvidenceRef } from "../evidence/reference.ts";
 import type { RasterDatabase } from "./repository.ts";
 
 export type MarketPackStatus = "pending" | "ready";
@@ -71,6 +72,14 @@ function optionalText(value: unknown, field: string, max = 512): string | undefi
   return requiredText(value, field, max);
 }
 
+function optionalEvidenceRef(value: unknown, field: string): string | undefined {
+  const result = optionalText(value, field, 264);
+  if (result !== undefined && !isSafeEvidenceRef(result)) {
+    throw new MarketPackValidationError(`${field} is invalid`);
+  }
+  return result;
+}
+
 function httpsUrl(value: unknown, field: string): URL {
   const text = requiredText(value, field, 2048);
   let parsed: URL;
@@ -136,11 +145,11 @@ export function validateMarketPack(input: unknown, now = new Date()): MarketPack
   const status = body.status === undefined ? "pending" : requiredText(body.status, "status", 7);
   if (status !== "pending" && status !== "ready") throw new MarketPackValidationError("status is invalid");
 
-  const eligibilityEvidenceRef = optionalText(body.eligibilityEvidenceRef, "eligibilityEvidenceRef");
+  const eligibilityEvidenceRef = optionalEvidenceRef(body.eligibilityEvidenceRef, "eligibilityEvidenceRef");
   const eligibilityVerifiedAt = body.eligibilityVerifiedAt === undefined ? undefined : dateValue(body.eligibilityVerifiedAt, "eligibilityVerifiedAt", now);
-  const collectorCreatedEvidenceRef = optionalText(body.collectorCreatedEvidenceRef, "collectorCreatedEvidenceRef");
+  const collectorCreatedEvidenceRef = optionalEvidenceRef(body.collectorCreatedEvidenceRef, "collectorCreatedEvidenceRef");
   const collectorCreatedAt = body.collectorCreatedAt === undefined ? undefined : dateValue(body.collectorCreatedAt, "collectorCreatedAt", now);
-  const collectorRunEvidenceRef = optionalText(body.collectorRunEvidenceRef, "collectorRunEvidenceRef");
+  const collectorRunEvidenceRef = optionalEvidenceRef(body.collectorRunEvidenceRef, "collectorRunEvidenceRef");
   const collectorRunAt = body.collectorRunAt === undefined ? undefined : dateValue(body.collectorRunAt, "collectorRunAt", now);
   if (status === "ready" && !(eligibilityEvidenceRef && eligibilityVerifiedAt && collectorCreatedEvidenceRef && collectorCreatedAt && collectorRunEvidenceRef && collectorRunAt)) {
     throw new MarketPackValidationError("ready packs require dated eligibility, create, and run evidence");
@@ -162,6 +171,14 @@ export function validateMarketPack(input: unknown, now = new Date()): MarketPack
 
 export async function upsertMarketPack(db: RasterDatabase, input: unknown, now = new Date()): Promise<MarketPackResult> {
   const value = validateMarketPack(input, now);
+  const existing = await getMarketPack(db, value.slug);
+  if (existing && (
+    existing.sourceSlug !== value.sourceSlug
+    || existing.countryCode !== value.countryCode
+    || existing.currency !== value.currency
+  )) {
+    throw new MarketPackValidationError("country, currency, and source binding are immutable");
+  }
   const timestamp = now.toISOString();
   const serializedHosts = JSON.stringify(value.allowedHosts);
   const packStatement = db.insert(schema.marketPacks).values({ ...value, allowedHosts: serializedHosts, updatedAt: timestamp }).onConflictDoUpdate({

@@ -27,6 +27,12 @@ function fakeDb({ failTable } = {}) {
   return {
     calls,
     rows,
+    select() {
+      return { from(table) { return { where() { return { async get() {
+        const name = tableName(table);
+        return name ? rows[name].values().next().value : undefined;
+      } }; } }; } };
+    },
     insert(table) {
       return { values(value) { calls.push(value); return { onConflictDoUpdate({ set }) { calls.push(set); return { execute: async () => {
         const name = tableName(table);
@@ -68,6 +74,8 @@ test("validates a pending pack and rejects unsafe onboarding fields", () => {
   assert.throws(() => validateMarketPack({ ...valid, allowedHosts: ["*.example.jp"] }), MarketPackValidationError);
   assert.throws(() => validateMarketPack({ ...valid, slug: "us", countryCode: "US" }), /baseline markets/);
   assert.throws(() => validateMarketPack({ ...valid, sourceSlug: "dynacore" }), /baseline sources/);
+  assert.throws(() => validateMarketPack({ ...valid, eligibilityEvidenceRef: "https://example.jp/token=secret" }), /eligibilityEvidenceRef/);
+  assert.throws(() => validateMarketPack({ ...valid, collectorRunEvidenceRef: "evidence/../raw/run.json" }), /collectorRunEvidenceRef/);
 });
 
 test("ready requires dated eligibility, creation, and run evidence", () => {
@@ -115,8 +123,19 @@ test("country and source admission rolls back when the source write fails", asyn
   assert.equal(db.rows.sources.size, 0);
 });
 
+test("an admitted Country Pack keeps its country, currency, and source binding", async () => {
+  const db = fakeDb();
+  await upsertMarketPack(db, valid, new Date("2026-08-21T00:00:00Z"));
+  await assert.rejects(
+    upsertMarketPack(db, { ...valid, sourceSlug: "replacement-japan" }, new Date("2026-08-21T00:01:00Z")),
+    /immutable/,
+  );
+  assert.equal(db.rows.marketPacks.get("japan").sourceSlug, "example-japan");
+  assert.equal(db.rows.sources.has("replacement-japan"), false);
+});
+
 test("route authenticates HMAC and does not echo provider evidence", async () => {
-  const body = JSON.stringify({ ...valid, collectorRunEvidenceRef: "secret-provider-response" });
+  const body = JSON.stringify({ ...valid, collectorRunEvidenceRef: "evidence/public/run-summary.json" });
   const db = fakeDb();
   const response = await handleMarketPackRequest(await request(body), {
     environment: { RASTER_INGEST_HMAC_SECRET: "market-pack-secret" },
@@ -128,9 +147,46 @@ test("route authenticates HMAC and does not echo provider evidence", async () =>
   assert.equal(response.status, 200);
   const payload = await response.json();
   assert.deepEqual(payload, { slug: "japan", countryCode: "JP", label: "Japan", currency: "JPY", locale: "ja-JP", symbol: "¥", sourceSlug: "example-japan", status: "pending" });
-  assert.doesNotMatch(JSON.stringify(payload), /secret-provider-response/);
+  assert.doesNotMatch(JSON.stringify(payload), /run-summary/);
   const unauthorized = await handleMarketPackRequest(await request(body, "wrong-secret-long"), { environment: { RASTER_INGEST_HMAC_SECRET: "market-pack-secret" }, db, nowSeconds: 1700000000 });
   assert.equal(unauthorized.status, 401);
+});
+
+test("Country Pack route handles malformed, oversized, replayed, invalid, and database failures safely", async () => {
+  const environment = { RASTER_INGEST_HMAC_SECRET: "market-pack-secret" };
+  const malformed = "{";
+  assert.equal((await handleMarketPackRequest(await request(malformed), { environment, nowSeconds: 1700000000 })).status, 400);
+
+  const oversized = JSON.stringify({ ...valid, padding: "x".repeat(70_000) });
+  assert.equal((await handleMarketPackRequest(await request(oversized), { environment, nowSeconds: 1700000000 })).status, 413);
+
+  const body = JSON.stringify(valid);
+  const replayed = await handleMarketPackRequest(await request(body), {
+    environment, db: fakeDb(), nowSeconds: 1700000000, replayGuard: async () => false,
+  });
+  assert.equal(replayed.status, 409);
+  assert.deepEqual(await replayed.json(), { error: "replayed_request" });
+
+  let invalidReleases = 0;
+  const invalid = await handleMarketPackRequest(await request(JSON.stringify({ ...valid, collectorId: "not-a-collector" })), {
+    environment,
+    db: fakeDb(),
+    nowSeconds: 1700000000,
+    replayGuard: async () => ({ acquired: true, complete: async () => {}, release: async () => { invalidReleases += 1; } }),
+  });
+  assert.equal(invalid.status, 400);
+  assert.equal(invalidReleases, 1);
+
+  let failureReleases = 0;
+  const unavailable = await handleMarketPackRequest(await request(body), {
+    environment,
+    db: fakeDb({ failTable: "sources" }),
+    nowSeconds: 1700000000,
+    replayGuard: async () => ({ acquired: true, complete: async () => {}, release: async () => { failureReleases += 1; } }),
+  });
+  assert.equal(unavailable.status, 503);
+  assert.deepEqual(await unavailable.json(), { error: "market_pack_unavailable" });
+  assert.equal(failureReleases, 1);
 });
 
 test("signing helper emits only a safe response summary", async () => {

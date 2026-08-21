@@ -1,5 +1,6 @@
 import { asc, desc, eq } from "drizzle-orm";
 import * as schema from "../../db/schema.ts";
+import { isSafeEvidenceRef } from "../evidence/reference.ts";
 import type { RasterDatabase } from "./repository.ts";
 
 export const HEALING_STAGES = [
@@ -41,7 +42,6 @@ export class HealingEvidenceValidationError extends Error {}
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const sessionPattern = /^heal-[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const collectorPattern = /^c_[A-Za-z0-9_-]{2,127}$/;
-const evidencePattern = /^evidence\/[A-Za-z0-9][A-Za-z0-9._/-]{0,254}$/;
 
 function requiredText(value: unknown, field: string, max: number): string {
   if (typeof value !== "string" || !value.trim() || value.length > max || /[\r\n\0]/.test(value)) {
@@ -66,7 +66,7 @@ export function validateHealingEvent(input: unknown, now = new Date()): HealingE
   if (!slugPattern.test(sourceSlug)) throw new HealingEvidenceValidationError("sourceSlug is invalid");
   if (!collectorPattern.test(collectorId)) throw new HealingEvidenceValidationError("collectorId is invalid");
   if (!HEALING_STAGES.includes(stage)) throw new HealingEvidenceValidationError("stage is invalid");
-  if (!evidencePattern.test(evidenceRef) || evidenceRef.includes("..") || evidenceRef.includes("//")) {
+  if (!isSafeEvidenceRef(evidenceRef)) {
     throw new HealingEvidenceValidationError("evidenceRef is invalid");
   }
   const parsedTime = new Date(occurredAt);
