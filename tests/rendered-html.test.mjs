@@ -42,11 +42,11 @@ test("server-renders the Raster market-local fixture desk", async () => {
 test("publishes Raster GPU favicon metadata instead of a generic site icon", async () => {
   const response = await render();
   const html = await response.text();
-  assert.match(html, /href="\/scrapper\/favicon\.svg\?v2"/);
-  assert.match(html, /href="\/scrapper\/favicon-32x32\.png\?v2"/);
-  assert.match(html, /href="\/scrapper\/favicon\.ico\?v2"/);
-  assert.match(html, /href="\/scrapper\/apple-touch-icon\.png\?v2"/);
-  assert.match(html, /href="\/scrapper\/manifest\.webmanifest"/);
+  assert.match(html, /href="\/scrapper\/favicon\.svg\?v3"/);
+  assert.match(html, /href="\/scrapper\/favicon-32x32\.png\?v3"/);
+  assert.match(html, /href="\/scrapper\/favicon\.ico\?v3"/);
+  assert.match(html, /href="\/scrapper\/apple-touch-icon\.png\?v3"/);
+  assert.match(html, /href="\/scrapper\/manifest\.webmanifest\?v3"/);
 });
 
 test("switches markets without mixing currencies", async () => {
