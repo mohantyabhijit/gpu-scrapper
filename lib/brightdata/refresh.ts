@@ -27,6 +27,8 @@ export type RefreshSuccess = {
   sourceSlug: SourceSlug;
   collectorId: string;
   responseId: string;
+  runId: string;
+  observedAt: string;
   rowCount: number;
   attempts: number;
 };
@@ -39,6 +41,22 @@ export type RefreshResult = {
 };
 
 export class RefreshRequestError extends Error {}
+
+export type RefreshCompletionInput = {
+  sourceSlug: SourceSlug;
+  collectorId: string;
+  responseId: string;
+  rows: unknown[];
+  runId: string;
+  observedAt: string;
+};
+
+export type RefreshCompletion = (input: RefreshCompletionInput) => void | Promise<void>;
+
+export type RefreshRunnerOptions = {
+  onComplete?: RefreshCompletion;
+  now?: () => Date;
+};
 
 const roles = new Set<CollectorRole>(["discovery", "pdp", "combined"]);
 
@@ -92,9 +110,19 @@ export async function authenticateRefreshRequest(
   return different === 0;
 }
 
+function safeRunId(sourceSlug: SourceSlug, responseId: string, observedAt: string): string {
+  const suffix = `${sourceSlug}-${responseId}-${observedAt}`
+    .replace(/[^a-zA-Z0-9._-]+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 180);
+  return `run-${suffix || sourceSlug}`;
+}
+
 export function createRefreshRunner(
   environment: RefreshEnvironment,
   clientOptions: Omit<BrightDataClientOptions, "apiKey"> = {},
+  runnerOptions: RefreshRunnerOptions = {},
 ) {
   return async function runRefresh(request: RefreshRequest): Promise<RefreshResult> {
     const completed: RefreshSuccess[] = [];
@@ -125,10 +153,27 @@ export function createRefreshRunner(
           collectorId: source.collectorId,
           inputUrl: source.inputUrl,
         });
+        const observedAt = (runnerOptions.now ?? (() => new Date()))().toISOString();
+        const runId = safeRunId(source.sourceSlug, run.responseId, observedAt);
+        try {
+          await runnerOptions.onComplete?.({
+            sourceSlug: source.sourceSlug,
+            collectorId: run.collectorId,
+            responseId: run.responseId,
+            rows: run.rows,
+            runId,
+            observedAt,
+          });
+        } catch {
+          failed.push({ sourceSlug: source.sourceSlug, code: "persistence_error" });
+          continue;
+        }
         completed.push({
           sourceSlug: source.sourceSlug,
           collectorId: run.collectorId,
           responseId: run.responseId,
+          runId,
+          observedAt,
           rowCount: run.rows.length,
           attempts: run.attempts,
         });

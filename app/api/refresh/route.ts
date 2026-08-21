@@ -3,8 +3,10 @@ import {
   createRefreshRunner,
   parseRefreshRequest,
   RefreshRequestError,
+  type RefreshCompletionInput,
   type RefreshEnvironment,
 } from "../../../lib/brightdata/refresh.ts";
+import type { RawOffer } from "../../../scrapers/contracts.ts";
 
 function runtimeEnvironment(): RefreshEnvironment {
   const runtime = globalThis as typeof globalThis & { RASTER_ENV?: RefreshEnvironment };
@@ -18,6 +20,29 @@ function runtimeEnvironment(): RefreshEnvironment {
 
 function json(payload: unknown, status = 200) {
   return Response.json(payload, { status, headers: { "Cache-Control": "no-store" } });
+}
+
+async function persistCompletedRun(input: RefreshCompletionInput): Promise<void> {
+  // Keep the Cloudflare binding import server-only and lazy so injected runner
+  // tests do not need a worker runtime. Every completed provider run crosses
+  // the same validator/normalizer/D1 boundary before the route reports it.
+  const [{ getDb }, { ingestRows }, { persistIngestion }] = await Promise.all([
+    import("../../../db/index.ts"),
+    import("../../../lib/ingest.ts"),
+    import("../../../lib/d1/repository.ts"),
+  ]);
+  const result = ingestRows(input.rows as RawOffer[], {
+    runId: input.runId,
+    observedAt: input.observedAt,
+    expectedSource: input.sourceSlug,
+  });
+  await persistIngestion(getDb(), result, {
+    runId: input.runId,
+    sourceSlug: input.sourceSlug,
+    startedAt: input.observedAt,
+    finishedAt: input.observedAt,
+    observedAt: input.observedAt,
+  });
 }
 
 export async function handleRefreshRequest(
@@ -51,7 +76,11 @@ export async function handleRefreshRequest(
   }
 
   try {
-    const runner = dependencies.runner ?? createRefreshRunner(dependencies.environment);
+    const runner = dependencies.runner ?? createRefreshRunner(
+      dependencies.environment,
+      {},
+      { onComplete: persistCompletedRun },
+    );
     const result = await runner(parsed);
     return json(result, result.completed.length > 0 || result.notConfigured.length > 0 ? 200 : 502);
   } catch {

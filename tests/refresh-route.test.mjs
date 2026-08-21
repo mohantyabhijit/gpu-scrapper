@@ -6,6 +6,8 @@ import {
   createRefreshRunner,
   parseRefreshRequest,
 } from "../lib/brightdata/refresh.ts";
+import { ingestRows } from "../lib/ingest.ts";
+import { sourceRegistry } from "../config/sources.ts";
 
 async function signature(secret, timestamp, body) {
   const key = await crypto.subtle.importKey(
@@ -29,6 +31,48 @@ function signedRequest(body, secret, timestamp = "1700000000") {
     },
     body,
   }));
+}
+
+const validRow = {
+  source_slug: "central-computer",
+  market: "US",
+  title: "ASUS GeForce RTX 5080 16GB",
+  product_url: "https://www.centralcomputer.com/asus-rtx-5080/sku-1",
+  price: "1,099.99",
+  currency: "USD",
+  availability: "in stock",
+  sku: "ASUS-5080-1",
+  mpn: "TUF-RTX5080-O16G",
+};
+
+const invalidRow = {
+  source_slug: "central-computer",
+  market: "US",
+  title: "not a public catalog row",
+  product_url: "https://not-allowed.example/item",
+  currency: "USD",
+  availability: "available",
+};
+
+function configureCentralComputer() {
+  const source = sourceRegistry["central-computer"];
+  const original = { enabled: source.enabled, collectorIds: source.collectorIds };
+  source.enabled = true;
+  source.collectorIds = { combined: "c_demo" };
+  return () => {
+    source.enabled = original.enabled;
+    source.collectorIds = original.collectorIds;
+  };
+}
+
+function mockProvider(rows) {
+  let calls = 0;
+  return async () => {
+    calls += 1;
+    return calls === 1
+      ? new Response(JSON.stringify({ collection_id: "response-live-like" }), { status: 200 })
+      : new Response(JSON.stringify({ data: rows }), { status: 200 });
+  };
 }
 
 test("HMAC auth accepts a current signature and rejects replay/tampering", async () => {
@@ -102,4 +146,100 @@ test("runner preserves an honest not-configured result without an API key", asyn
   const result = await run({ sourceSlugs: ["central-computer"], role: "combined" });
   assert.deepEqual(result.notConfigured, ["central-computer"]);
   assert.deepEqual(result.failed, []);
+});
+
+test("completed live-like rows reach the injected ingestion boundary with safe run metadata", async () => {
+  const restore = configureCentralComputer();
+  try {
+    const completed = [];
+    const run = createRefreshRunner({ BRIGHTDATA_API_KEY: "provider-secret" }, {
+      fetchImpl: mockProvider([validRow]),
+      pollIntervalMs: 0,
+      sleep: async () => {},
+    }, {
+      now: () => new Date("2026-08-21T10:00:00.000Z"),
+      onComplete: async (input) => {
+        const result = ingestRows(input.rows, {
+          runId: input.runId,
+          observedAt: input.observedAt,
+          expectedSource: input.sourceSlug,
+        });
+        completed.push({ input, result });
+      },
+    });
+    const result = await run({ sourceSlugs: ["central-computer"], role: "combined" });
+    assert.equal(result.completed.length, 1);
+    assert.match(result.completed[0].runId, /^run-central-computer-response-live-like-/);
+    assert.equal(result.completed[0].observedAt, "2026-08-21T10:00:00.000Z");
+    assert.equal(completed[0].result.offers.length, 1);
+    assert.equal(completed[0].result.quarantined.length, 0);
+  } finally {
+    restore();
+  }
+});
+
+test("completed rows quarantine invalid output before persistence", async () => {
+  const restore = configureCentralComputer();
+  try {
+    let persisted;
+    const run = createRefreshRunner({ BRIGHTDATA_API_KEY: "provider-secret" }, {
+      fetchImpl: mockProvider([validRow, invalidRow]),
+      pollIntervalMs: 0,
+      sleep: async () => {},
+    }, {
+      now: () => new Date("2026-08-21T10:01:00.000Z"),
+      onComplete: async (input) => {
+        persisted = ingestRows(input.rows, {
+          runId: input.runId,
+          observedAt: input.observedAt,
+          expectedSource: input.sourceSlug,
+        });
+      },
+    });
+    const result = await run({ sourceSlugs: ["central-computer"], role: "combined" });
+    assert.equal(result.completed[0].rowCount, 2);
+    assert.equal(persisted.offers.length, 1);
+    assert.equal(persisted.quarantined.length, 1);
+    assert.deepEqual(result.failed, []);
+  } finally {
+    restore();
+  }
+});
+
+test("persistence failures become a sanitized source error", async () => {
+  const restore = configureCentralComputer();
+  try {
+    const run = createRefreshRunner({ BRIGHTDATA_API_KEY: "provider-secret" }, {
+      fetchImpl: mockProvider([validRow]),
+      pollIntervalMs: 0,
+      sleep: async () => {},
+    }, {
+      onComplete: async () => {
+        throw new Error("D1 provider body secret");
+      },
+    });
+    const result = await run({ sourceSlugs: ["central-computer"], role: "combined" });
+    assert.deepEqual(result.completed, []);
+    assert.deepEqual(result.failed, [{ sourceSlug: "central-computer", code: "persistence_error" }]);
+    assert.doesNotMatch(JSON.stringify(result), /provider body secret|provider-secret/);
+  } finally {
+    restore();
+  }
+});
+
+test("route sanitizes an unexpected persistence exception", async () => {
+  const body = JSON.stringify({ sourceSlugs: ["central-computer"], role: "combined" });
+  const request = await signedRequest(body, "refresh-secret");
+  const response = await handleRefreshRequest(request, {
+    environment: {
+      RASTER_INGEST_HMAC_SECRET: "refresh-secret",
+      BRIGHTDATA_API_KEY: "provider-secret",
+    },
+    nowSeconds: 1700000000,
+    runner: async () => {
+      throw new Error("D1 provider body secret");
+    },
+  });
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), { error: "refresh_unavailable" });
 });
