@@ -55,6 +55,27 @@ The URLs, prompt, and Collector ID above are placeholders, not runnable source
 claims. During the real flow, send CLI JSON through the repository sanitizer
 before saving evidence; never commit raw provider output.
 
+## Same-ID healing proof harness
+
+The healing proof is intentionally read-only. It consumes real local provider
+artifacts later; it does not call Bright Data or fabricate a before/preview/after
+sequence. Keep those raw files in ignored `evidence/raw/`. First capture a
+baseline with `scripts/check-source-health.ts`, passing the exact source,
+allowlisted input URL, controlled missing field, and downstream consumer files.
+Then run `scripts/heal-source.ts` with the baseline, the inspected provider
+preview, and the rerun artifact. Both commands fail closed on missing or
+malformed files, secret-shaped fields, an off-domain input, a changed `c_*`
+Collector ID, an unresolved required field, or changed downstream hashes.
+
+The generated baseline/proof contain only fixed public input metadata,
+repository-relative artifact paths, row counts, and SHA-256 hashes. They do
+not replace the live evidence gate: do not mark the evidence matrix complete
+until the provider commands were actually run and the artifacts were manually
+reviewed for secret and public-data safety.
+
+See [`evidence/healing/README.md`](../evidence/healing/README.md) for the exact
+offline operator sequence.
+
 ## Workflow behavior
 
 `.github/workflows/collect.yml` runs on a daily schedule and supports
