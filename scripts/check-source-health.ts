@@ -1,4 +1,4 @@
-import { createHealingBaseline, HEALING_REQUIRED_FIELDS, type HealingRequiredField } from "../lib/evidence/healing-harness.ts";
+import { createHealingBaseline, HEALING_REQUIRED_FIELDS, resolveSafeOutputPath, type HealingRequiredField } from "../lib/evidence/healing-harness.ts";
 
 type Arguments = {
   source: string;
@@ -42,9 +42,7 @@ async function writeOutput(outputPath: string | undefined, repoRoot: string, pay
     process.stdout.write(serialized);
     return;
   }
-  const root = await import("node:path").then(({ default: path }) => path.resolve(repoRoot));
-  const path = await import("node:path").then(({ default: path }) => path.resolve(root, outputPath));
-  if (!path.startsWith(`${root}/`) || path.includes("..")) throw new Error("output must stay inside repo root");
+  const path = await resolveSafeOutputPath(repoRoot, outputPath);
   const { writeFile } = await import("node:fs/promises");
   await writeFile(path, serialized, "utf8");
 }

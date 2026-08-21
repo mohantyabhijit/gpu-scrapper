@@ -64,10 +64,19 @@ baseline with `scripts/check-source-health.ts`, passing the exact source,
 allowlisted input URL, controlled missing field, and downstream consumer files.
 Then run `scripts/heal-source.ts` with the baseline, the inspected provider
 preview, and the rerun artifact. Both commands fail closed on missing or
-malformed files, secret-shaped fields, an off-domain input, a changed `c_*`
-Collector ID, an unresolved required field, or changed downstream hashes.
+malformed capture envelopes, secret-shaped fields, an off-domain input, a
+changed or unregistered `c_*` Collector ID, an unresolved required field,
+non-successful provider status, missing response/run identity, malformed rows,
+unsafe output paths, or changed downstream hashes. The baseline must include
+the source registry, refresh route/helper, ingestion, PostgreSQL catalog
+repository, and storefront files. A failed post-heal validation emits no proof
+and leaves the last-known-good catalog untouched.
 
-The generated baseline/proof contain only fixed public input metadata,
+The provider envelope is required to bind `collector_id`, `source_slug`,
+`input_url`, top-level `status`, response/run identity, and `rows`; row-level
+status cannot approve a heal. Before/after status must be exactly successful or
+completed, while preview status must be an exact positive approval state. The
+generated baseline/proof contain only fixed public input metadata,
 repository-relative artifact paths, row counts, and SHA-256 hashes. They do
 not replace the live evidence gate: do not mark the evidence matrix complete
 until the provider commands were actually run and the artifacts were manually

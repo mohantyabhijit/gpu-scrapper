@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { createHealingProof, type HealingBaseline } from "../lib/evidence/healing-harness.ts";
+import { createHealingProof, resolveSafeOutputPath, type HealingBaseline } from "../lib/evidence/healing-harness.ts";
 
 type Arguments = {
   baseline: string;
@@ -37,10 +37,7 @@ async function writeOutput(outputPath: string | undefined, repoRoot: string, pay
     process.stdout.write(serialized);
     return;
   }
-  const pathModule = await import("node:path");
-  const root = pathModule.resolve(repoRoot);
-  const output = pathModule.resolve(root, outputPath);
-  if (!output.startsWith(`${root}${pathModule.sep}`)) throw new Error("output must stay inside repo root");
+  const output = await resolveSafeOutputPath(repoRoot, outputPath);
   const { writeFile } = await import("node:fs/promises");
   await writeFile(output, serialized, "utf8");
 }

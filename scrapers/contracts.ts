@@ -84,7 +84,7 @@ function text(value: unknown): string | undefined {
 
 function canonicalAvailability(value: unknown): Availability | undefined {
   const normalized = text(value)?.toLowerCase().replace(/[ -]+/g, "_");
-  if (!normalized) return "unknown";
+  if (!normalized) return undefined;
   if (["in_stock", "instock", "available", "yes", "true"].includes(normalized)) {
     return "in_stock";
   }

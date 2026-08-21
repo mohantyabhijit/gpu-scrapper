@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { lstat, readFile } from "node:fs/promises";
+import { lstat, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 import { getSource, sourceHostIsAllowedForDefinition, type SourceDefinition } from "../../config/sources.ts";
 import { validateRawOffer, type RawOffer, type ValidationCode } from "../../scrapers/contracts.ts";
@@ -44,6 +44,16 @@ export type HealingBaseline = {
   downstream_files: readonly ArtifactHash[];
 };
 
+/** Every code path whose contract must remain unchanged during a heal proof. */
+export const REQUIRED_DOWNSTREAM_PATHS = [
+  "config/sources.ts",
+  "lib/brightdata/refresh.ts",
+  "app/api/refresh/route.ts",
+  "lib/ingest.ts",
+  "lib/d1/repository.ts",
+  "app/page.tsx",
+] as const;
+
 export type HealingProof = {
   schema_version: typeof HEALING_HARNESS_SCHEMA_VERSION;
   evidence_type: "healing-proof";
@@ -77,17 +87,12 @@ const sensitiveValuePatterns = [
   /[?&](?:access[_-]?token|api[_-]?key|signature|token)=/i,
 ];
 const artifactMaxBytes = 8 * 1024 * 1024;
-const inputUrlKeys = new Set(["inputurl", "targeturl", "runurl"]);
-const collectorIdKeys = new Set(["collectorid", "collector"]);
-const sourceSlugKeys = new Set(["sourceslug", "source"]);
-const rowContainerKeys = new Set(["data", "items", "output", "products", "records", "results", "rows"]);
+const successfulCaptureStatuses = new Set(["completed", "success", "succeeded"]);
+const positivePreviewStatuses = new Set(["awaiting_approval", "preview_ready", "approved", "approval_granted", "healed_preview"]);
+const responseIdentityKeys = ["response_id", "responseId", "run_id", "runId"] as const;
 
 function fail(message: string): never {
   throw new HealingHarnessError(message);
-}
-
-function normalizedKey(key: string): string {
-  return key.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -115,6 +120,7 @@ function assertNoSensitiveMaterial(value: unknown, location = "$", depth = 0): v
 
 function relativeSafePath(root: string, requested: string): string {
   if (!requested || path.isAbsolute(requested)) fail("artifact and consumer paths must be repository-relative");
+  if (requested.split(/[\\/]/).some((segment) => segment === "..")) fail("artifact and consumer paths may not use lexical traversal");
   const normalized = path.normalize(requested);
   if (normalized === "." || normalized.startsWith(`..${path.sep}`) || normalized === "..") {
     fail("artifact and consumer paths must remain inside the repository");
@@ -136,11 +142,32 @@ async function realPathInside(root: string, requested: string): Promise<{ absolu
 
 async function pathRealpath(value: string): Promise<string> {
   try {
-    const { realpath } = await import("node:fs/promises");
     return await realpath(value);
   } catch {
     fail("path does not exist");
   }
+}
+
+/** Resolve a CLI output path without allowing symlink or secret-path escapes. */
+export async function resolveSafeOutputPath(root: string, requested: string): Promise<string> {
+  const relative = relativeSafePath(root, requested);
+  const realRoot = await pathRealpath(root);
+  const absolute = path.resolve(realRoot, relative);
+  const rootPrefix = `${realRoot}${path.sep}`;
+  if (!absolute.startsWith(rootPrefix)) fail("output must stay inside the repository");
+  const parent = path.dirname(absolute);
+  const realParent = await pathRealpath(parent);
+  if (!realParent.startsWith(rootPrefix)) fail("output parent resolves outside the repository");
+  try {
+    const stats = await lstat(absolute);
+    if (!stats.isFile()) fail("output must be a regular file, not a symlink or directory");
+    const resolved = await pathRealpath(absolute);
+    if (!resolved.startsWith(rootPrefix)) fail("output resolves outside the repository");
+  } catch (error) {
+    if (error instanceof HealingHarnessError) throw error;
+    // A new regular file is safe once its real parent has been checked.
+  }
+  return absolute;
 }
 
 async function readJsonArtifact(root: string, requested: string): Promise<{ hash: ArtifactHash; value: unknown }> {
@@ -174,51 +201,6 @@ async function hashRepositoryFile(root: string, requested: string): Promise<Arti
   return { path: resolved.relative, sha256: createHash("sha256").update(bytes).digest("hex") };
 }
 
-function collectStringsForKeys(value: unknown, keys: ReadonlySet<string>, output: string[], depth = 0): void {
-  if (depth > 12 || value === null || value === undefined) return;
-  if (Array.isArray(value)) {
-    value.forEach((item) => collectStringsForKeys(item, keys, output, depth + 1));
-    return;
-  }
-  if (!isObject(value)) return;
-  for (const [key, child] of Object.entries(value)) {
-    if (keys.has(normalizedKey(key))) {
-      if (typeof child === "string") output.push(child);
-      else if (Array.isArray(child)) child.forEach((item) => { if (typeof item === "string") output.push(item); });
-      else if (isObject(child)) Object.values(child).forEach((item) => { if (typeof item === "string") output.push(item); });
-    }
-    collectStringsForKeys(child, keys, output, depth + 1);
-  }
-}
-
-function collectCollectorIds(value: unknown, output: Set<string>, depth = 0): void {
-  if (depth > 12 || value === null || value === undefined) return;
-  if (typeof value === "string") {
-    if (collectorIdPattern.test(value)) output.add(value);
-    return;
-  }
-  if (Array.isArray(value)) {
-    value.forEach((item) => collectCollectorIds(item, output, depth + 1));
-    return;
-  }
-  if (!isObject(value)) return;
-  Object.values(value).forEach((child) => collectCollectorIds(child, output, depth + 1));
-}
-
-function collectRows(value: unknown, output: Record<string, unknown>[], key = "", depth = 0): void {
-  if (depth > 12 || value === null || value === undefined) return;
-  if (Array.isArray(value)) {
-    if (rowContainerKeys.has(normalizedKey(key))) {
-      value.forEach((item) => { if (isObject(item)) output.push(item); });
-      return;
-    }
-    value.forEach((item) => collectRows(item, output, key, depth + 1));
-    return;
-  }
-  if (!isObject(value)) return;
-  Object.entries(value).forEach(([childKey, child]) => collectRows(child, output, childKey, depth + 1));
-}
-
 function manifestSource(manifest: HealingManifest): SourceDefinition {
   if (!collectorIdPattern.test(manifest.collectorId)) fail("collectorId must be an exact c_* identifier");
   if (!HEALING_REQUIRED_FIELDS.includes(manifest.requiredField)) fail("requiredField is not supported");
@@ -227,6 +209,10 @@ function manifestSource(manifest: HealingManifest): SourceDefinition {
     source = getSource(manifest.sourceSlug);
   } catch {
     fail("sourceSlug is not in the source registry");
+  }
+  if (!source.enabled) fail("source is not enabled in the source registry");
+  if (!Object.values(source.collectorIds).some((collectorId) => collectorId === manifest.collectorId)) {
+    fail("Collector ID is not configured for the enabled source");
   }
   let parsed: URL;
   try {
@@ -239,23 +225,33 @@ function manifestSource(manifest: HealingManifest): SourceDefinition {
   return source;
 }
 
-function assertArtifactIdentity(value: unknown, manifest: HealingManifest, source: SourceDefinition): void {
-  const collectorIds = new Set<string>();
-  collectCollectorIds(value, collectorIds);
-  const explicitCollectorIds: string[] = [];
-  collectStringsForKeys(value, collectorIdKeys, explicitCollectorIds);
-  if (explicitCollectorIds.length === 0 || collectorIds.size !== 1 || !collectorIds.has(manifest.collectorId) || explicitCollectorIds.some((id) => id !== manifest.collectorId)) {
-    fail("provider artifact must contain exactly the expected Collector ID");
+function topLevelText(value: Record<string, unknown>, keys: readonly string[]): string | undefined {
+  for (const key of keys) {
+    if (typeof value[key] === "string" && value[key].trim()) return value[key].trim();
   }
-  const sourceSlugs: string[] = [];
-  collectStringsForKeys(value, sourceSlugKeys, sourceSlugs);
-  if (sourceSlugs.length === 0) fail("provider artifact must contain the fixed source slug");
-  if (sourceSlugs.some((slug) => slug !== manifest.sourceSlug)) fail("provider artifact source does not match the fixed source");
-  const inputUrls: string[] = [];
-  collectStringsForKeys(value, inputUrlKeys, inputUrls);
-  if (inputUrls.length === 0) fail("provider artifact must contain the fixed input URL");
-  if (inputUrls.some((url) => url !== manifest.inputUrl)) fail("provider artifact input does not match the fixed input URL");
+  return undefined;
+}
+
+function assertCaptureEnvelope(value: unknown, manifest: HealingManifest, source: SourceDefinition, phase: "before" | "preview" | "after"): Record<string, unknown> {
+  if (!isObject(value)) fail("provider artifact must be a capture envelope object, not a root JSON array or scalar");
+  const collectorId = value.collector_id;
+  if (typeof collectorId !== "string" || collectorId !== manifest.collectorId) fail("provider artifact must contain exactly the expected Collector ID");
+  if (typeof value.source_slug !== "string" || value.source_slug !== manifest.sourceSlug) fail("provider artifact source does not match the fixed source");
+  if (typeof value.input_url !== "string" || value.input_url !== manifest.inputUrl) fail("provider artifact input does not match the fixed input URL");
+  if (typeof value.status !== "string" || !value.status.trim()) fail("provider artifact must contain a top-level status");
+  if (!Array.isArray(value.rows)) fail("provider artifact must contain a top-level rows array");
+  if (phase === "preview") {
+    const status = value.status.trim().toLowerCase().replace(/[ -]+/g, "_");
+    if (!positivePreviewStatuses.has(status)) fail("preview artifact lacks an exact positive top-level preview status");
+  } else {
+    const status = value.status.trim().toLowerCase().replace(/[ -]+/g, "_");
+    if (!successfulCaptureStatuses.has(status)) fail("provider artifact must contain an exact successful/completed top-level status");
+    const identity = topLevelText(value, responseIdentityKeys);
+    if (!identity) fail("provider artifact must contain a non-secret response/run identity before rows");
+    if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{0,255}$/.test(identity)) fail("provider response/run identity is invalid");
+  }
   if (!source) fail("source definition is unavailable");
+  return value;
 }
 
 function requiredValuePresent(row: Record<string, unknown>, field: HealingRequiredField): boolean {
@@ -282,16 +278,17 @@ const requiredError: Record<HealingRequiredField, ValidationCode> = {
   market: "market_invalid",
 };
 
-function rowsIn(value: unknown): Record<string, unknown>[] {
-  const rows: Record<string, unknown>[] = [];
-  collectRows(value, rows);
-  if (rows.length === 0 && isObject(value)) rows.push(value);
-  if (rows.length === 0) fail("provider artifact contains no object rows");
-  return rows;
+function rowsIn(value: Record<string, unknown>): Record<string, unknown>[] {
+  if (!Array.isArray(value.rows)) fail("provider artifact must contain a top-level rows array");
+  return value.rows.map((row, index) => {
+    if (!isObject(row)) fail(`provider artifact row ${index} must be an object; null, scalar, and nested arrays are invalid`);
+    return row;
+  });
 }
 
-function assertBrokenBefore(value: unknown, manifest: HealingManifest, source: SourceDefinition): number {
+function assertBrokenBefore(value: Record<string, unknown>, manifest: HealingManifest, source: SourceDefinition): number {
   const rows = rowsIn(value);
+  if (rows.length === 0) fail("provider artifact contains no object rows");
   const results = rows.map((row) => validateRawOffer(row as RawOffer, manifest.sourceSlug, source));
   if (results.some((result) => result.ok)) fail("before artifact unexpectedly contains a valid contract row");
   const expected = requiredError[manifest.requiredField];
@@ -301,15 +298,14 @@ function assertBrokenBefore(value: unknown, manifest: HealingManifest, source: S
   return rows.length;
 }
 
-function assertPreview(value: unknown, manifest: HealingManifest): void {
-  const statuses: string[] = [];
-  collectStringsForKeys(value, new Set(["status", "state", "phase"]), statuses);
-  if (!statuses.some((status) => /preview|approval|approved|ready|heal/i.test(status))) fail("preview artifact lacks an approval/preview status");
+function assertPreview(value: Record<string, unknown>, manifest: HealingManifest): void {
+  if (!positivePreviewStatuses.has(String(value.status).trim().toLowerCase().replace(/[ -]+/g, "_"))) fail("preview artifact lacks an exact positive top-level preview status");
   if (manifest.requiredField.length === 0) fail("requiredField is invalid");
 }
 
-function assertRecoveredAfter(value: unknown, manifest: HealingManifest, source: SourceDefinition): { rows: number; validRows: number } {
+function assertRecoveredAfter(value: Record<string, unknown>, manifest: HealingManifest, source: SourceDefinition): { rows: number; validRows: number } {
   const rows = rowsIn(value);
+  if (rows.length === 0) fail("after artifact contains no recovered rows");
   const results = rows.map((row) => validateRawOffer(row as RawOffer, manifest.sourceSlug, source));
   const validRows = results.filter((result) => result.ok).length;
   if (validRows !== rows.length) fail("after artifact does not pass the complete shared contract");
@@ -336,9 +332,12 @@ export async function createHealingBaseline(options: HealingManifest & { repoRoo
   };
   const source = manifestSource(manifest);
   const before = await readJsonArtifact(options.repoRoot, options.beforePath);
-  assertArtifactIdentity(before.value, manifest, source);
-  assertBrokenBefore(before.value, manifest, source);
+  const beforeEnvelope = assertCaptureEnvelope(before.value, manifest, source, "before");
+  assertBrokenBefore(beforeEnvelope, manifest, source);
   if (options.downstreamPaths.length === 0) fail("at least one downstream consumer file is required");
+  const downstreamSet = new Set(options.downstreamPaths);
+  const missingDownstream = REQUIRED_DOWNSTREAM_PATHS.filter((file) => !downstreamSet.has(file));
+  if (missingDownstream.length > 0) fail(`downstream baseline is incomplete; missing ${missingDownstream.join(", ")}`);
   const downstream = await Promise.all(options.downstreamPaths.map((file) => hashRepositoryFile(options.repoRoot, file)));
   return {
     schema_version: HEALING_HARNESS_SCHEMA_VERSION,
@@ -357,14 +356,14 @@ export async function createHealingProof(options: { repoRoot: string; baseline: 
   const source = manifestSource(manifest);
   const before = await readJsonArtifact(options.repoRoot, options.baseline.before_artifact.path);
   if (before.hash.sha256 !== options.baseline.before_artifact.sha256) fail("before artifact changed after baseline capture");
-  assertArtifactIdentity(before.value, manifest, source);
-  const beforeRows = assertBrokenBefore(before.value, manifest, source);
+  const beforeEnvelope = assertCaptureEnvelope(before.value, manifest, source, "before");
+  const beforeRows = assertBrokenBefore(beforeEnvelope, manifest, source);
   const preview = await readJsonArtifact(options.repoRoot, options.previewPath);
-  assertArtifactIdentity(preview.value, manifest, source);
-  assertPreview(preview.value, manifest);
+  const previewEnvelope = assertCaptureEnvelope(preview.value, manifest, source, "preview");
+  assertPreview(previewEnvelope, manifest);
   const after = await readJsonArtifact(options.repoRoot, options.afterPath);
-  assertArtifactIdentity(after.value, manifest, source);
-  const afterRows = assertRecoveredAfter(after.value, manifest, source);
+  const afterEnvelope = assertCaptureEnvelope(after.value, manifest, source, "after");
+  const afterRows = assertRecoveredAfter(afterEnvelope, manifest, source);
   const files: DownstreamFileHash[] = [];
   for (const expected of options.baseline.downstream_files) {
     const current = await hashRepositoryFile(options.repoRoot, expected.path);
