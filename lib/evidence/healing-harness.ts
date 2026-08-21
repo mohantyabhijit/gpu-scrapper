@@ -157,7 +157,7 @@ export async function resolveSafeOutputPath(root: string, requested: string): Pr
   if (!absolute.startsWith(rootPrefix)) fail("output must stay inside the repository");
   const parent = path.dirname(absolute);
   const realParent = await pathRealpath(parent);
-  if (!realParent.startsWith(rootPrefix)) fail("output parent resolves outside the repository");
+  if (realParent !== realRoot && !realParent.startsWith(rootPrefix)) fail("output parent resolves outside the repository");
   try {
     const stats = await lstat(absolute);
     if (!stats.isFile()) fail("output must be a regular file, not a symlink or directory");
@@ -323,6 +323,31 @@ function manifestFromBaseline(baseline: HealingBaseline): HealingManifest {
   };
 }
 
+function assertRequiredDownstreamPaths(paths: readonly string[]): void {
+  if (!Array.isArray(paths) || paths.length !== REQUIRED_DOWNSTREAM_PATHS.length) {
+    fail("downstream baseline must contain exactly the required consumer files");
+  }
+  const seen = new Set<string>();
+  for (const file of paths) {
+    if (typeof file !== "string" || !file || seen.has(file)) fail("downstream baseline contains a duplicate or malformed path");
+    if (!REQUIRED_DOWNSTREAM_PATHS.includes(file as (typeof REQUIRED_DOWNSTREAM_PATHS)[number])) {
+      fail("downstream baseline contains a non-required consumer path");
+    }
+    seen.add(file);
+  }
+  if (REQUIRED_DOWNSTREAM_PATHS.some((file) => !seen.has(file))) fail("downstream baseline is incomplete");
+}
+
+function assertDownstreamEntriesShape(entries: unknown): asserts entries is readonly ArtifactHash[] {
+  if (!Array.isArray(entries)) fail("downstream baseline entries must be an array");
+  assertRequiredDownstreamPaths(entries.map((entry) => isObject(entry) && typeof entry.path === "string" ? entry.path : ""));
+  for (const entry of entries) {
+    if (!isObject(entry) || typeof entry.path !== "string" || !/^[a-f0-9]{64}$/.test(String(entry.sha256))) {
+      fail("downstream baseline contains a malformed hash entry");
+    }
+  }
+}
+
 export async function createHealingBaseline(options: HealingManifest & { repoRoot: string; beforePath: string; downstreamPaths: readonly string[] }): Promise<HealingBaseline> {
   const manifest: HealingManifest = {
     sourceSlug: options.sourceSlug,
@@ -335,9 +360,7 @@ export async function createHealingBaseline(options: HealingManifest & { repoRoo
   const beforeEnvelope = assertCaptureEnvelope(before.value, manifest, source, "before");
   assertBrokenBefore(beforeEnvelope, manifest, source);
   if (options.downstreamPaths.length === 0) fail("at least one downstream consumer file is required");
-  const downstreamSet = new Set(options.downstreamPaths);
-  const missingDownstream = REQUIRED_DOWNSTREAM_PATHS.filter((file) => !downstreamSet.has(file));
-  if (missingDownstream.length > 0) fail(`downstream baseline is incomplete; missing ${missingDownstream.join(", ")}`);
+  assertRequiredDownstreamPaths(options.downstreamPaths);
   const downstream = await Promise.all(options.downstreamPaths.map((file) => hashRepositoryFile(options.repoRoot, file)));
   return {
     schema_version: HEALING_HARNESS_SCHEMA_VERSION,
@@ -352,6 +375,7 @@ export async function createHealingBaseline(options: HealingManifest & { repoRoo
 }
 
 export async function createHealingProof(options: { repoRoot: string; baseline: HealingBaseline; previewPath: string; afterPath: string }): Promise<HealingProof> {
+  assertDownstreamEntriesShape(options.baseline?.downstream_files);
   const manifest = manifestFromBaseline(options.baseline);
   const source = manifestSource(manifest);
   const before = await readJsonArtifact(options.repoRoot, options.baseline.before_artifact.path);

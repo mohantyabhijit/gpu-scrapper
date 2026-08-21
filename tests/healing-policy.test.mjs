@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, realpath, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { sourceRegistry } from "../config/sources.ts";
@@ -191,7 +191,28 @@ test("Collector ID must be enabled and registry-configured", async () => {
 
 test("incomplete downstream baselines are rejected", async () => {
   const root = await fixtureRoot();
-  await assert.rejects(baselineFor(root, beforeArtifact(), REQUIRED_DOWNSTREAM_PATHS.slice(0, -1)), /baseline is incomplete/);
+  await assert.rejects(baselineFor(root, beforeArtifact(), REQUIRED_DOWNSTREAM_PATHS.slice(0, -1)), /exactly|required|incomplete/);
+});
+
+test("proof revalidates a tampered baseline's exact downstream membership", async () => {
+  const root = await fixtureRoot();
+  const baseline = await baselineFor(root);
+  const previewPath = await writeArtifact(root, "preview.json", previewArtifact());
+  const afterPath = await writeArtifact(root, "after.json", afterArtifact());
+  const validEntries = baseline.downstream_files;
+  const tamperedBaselines = [
+    { ...baseline, downstream_files: [] },
+    { ...baseline, downstream_files: validEntries.slice(0, 1) },
+    { ...baseline, downstream_files: [...validEntries.slice(0, -1), validEntries[0]] },
+    { ...baseline, downstream_files: [...validEntries.slice(0, -1), { path: "arbitrary.ts", sha256: validEntries[0].sha256 }] },
+    { ...baseline, downstream_files: [...validEntries.slice(0, -1), { path: validEntries[0].path, sha256: "not-a-hash" }] },
+  ];
+  for (const tampered of tamperedBaselines) {
+    await assert.rejects(
+      createHealingProof({ repoRoot: root, baseline: tampered, previewPath, afterPath }),
+      /downstream baseline|duplicate|malformed|non-required|incomplete|exactly|required/,
+    );
+  }
 });
 
 test("failed post-heal validation does not replace the last-known-good catalog", async () => {
@@ -215,6 +236,14 @@ test("output path policy rejects traversal, symlink traversal, symlink targets, 
   await writeFile(target, "{}\n");
   await symlink(target, link);
   await assert.rejects(resolveSafeOutputPath(root, "evidence/raw/link.json"), /regular file|symlink/);
+});
+
+test("output path policy permits a regular repository-root output", async () => {
+  const root = await fixtureRoot();
+  const output = await resolveSafeOutputPath(root, "baseline.json");
+  assert.equal(output, path.join(await realpath(root), "baseline.json"));
+  await writeFile(output, "{}\n");
+  assert.equal(await readFile(output, "utf8"), "{}\n");
 });
 
 test("secret-bearing provider artifacts are rejected instead of sanitized into proof", async () => {
