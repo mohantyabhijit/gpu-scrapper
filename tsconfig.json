@@ -12,6 +12,7 @@
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "types": ["@cloudflare/workers-types"],
     "jsx": "react-jsx",
     "incremental": true,
     "paths": {
