@@ -153,6 +153,10 @@ export const sourceRegistry = {
   },
 } satisfies Record<string, SourceDefinition>;
 
+function hasOwnSource(slug: string): boolean {
+  return Object.prototype.hasOwnProperty.call(sourceRegistry, slug);
+}
+
 /** Runtime source IDs are PostgreSQL-owned; the static registry is only the fallback. */
 export type SourceSlug = string;
 export const SOURCE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -163,13 +167,13 @@ export function isSafeSourceSlug(value: unknown): value is SourceSlug {
 }
 
 export function getSource(slug: string): SourceDefinition {
+  if (!hasOwnSource(slug)) throw new Error(`Unknown source slug: ${slug}`);
   const source = sourceRegistry[slug as keyof typeof sourceRegistry];
-  if (!source) throw new Error(`Unknown source slug: ${slug}`);
   return source;
 }
 
 export function isKnownSource(slug: string): slug is SourceSlug {
-  return isSafeSourceSlug(slug) && slug in sourceRegistry;
+  return isSafeSourceSlug(slug) && hasOwnSource(slug);
 }
 
 export function sourceHostIsAllowed(slug: string, url: string): boolean {

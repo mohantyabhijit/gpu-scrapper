@@ -8,6 +8,8 @@ test("collection CLI accepts only a registered source and role", () => {
   assert.deepEqual(parseCollectArgs(["--source", "dynacore"]), { source: "dynacore", role: "combined" });
   assert.throws(() => parseCollectArgs(["--source", "dynacore", "--url", "https://evil.example"]));
   assert.throws(() => parseCollectArgs(["--source", "dynacore", "--collector-id", "c_fake"]));
+  assert.throws(() => parseCollectArgs(["--source", "constructor"]));
+  assert.throws(() => parseCollectArgs(["--source", "toString"]));
 });
 
 test("collection target resolution refuses disabled or malformed IDs and binds the registry URL", () => {
@@ -33,4 +35,6 @@ test("validator CLI accepts a local path and optional registered source only", (
     source: "pc-themes",
   });
   assert.throws(() => parseValidatorArgs(["--input", "/tmp/provider.json", "--source", "tradezone"]));
+  assert.throws(() => parseValidatorArgs(["--input", "/tmp/provider.json", "--source", "constructor"]));
+  assert.throws(() => parseValidatorArgs(["--input", "/tmp/provider.json", "--source", "toString"]));
 });

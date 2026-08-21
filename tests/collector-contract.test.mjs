@@ -137,6 +137,13 @@ test("collector validator requires nullable fields to be present and rejects ext
 test("collector validator rejects invalid timestamps, malformed members, and empty results", () => {
   const timestampResult = validateCollectorOutput([explicitRow({ scraped_at: "not-a-timestamp" })], "dynacore");
   assert.equal(timestampResult.errorCounts.timestamp_invalid, 1);
+  const impossibleDate = validateCollectorOutput([explicitRow({ scraped_at: "2026-02-29T10:00:00Z" })], "dynacore");
+  assert.equal(impossibleDate.errorCounts.timestamp_invalid, 1);
+  const impossibleDay = validateCollectorOutput([explicitRow({ scraped_at: "2026-04-31T10:00:00Z" })], "dynacore");
+  assert.equal(impossibleDay.errorCounts.timestamp_invalid, 1);
+  const impossibleTime = validateCollectorOutput([explicitRow({ scraped_at: "2026-01-01T24:00:00+05:30" })], "dynacore");
+  assert.equal(impossibleTime.errorCounts.timestamp_invalid, 1);
+  assert.equal(validateCollectorOutput([explicitRow({ scraped_at: "2026-02-28T10:00:00+05:30" })], "dynacore").ok, true);
   const membersResult = validateCollectorOutput([explicitRow(), null, "row"], "dynacore");
   assert.equal(membersResult.ok, false);
   assert.equal(membersResult.errorCounts.not_an_object, 2);
@@ -144,6 +151,16 @@ test("collector validator rejects invalid timestamps, malformed members, and emp
   assert.equal(emptyResult.errorCounts.empty_results, 1);
   const malformedWrapper = validateCollectorOutput({ rows: [], metadata: {} }, "dynacore");
   assert.equal(malformedWrapper.errorCounts.malformed_wrapper, 1);
+});
+
+test("validator rejects inherited source names without throwing", () => {
+  for (const sourceSlug of ["constructor", "toString"]) {
+    assert.doesNotThrow(() => {
+      const result = validateCollectorOutput([explicitRow({ source_slug: sourceSlug })]);
+      assert.equal(result.ok, false);
+      assert.equal(result.errorCounts.unknown_source, 1);
+    });
+  }
 });
 
 test("collector validator rejects off-domain URLs and unsupported currencies", () => {
