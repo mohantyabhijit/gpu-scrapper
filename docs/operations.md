@@ -92,6 +92,42 @@ The selector, validation, currency formatting, and D1 query layer merge ready
 Country Packs with the baseline registry. Shopper input cannot supply a source
 URL or Collector ID, and an admitted source binding is immutable.
 
+### Exact Country Pack rehearsal
+
+The committed pending and ready files under `examples/` are non-runnable
+templates: the `.example` host, `c_REPLACE_AFTER_CREATE`, and date placeholders
+are not source or live-collector claims. Copy them outside the repository,
+replace every placeholder only after eligibility and create/run proof exists,
+then use the HTTPS production endpoint:
+
+```bash
+export RASTER_MARKET_PACK_URL='https://abhijitmohanty.com/scrapper/api/market-packs'
+
+node scripts/sign-market-pack.mjs \
+  --url "$RASTER_MARKET_PACK_URL" \
+  --file '/secure/path/country-pack.pending.json'
+# safe response: {"slug":"japan","status":"pending"}
+```
+
+At this point `/scrapper/data-health` shows the pack as pending and the shopper
+selector must not contain it. After the real collector output passes the shared
+contract, copy the exact same country/source/collector boundary into the ready
+payload, add only repository-local sanitized `evidence/...` references and
+their ISO dates, then submit:
+
+```bash
+node scripts/sign-market-pack.mjs \
+  --url "$RASTER_MARKET_PACK_URL" \
+  --file '/secure/path/country-pack.ready.json'
+# safe response: {"slug":"japan","status":"ready"}
+```
+
+Refresh `/scrapper/data-health`, then the home page. The ledger must show ready
+and the country must enter the selector without a deploy. Record the safe
+responses and browser state; never record the HMAC secret or raw provider body.
+An already-ready pack cannot change its country, currency, source, collector,
+URL/host boundary, or source identity while reusing old evidence.
+
 ## Signing contract
 
 The signer sends this compact JSON body:

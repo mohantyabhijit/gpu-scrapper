@@ -1,6 +1,33 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { DatabaseSync } from "node:sqlite";
+import { drizzle } from "drizzle-orm/d1";
+import * as schema from "../db/schema.ts";
 import { createReplayGuard, createSourceRateGuard } from "../lib/d1/replay.ts";
+
+async function realReplayDatabase() {
+  const sqlite = new DatabaseSync(":memory:");
+  for (const migration of ["0000_cuddly_kylun.sql", "0001_mute_ted_forrester.sql", "0002_eager_prodigy.sql", "0003_light_mandrill.sql"]) {
+    sqlite.exec(await readFile(new URL(`../drizzle/${migration}`, import.meta.url), "utf8"));
+  }
+  const d1 = {
+    prepare(sql) {
+      return { bind(...params) {
+        const statement = sqlite.prepare(sql);
+        return {
+          async first(column) { const row = statement.get(...params); return column && row ? row[column] : row; },
+          async all() { return { results: statement.all(...params), success: true, meta: {} }; },
+          async run() { statement.run(...params); return { success: true, meta: {} }; },
+          async raw() { return statement.all(...params).map((row) => Object.values(row)); },
+        };
+      } };
+    },
+    async batch(statements) { return Promise.all(statements.map((statement) => statement.run())); },
+    async exec(sql) { sqlite.exec(sql); return { count: 0, duration: 0 }; },
+  };
+  return { sqlite, db: drizzle(d1, { schema }) };
+}
 
 function replayDatabase({ inserted = true, existingExpiresAt } = {}) {
   const calls = { deletes: 0, insertedValues: undefined, completedValues: undefined, wheres: [] };
@@ -94,4 +121,22 @@ test("source rate guard denies a conflicting persistent lease with bounded retry
   assert.equal(fixture.calls.deletes, 1, "expired receipts are purged before the atomic insert");
   await claim.complete();
   assert.equal(fixture.calls.completedValues, undefined, "a non-owner cannot alter the existing lease");
+});
+
+test("SQLite uniqueness serializes concurrent source claims and permits work after exact expiry", async () => {
+  const { sqlite, db } = await realReplayDatabase();
+  let current = new Date("2026-08-21T12:00:00.000Z");
+  const guard = createSourceRateGuard(db, () => current, 60_000);
+  const claims = await Promise.all([guard("central-computer"), guard("central-computer")]);
+  assert.equal(claims.filter((claim) => claim.acquired).length, 1);
+  assert.equal(claims.filter((claim) => !claim.acquired).length, 1);
+  assert.ok(claims.find((claim) => !claim.acquired).retryAfterSeconds > 0);
+
+  await claims.find((claim) => claim.acquired).complete();
+  const cooldown = sqlite.prepare("SELECT expires_at FROM request_receipts WHERE route='refresh-rate'").get();
+  assert.equal(cooldown.expires_at, "2026-08-21T12:01:00.000Z");
+  current = new Date("2026-08-21T12:01:00.001Z");
+  const afterExpiry = await guard("central-computer");
+  assert.equal(afterExpiry.acquired, true);
+  assert.equal(sqlite.prepare("SELECT count(*) AS count FROM request_receipts WHERE route='refresh-rate'").get().count, 1);
 });

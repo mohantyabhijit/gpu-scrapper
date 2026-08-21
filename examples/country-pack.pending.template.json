@@ -1,0 +1,17 @@
+{
+  "slug": "japan",
+  "countryCode": "JP",
+  "label": "Japan",
+  "currency": "JPY",
+  "locale": "ja-JP",
+  "symbol": "¥",
+  "sourceSlug": "replace-with-eligible-source",
+  "sourceDisplayName": "Replace with eligible source",
+  "baseUrl": "https://public-retailer.example",
+  "catalogUrl": "https://public-retailer.example/gpus",
+  "allowedHosts": [
+    "public-retailer.example"
+  ],
+  "collectorId": "c_REPLACE_AFTER_CREATE",
+  "status": "pending"
+}

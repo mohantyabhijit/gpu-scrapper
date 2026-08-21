@@ -48,3 +48,36 @@ test("0003 and 0004 add replay receipts and constrained append-only healing evid
   assert.throws(() => db.exec("INSERT INTO healing_events(session_id,source_slug,collector_id,stage,occurred_at,evidence_ref,detail) VALUES('heal-invalid','example-japan','c_japan_gpu_01','invented','2026-08-21T08:01:00.000Z','evidence/heal/invalid.json','Invalid')"), /CHECK/);
   assert.deepEqual(db.prepare("PRAGMA foreign_key_check").all(), []);
 });
+
+test("0005 freezes Country Pack identity and every ready collector boundary", async () => {
+  const db = new DatabaseSync(":memory:");
+  for (const migration of [
+    "0000_cuddly_kylun.sql",
+    "0001_mute_ted_forrester.sql",
+    "0002_eager_prodigy.sql",
+    "0003_light_mandrill.sql",
+    "0004_giant_madame_masque.sql",
+    "0005_freeze_ready_country_pack.sql",
+  ]) db.exec(await sql(migration));
+  db.exec("INSERT INTO market_packs(slug,country_code,label,currency,locale,symbol,source_slug,source_display_name,base_url,catalog_url,allowed_hosts,collector_id,status) VALUES('japan','JP','Japan','JPY','ja-JP','¥','example-japan','Example Japan','https://example.jp/','https://example.jp/gpus','[\"example.jp\"]','c_japan_gpu_01','ready')");
+
+  for (const statement of [
+    "UPDATE market_packs SET country_code='KR' WHERE slug='japan'",
+    "UPDATE market_packs SET currency='KRW' WHERE slug='japan'",
+    "UPDATE market_packs SET source_slug='replacement-japan' WHERE slug='japan'",
+    "UPDATE market_packs SET source_display_name='Replacement Japan' WHERE slug='japan'",
+    "UPDATE market_packs SET base_url='https://replacement.example/' WHERE slug='japan'",
+    "UPDATE market_packs SET catalog_url='https://example.jp/new-gpus' WHERE slug='japan'",
+    "UPDATE market_packs SET allowed_hosts='[\"example.jp\",\"cdn.example.jp\"]' WHERE slug='japan'",
+    "UPDATE market_packs SET collector_id='c_replacement_gpu_02' WHERE slug='japan'",
+  ]) assert.throws(() => db.exec(statement), /immutable/);
+
+  db.exec("INSERT INTO market_packs(slug,country_code,label,currency,locale,symbol,source_slug,source_display_name,base_url,catalog_url,allowed_hosts,collector_id,status) VALUES('korea','KR','Korea','KRW','ko-KR','₩','example-korea','Example Korea','https://example.kr/','https://example.kr/gpus','[\"example.kr\"]','c_korea_gpu_01','pending')");
+  assert.throws(() => db.exec("INSERT INTO market_packs(slug,country_code,label,currency,locale,symbol,source_slug,source_display_name,base_url,catalog_url,allowed_hosts,collector_id) VALUES('duplicate-country','KR','Duplicate','KRW','ko-KR','₩','duplicate-country-source','Duplicate','https://duplicate.example/','https://duplicate.example/gpus','[\"duplicate.example\"]','c_duplicate_01')"), /UNIQUE/);
+  assert.throws(() => db.exec("INSERT INTO market_packs(slug,country_code,label,currency,locale,symbol,source_slug,source_display_name,base_url,catalog_url,allowed_hosts,collector_id) VALUES('duplicate-source','NZ','Duplicate','NZD','en-NZ','$','example-korea','Duplicate','https://duplicate.example/','https://duplicate.example/gpus','[\"duplicate.example\"]','c_duplicate_02')"), /UNIQUE/);
+  db.exec("UPDATE market_packs SET collector_id='c_korea_gpu_02', catalog_url='https://example.kr/new-gpus' WHERE slug='korea'");
+  assert.deepEqual(
+    { ...db.prepare("SELECT collector_id, catalog_url FROM market_packs WHERE slug='korea'").get() },
+    { collector_id: "c_korea_gpu_02", catalog_url: "https://example.kr/new-gpus" },
+  );
+});

@@ -6,7 +6,7 @@ Verified on 2026-08-21 against
 
 ## Automated gates
 
-- 77/77 unit, migration, ingestion, auth, replay, rate-limit, retry-safety,
+- 81/81 unit, migration, ingestion, auth, replay, rate-limit, retry-safety,
   Country Pack, and healing
   evidence tests pass.
 - 6/6 production server-render tests pass.

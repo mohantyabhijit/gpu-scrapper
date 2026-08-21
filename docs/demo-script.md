@@ -22,6 +22,11 @@ evidence that already has a dated link in the evidence matrix.
    retailer link. Call out same-currency ranking, freshness/health labels, and
    “verify at retailer.” The visible catalog must say `live` only when backed by
    a verified live row; otherwise keep the fixture label.
+
+   Rehearse this beat with the exact pending and ready payload sequence in
+   [operations.md](operations.md#exact-country-pack-rehearsal). The terminal
+   should show only the safe `{slug,status}` responses; the two payloads must
+   keep the same verified country/source/collector boundary.
 4. **1:20–2:05 — Prompt-to-production and scheduled goal.** Show the structured
    collector row crossing validation/normalization into D1 and the storefront,
    then show the GitHub Action summary for one scheduled/manual market-source
