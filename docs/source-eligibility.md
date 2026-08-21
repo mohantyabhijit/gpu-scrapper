@@ -7,48 +7,6 @@ until it passes the full review below. URLs were checked as public catalog
 research leads on 2026-08-21 using Exa search; they are not proof that access,
 terms, or Bright Data coverage are approved.
 
-## Plan-aligned P0 market review: South Africa / ZAR
-
-The master plan names South Africa as the first-choice same-market launch. A
-bounded public review on 2026-08-21 recommends **The Gnarly Griffin + Evetech**
-for the P0 comparison pair, with **Progenix** retained as the third-source
-backup. This is a candidate recommendation, not an enablement decision:
-Bright Data's authenticated pre-built-library exclusion is still **pending**
-for all three sources, and no Collector ID is asserted here.
-
-The pair has at least three model-family overlaps visible in public pages:
-RTX 4060 Ti, RTX 4070, and RTX 5080. The match is intentionally at canonical
-GPU-family level until the collector returns stable board-partner/MPN fields;
-the original titles, product URLs, and public SKUs must remain attached to each
-row. The Gnarly Griffin currently exposes many historical/out-of-stock rows,
-so the P0 run must confirm that the required breadth and freshness thresholds
-are met before the source is enabled.
-
-| Source | P0 recommendation | Signed-out / robots signal | Extractable public fields and price semantics | Bounded-probe suitability | Decision gates still open |
-| --- | --- | --- | --- | --- | --- |
-| [The Gnarly Griffin](https://thegnarlygriffin.com/collections/graphics-cards-gpus) | Primary pair | Catalog and `robots.txt` returned HTTP 200. `User-agent: *` allows public paths; private/admin/cart/checkout paths are disallowed. Terms describe public product prices, stock and ordering; no public catalog prohibition was found. | Collection exposes titles, ZAR prices, product links, brand/GPU filters, and explicit in-stock/sold-out labels. PDPs expose SKU, GPU, VRAM, board partner and availability; e.g. [RTX 5080 Ventus](https://thegnarlygriffin.com/products/msi-geforce-rtx-5080-16g-ventus-3x-oc-plus). Price is a regular/current listing amount, not MSRP; stock is volatile and must be timestamped. | Pass for one low-rate public catalog + robots read; repeat-read and live collector validation remain required. | Bright Data pre-built exclusion, two-read stability, and breadth/freshness threshold. |
-| [Evetech](https://www.evetech.co.za/components/buy-nvidia-geforce-gtx-graphics-cards-47) | Primary pair | Catalog and `robots.txt` returned HTTP 200. `User-agent: *` allows `/` with `Crawl-delay: 1`; account, cart, checkout, API and review/write paths are disallowed. [Official terms](https://www.evetech.co.za/Company/terms-and-conditions) and pricing-change language were reviewed. | Category/PDP pages expose title, model/MPN-style text, specs and product URL; public pages cover RTX 4060 Ti, [RTX 4070](https://www.evetech.co.za/asus-dual-geforce-rtx-4070-oc-12gb-gddr6x/best-deal/17574), and [RTX 5080](https://www.evetech.co.za/msi-geforce-rtx-5080-gaming-trio-16gb-white/best-deal/24748). The site may show sale/deal/free-delivery qualifiers; preserve the displayed amount and qualifier rather than calling it MSRP. | Pass for one low-rate public catalog + robots read with the published one-second delay; current product-price/stock extraction must be confirmed by the collector. | Bright Data pre-built exclusion, exact live price/availability fields, two-read stability, and overlap confirmation. |
-| [Progenix](https://progenix.co.za/Graphics-Cards) | Third-source backup | Catalog, representative PDP, and `robots.txt` returned HTTP 200. Robots disallow query sorting/pagination and account/cart/checkout/search surfaces, but not the graphics-card catalog or PDP. [Terms](https://progenix.co.za/Terms-and-Conditions) describe a public online computer retailer. | Catalog/PDPs expose titles, ZAR prices, product codes, GPU/VRAM/spec tables, and explicit “In Stock with Supplier” / “Out Of Stock” states; [RTX 5070 AERO](https://progenix.co.za/Gigabyte-GeForce-RTX-5070-AERO-OC-12G-Graphics-Card-12GB) is a current example. Progenix documents a 4% EFT discount, so the displayed price must be tagged as EFT-discounted rather than treated as a universal cash price. | Strongest backup probe: three bounded public reads returned 200; still perform a second timed catalog/PDP read before onboarding. | Bright Data pre-built exclusion, overlap with the selected pair, and price/payment-mode normalization. |
-
-Wootware remains a researched South African candidate but is not the selected
-backup in this review. Its public indexed pages show broad GPU coverage, stock
-labels and ZAR prices, while a representative local probe returned HTTP 403
-for both the RTX 5070 category and `robots.txt`; one PDP also explains that its
-price may be hidden until a basket interaction. That is a stability and price
-semantics risk for P0, not evidence that Wootware is ineligible forever. See
-`evidence/sources/wootware-screening.md` for the bounded result.
-
-### P0 evidence records
-
-- [`evidence/sources/the-gnarly-griffin-eligibility.md`](../evidence/sources/the-gnarly-griffin-eligibility.md)
-- [`evidence/sources/evetech-eligibility.md`](../evidence/sources/evetech-eligibility.md)
-- [`evidence/sources/progenix-eligibility.md`](../evidence/sources/progenix-eligibility.md)
-- [`evidence/sources/wootware-screening.md`](../evidence/sources/wootware-screening.md)
-
-The evidence records are sanitized public-page notes. They do not contain
-credentials, cookies, personal contact details, raw provider output, or a
-claim that the Bright Data pre-built-library gate has passed.
-
 ## Candidate markets
 
 | Market | Source | Public catalog URL | Registry slug | Role | Research signal |
