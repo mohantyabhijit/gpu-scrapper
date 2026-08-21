@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { handleMarketPackRequest } from "../app/api/market-packs/route.ts";
+import * as schema from "../db/schema.ts";
 import { MarketPackValidationError, upsertMarketPack, validateMarketPack } from "../lib/d1/market-packs.ts";
 import { signatureFor, runMarketPack } from "../scripts/sign-market-pack.mjs";
 
@@ -19,14 +20,31 @@ const valid = {
   collectorId: "c_japan_gpu_01",
 };
 
-function fakeDb() {
+function fakeDb({ failTable } = {}) {
   const calls = [];
+  const rows = { marketPacks: new Map(), sources: new Map() };
+  const tableName = (table) => table === schema.marketPacks ? "marketPacks" : table === schema.sources ? "sources" : undefined;
   return {
     calls,
-    insert() {
-      return { values(value) { calls.push(value); return { onConflictDoUpdate({ set }) { calls.push(set); return { execute: async () => {} }; } }; } };
+    rows,
+    insert(table) {
+      return { values(value) { calls.push(value); return { onConflictDoUpdate({ set }) { calls.push(set); return { execute: async () => {
+        const name = tableName(table);
+        if (!name) throw new Error("unknown fake table");
+        if (name === failTable) throw new Error(`forced ${name} failure`);
+        rows[name].set(value.slug, { ...value, ...set });
+      } }; } }; } };
     },
-    async batch(statements) { calls.push(`batch:${statements.length}`); for (const statement of statements) await statement.execute(); },
+    async batch(statements) {
+      calls.push(`batch:${statements.length}`);
+      const snapshot = Object.fromEntries(Object.entries(rows).map(([name, values]) => [name, new Map(values)]));
+      try {
+        for (const statement of statements) await statement.execute();
+      } catch (error) {
+        for (const [name, values] of Object.entries(snapshot)) rows[name] = values;
+        throw error;
+      }
+    },
   };
 }
 
@@ -83,6 +101,18 @@ test("upsert atomically admits the market and its server-resolved source", async
   assert.deepEqual(result, { slug: "japan", countryCode: "JP", label: "Japan", currency: "JPY", locale: "ja-JP", symbol: "¥", sourceSlug: "example-japan", status: "pending" });
   assert.equal(db.calls.at(-1), "batch:2");
   assert.equal(db.calls[2].enabled, false);
+  assert.equal(db.rows.marketPacks.get("japan").countryCode, "JP");
+  assert.equal(db.rows.sources.get("example-japan").onboardingStatus, "pending");
+});
+
+test("country and source admission rolls back when the source write fails", async () => {
+  const db = fakeDb({ failTable: "sources" });
+  await assert.rejects(
+    upsertMarketPack(db, valid, new Date("2026-08-21T00:00:00Z")),
+    /forced sources failure/,
+  );
+  assert.equal(db.rows.marketPacks.size, 0);
+  assert.equal(db.rows.sources.size, 0);
 });
 
 test("route authenticates HMAC and does not echo provider evidence", async () => {

@@ -25,6 +25,8 @@ test("server-renders the Raster market-local fixture desk", async () => {
   assert.match(html, /B(?:&|&amp;)H Photo/);
   assert.match(html, /no cross-market price ranking/);
   assert.match(html, /Verify at retailer/);
+  assert.match(html, /Compare details/);
+  assert.match(html, /href="\/scrapper\/gpu\/rtx-5070-ti\?market=us"/);
   assert.match(html, /name="market"/);
   assert.match(html, /name="q"/);
   assert.match(html, /href="\/scrapper\/how-it-works"/);

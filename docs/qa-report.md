@@ -6,13 +6,15 @@ Verified on 2026-08-21 against
 
 ## Automated gates
 
-- 58/58 unit, migration, ingestion, auth, replay, Country Pack, and healing
+- 59/59 unit, migration, ingestion, auth, replay, Country Pack, and healing
   evidence tests pass.
 - 5/5 production server-render tests pass.
 - TypeScript, ESLint, `git diff --check`, the deployment dry run, and the
   repository secret scan pass.
 - Remote D1 contains all five applied migrations and the expected production
   tables, including `market_packs`, `request_receipts`, and `healing_events`.
+  Country Pack tests also force the second batched write to fail and verify the
+  first write is rolled back.
 - The protected refresh route rejects an unsigned request with HTTP 401. A
   correctly signed request reaches the route and returns the expected HTTP 503
   while live Collector IDs/provider access remain intentionally unconfigured.

@@ -10,7 +10,7 @@ artifact, commit, Action run, or public URL as each gate is completed.
 | Public data only | Signed-out URLs and data-boundary review | `docs/security.md`, source register | baseline |
 | Collector as production API | Trigger/schedule feeding D1 and storefront | GitHub Action summary, run record, public catalog | pending |
 | Terminal is the UI | Reproducible CLI commands and concise outputs | `docs/demo-script.md`, sanitized transcript | pending |
-| Code ownership | Versioned manifests, validator, normalizer, pipeline | repository code, 63 automated tests, and public commit history | implemented |
+| Code ownership | Versioned manifests, validator, normalizer, pipeline | repository code, 64 automated tests, and public commit history | implemented |
 | Self-healing | Before/preview/after proof using same Collector ID | `evidence/healing/` | pending |
 | Scrapers in CI | Scheduled/manual workflow with green validation | `.github/workflows/collect.yml` and Action run | pending |
 | Downstream product | Normalized offers rendered in storefront | <https://abhijitmohanty.com/scrapper/> and `docs/qa-report.md` | deployed fixture slice; live ingestion pending |
