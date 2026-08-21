@@ -18,10 +18,16 @@ Verified on 2026-08-21 against
 - The GitHub push and pull-request `Raster quality` runs for security-fix
   commit `f57cf56` pass; `actionlint v1.7.12` accepts the scheduled and quality
   workflows.
-- Remote D1 contains all five applied migrations and the expected production
+- Remote D1 contains all six applied migrations and the expected production
   tables, including `market_packs`, `request_receipts`, and `healing_events`.
-  Country Pack tests also force the second batched write to fail and verify the
-  first write is rolled back.
+  The three Country Pack immutability triggers were queried from remote
+  `sqlite_master` after migration `0005` applied. SQLite tests prove unique
+  country/source constraints, the complete ready collector boundary, and
+  pending-to-ready update behavior. Country Pack tests also force the second
+  batched write to fail and verify the first write is rolled back.
+- Direct SQLite-backed tests persist and reload all seven same-ID healing
+  stages and serialize concurrent source-rate claims through the real unique
+  receipt key; route tests cover bounded input and replay cleanup failures.
 - A production D1 binding smoke check inserted and read a uniquely named QA
   receipt, immediately deleted it, and verified `residue = 0`. No catalog row
   was touched.
