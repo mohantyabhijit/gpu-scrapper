@@ -45,7 +45,7 @@ test("PostgreSQL migration installs the complete schema and migration journal", 
     "products", "quarantined_rows", "request_receipts", "sources",
   ]);
   const migrations = await fixture.sql`SELECT count(*)::int AS count FROM drizzle.__drizzle_migrations`;
-  assert.equal(migrations[0].count, 2);
+  assert.equal(migrations[0].count, 3);
 });
 
 test("PostgreSQL integrity triggers enforce Country Pack identity and ready boundaries", async () => {

@@ -38,6 +38,8 @@ const invalidRow = {
 
 const context = {
   sourceSlug: "central-computer",
+  collectorId: "c_persist",
+  responseId: "response-persist",
   startedAt: "2026-08-21T09:59:00.000Z",
   finishedAt: "2026-08-21T10:00:00.000Z",
   observedAt: "2026-08-21T10:00:00.000Z",
@@ -57,9 +59,11 @@ test("PostgreSQL persistence writes normalized state, quarantine, and run metada
       (SELECT count(*) FROM offers)::int AS offers,
       (SELECT count(*) FROM price_observations)::int AS observations,
       (SELECT count(*) FROM quarantined_rows WHERE run_id = 'pg-run-1')::int AS quarantined,
-      (SELECT count(*) FROM collector_runs WHERE run_id = 'pg-run-1')::int AS runs
+      (SELECT count(*) FROM collector_runs WHERE run_id = 'pg-run-1')::int AS runs,
+      (SELECT collector_id FROM collector_runs WHERE run_id = 'pg-run-1') AS collector_id,
+      (SELECT response_id FROM collector_runs WHERE run_id = 'pg-run-1') AS response_id
   `;
-  assert.deepEqual(counts[0], { sources: 1, products: 1, offers: 1, observations: 1, quarantined: 1, runs: 1 });
+  assert.deepEqual(counts[0], { sources: 1, products: 1, offers: 1, observations: 1, quarantined: 1, runs: 1, collector_id: "c_persist", response_id: "response-persist" });
 });
 
 test("PostgreSQL persistence is idempotent and preserves last-known-good offers", async () => {
@@ -142,16 +146,18 @@ test("provider failure persistence preserves last-known-good fields and is idemp
   `;
   assert.deepEqual(after[0], { ...before[0], health: "degraded" });
   const runs = await fixture.sql`
-    SELECT count(*)::int AS count, status, accepted_count, validation_summary
+    SELECT count(*)::int AS count, status, accepted_count, validation_summary, collector_id, response_id
     FROM collector_runs
     WHERE run_id = ${first.runId}
-    GROUP BY status, accepted_count, validation_summary
+    GROUP BY status, accepted_count, validation_summary, collector_id, response_id
   `;
   assert.deepEqual(runs[0], {
     count: 1,
     status: "degraded",
     accepted_count: 0,
     validation_summary: JSON.stringify({ failureCode: "timeout" }),
+    collector_id: "c_failure",
+    response_id: null,
   });
 
   await persistIngestion(fixture.db, batch("pg-failure-recovery", [validRow]), { ...context, runId: "pg-failure-recovery" });

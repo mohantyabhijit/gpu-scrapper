@@ -206,3 +206,30 @@ test("transaction rollback does not leave partial catalog state", async () => {
   assert.equal(db.rows("offers").length, 0);
   assert.equal(db.rows("runs").length, 0);
 });
+
+test("persistence rejects a provider collector outside the source boundary", async () => {
+  const db = new FakeDb();
+  const source = {
+    slug: "central-computer",
+    displayName: "Central Computers",
+    role: "primary",
+    region: "US",
+    currency: "USD",
+    baseUrl: "https://www.centralcomputer.com",
+    allowedHosts: ["centralcomputer.com", "www.centralcomputer.com"],
+    catalogUrl: "https://www.centralcomputer.com/all-products/hardware/video-cards/video-cards.html",
+    enabled: true,
+    collectorIds: { combined: "c_expected" },
+    collectorRoles: ["combined"],
+  };
+  await assert.rejects(
+    persistIngestion(db, batch("run-boundary"), {
+      ...context,
+      runId: "run-boundary",
+      source,
+      collectorId: "c_other",
+    }),
+    /collectorId does not match source/,
+  );
+  assert.equal(db.rows("runs").length, 0);
+});

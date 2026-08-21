@@ -145,12 +145,16 @@ function safeRunPart(value: string, fallback: string): string {
   return part || fallback;
 }
 
+async function sha256Hex(value: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 async function safeRunId(sourceSlug: SourceSlug, responseId: string): Promise<string> {
   // The complete immutable identity is hashed so long or adversarial response
   // IDs cannot collide merely because their bounded display prefix matches.
   const identity = `${sourceSlug}\u0000${responseId}`;
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(identity));
-  const hash = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  const hash = await sha256Hex(identity);
   return `run-${safeRunPart(sourceSlug, "source")}-${safeRunPart(responseId, "response")}-${hash.slice(0, 24)}`;
 }
 
@@ -207,6 +211,13 @@ export function createRefreshRunner(
           collectorId: source.collectorId,
           inputUrl: source.inputUrl,
         });
+        // The provider response is only accepted when it remains bound to the
+        // source and exact collector selected above. This protects the
+        // persistence boundary from a misconfigured/custom runner returning a
+        // different source's artifact.
+        if (run.sourceSlug !== source.sourceSlug || run.collectorId !== source.collectorId) {
+          throw new BrightDataError("provider_error", "Bright Data returned an artifact for a different source or collector");
+        }
         const observedAt = (runnerOptions.now ?? (() => new Date()))().toISOString();
         const runId = await safeRunId(source.sourceSlug, run.responseId);
         try {

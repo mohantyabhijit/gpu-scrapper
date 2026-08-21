@@ -35,11 +35,17 @@ export const priceObservations = pgTable("price_observations", {
 }, (table) => [index("observations_offer_idx").on(table.offerKey, table.observedAt), uniqueIndex("observations_run_fingerprint_idx").on(table.runId, table.rowFingerprint), marketCurrencyCheck("observations_market_currency_check")]);
 
 export const collectorRuns = pgTable("collector_runs", {
-  runId: text("run_id").primaryKey(), sourceSlug: text("source_slug").notNull().references(() => sources.slug), market: text("market").notNull(),
+  runId: text("run_id").primaryKey(), sourceSlug: text("source_slug").notNull().references(() => sources.slug),
+  collectorId: text("collector_id"), responseId: text("response_id"), market: text("market").notNull(),
   currency: text("currency").notNull(), status: text("status").notNull(), acceptedCount: integer("accepted_count").notNull().default(0),
   rejectedCount: integer("rejected_count").notNull().default(0), startedAt: text("started_at").notNull(), finishedAt: text("finished_at"),
   validationSummary: text("validation_summary").notNull().default("{}"),
-});
+}, (table) => [
+  index("collector_runs_source_response_idx").on(table.sourceSlug, table.responseId),
+  index("collector_runs_collector_response_idx").on(table.collectorId, table.responseId),
+  check("collector_runs_collector_id_check", sql`collector_id IS NULL OR collector_id ~ '^c_[A-Za-z0-9_-]{2,127}$'`),
+  check("collector_runs_response_id_check", sql`response_id IS NULL OR char_length(response_id) BETWEEN 1 AND 256`),
+]);
 
 export const quarantinedRows = pgTable("quarantined_rows", {
   id: serial("id").primaryKey(), runId: text("run_id").notNull(), sourceSlug: text("source_slug"), rowIndex: integer("row_index").notNull(),

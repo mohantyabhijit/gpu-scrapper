@@ -11,6 +11,9 @@ type RasterStatement = PromiseLike<unknown>;
 export type PersistenceContext = {
   runId: string;
   sourceSlug: SourceSlug;
+  /** Provider identity for successful runs; absent only for legacy callers. */
+  collectorId?: string;
+  responseId?: string;
   source?: SourceDefinition;
   startedAt: string;
   finishedAt?: string;
@@ -99,16 +102,21 @@ function safeFailureCode(code: unknown): RefreshFailureCode {
 }
 
 /** Bounded deterministic identity for one persisted provider failure. */
-function failureRunId(input: SourceFailurePersistenceInput, code: RefreshFailureCode): string {
+async function failureRunId(input: SourceFailurePersistenceInput, code: RefreshFailureCode): Promise<string> {
   const identity = `${input.sourceSlug}\u0000${input.collectorId}\u0000${code}\u0000${input.failedAt}`;
-  let hash = BigInt("14695981039346656037");
-  const prime = BigInt("1099511628211");
-  for (let index = 0; index < identity.length; index += 1) {
-    hash ^= BigInt(identity.charCodeAt(index));
-    hash = BigInt.asUintN(64, hash * prime);
-  }
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(identity));
+  const hash = [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
   const source = input.sourceSlug.replace(/[^a-zA-Z0-9._-]+/g, "-").slice(0, 64) || "source";
-  return `failure-${source}-${hash.toString(16).padStart(16, "0")}`;
+  return `failure-${source}-${hash}`;
+}
+
+function assertCollectorBelongsToSource(source: SourceDefinition, collectorId: string | undefined): void {
+  if (collectorId === undefined) return;
+  if (!/^c_[A-Za-z0-9_-]{2,127}$/.test(collectorId)) throw new Error("collectorId is invalid");
+  const registered = Object.values(source.collectorIds).filter((id): id is CollectorId => typeof id === "string");
+  if (registered.length > 0 && !registered.includes(collectorId as CollectorId)) {
+    throw new Error("collectorId does not match source");
+  }
 }
 
 function assertBatchBelongsToSource(result: IngestionResult, context: PersistenceContext): void {
@@ -238,9 +246,12 @@ function runAndQuarantineUpserts(
   status: PersistenceResult["status"],
 ): RasterStatement[] {
   const source = context.source ?? getSource(context.sourceSlug);
+  assertCollectorBelongsToSource(source, context.collectorId);
   const statements: RasterStatement[] = [db.insert(schema.collectorRuns).values({
     runId: context.runId,
     sourceSlug: context.sourceSlug,
+    collectorId: context.collectorId,
+    responseId: context.responseId,
     market: source.region,
     currency: source.currency,
     status,
@@ -256,6 +267,8 @@ function runAndQuarantineUpserts(
       acceptedCount: result.summary.accepted,
       rejectedCount: result.summary.rejected,
       finishedAt: context.finishedAt ?? context.observedAt,
+      collectorId: context.collectorId,
+      responseId: context.responseId,
       validationSummary: validationSummary(result),
     },
   })];
@@ -318,7 +331,8 @@ export async function persistSourceFailure(
   if (!input.failedAt.trim()) throw new Error("failedAt is required");
   if (input.source.slug !== input.sourceSlug) throw new Error("source metadata does not match sourceSlug");
   const code = safeFailureCode(input.code);
-  const runId = failureRunId(input, code);
+  assertCollectorBelongsToSource(input.source, input.collectorId);
+  const runId = await failureRunId(input, code);
   const summary = JSON.stringify({ failureCode: code });
   await db.transaction(async (tx) => {
     await sourceUpsert(tx as RasterDatabase, input.source);
@@ -326,6 +340,8 @@ export async function persistSourceFailure(
     await tx.insert(schema.collectorRuns).values({
       runId,
       sourceSlug: input.sourceSlug,
+      collectorId: input.collectorId,
+      responseId: null,
       market: input.source.region,
       currency: input.source.currency,
       status: "degraded",
@@ -341,6 +357,8 @@ export async function persistSourceFailure(
         acceptedCount: 0,
         rejectedCount: 0,
         finishedAt: input.failedAt,
+        collectorId: input.collectorId,
+        responseId: null,
         validationSummary: summary,
       },
     });

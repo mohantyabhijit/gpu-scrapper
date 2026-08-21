@@ -100,18 +100,35 @@ test("refresh input only accepts bounded registered sources and no URLs", () => 
   assert.throws(() => parseRefreshRequest({ sourceSlugs: ["central-computer"], url: "https://evil.test" }));
 });
 
-test("route returns a sanitized not-configured response", async () => {
+test("route routes a missing provider key through the configured failure persistence boundary", async () => {
+  const restore = configureCentralComputer();
   const body = JSON.stringify({ sourceSlugs: ["central-computer"], role: "combined" });
   const request = await signedRequest(body, "refresh-secret");
-  const response = await handleRefreshRequest(request, {
-    environment: { RASTER_INGEST_HMAC_SECRET: "refresh-secret" },
-    nowSeconds: 1700000000,
-  });
-  assert.equal(response.status, 503);
-  assert.deepEqual(await response.json(), {
-    error: "bright_data_not_configured",
-    requested: ["central-computer"],
-  });
+  const failures = [];
+  try {
+    const response = await handleRefreshRequest(request, {
+      environment: { RASTER_INGEST_HMAC_SECRET: "refresh-secret" },
+      nowSeconds: 1700000000,
+      replayGuard: async () => true,
+      rateGuard: async () => ({ acquired: true, retryAfterSeconds: 0, complete: async () => {} }),
+      resolveSource: () => sourceRegistry["central-computer"],
+      onFailure: async (input) => { failures.push(input); },
+    });
+    assert.equal(response.status, 502);
+    assert.deepEqual(await response.json(), {
+      requested: ["central-computer"],
+      completed: [],
+      notConfigured: [],
+      failed: [{ sourceSlug: "central-computer", code: "not_configured" }],
+    });
+    assert.equal(failures.length, 1);
+    assert.deepEqual(Object.keys(failures[0]).sort(), ["code", "collectorId", "failedAt", "source", "sourceSlug"]);
+    assert.equal(failures[0].collectorId, "c_demo");
+    assert.equal(failures[0].code, "not_configured");
+    assert.doesNotMatch(JSON.stringify(failures), /provider-secret|api[_-]?key/i);
+  } finally {
+    restore();
+  }
 });
 
 test("route uses an injected runner and returns no provider body", async () => {

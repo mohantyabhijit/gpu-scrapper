@@ -45,6 +45,8 @@ async function persistCompletedRun(input: RefreshCompletionInput): Promise<void>
   await persistIngestion(getDb(), result, {
     runId: input.runId,
     sourceSlug: input.sourceSlug,
+    collectorId: input.collectorId,
+    responseId: input.responseId,
     startedAt: input.observedAt,
     finishedAt: input.observedAt,
     observedAt: input.observedAt,
@@ -98,10 +100,6 @@ export async function handleRefreshRequest(
   } catch (error) {
     const message = error instanceof RefreshRequestError ? error.message : "Request body is invalid JSON";
     return json({ error: message }, 400);
-  }
-
-  if (!dependencies.environment.BRIGHTDATA_API_KEY) {
-    return json({ error: "bright_data_not_configured", requested: parsed.sourceSlugs }, 503);
   }
 
   let replayClaim: boolean | ReplayClaim | undefined;
