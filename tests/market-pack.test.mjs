@@ -134,6 +134,34 @@ test("an admitted Country Pack keeps its country, currency, and source binding",
   assert.equal(db.rows.sources.has("replacement-japan"), false);
 });
 
+test("a ready Country Pack cannot reuse evidence while swapping its collector boundary", async () => {
+  const db = fakeDb();
+  const ready = {
+    ...valid,
+    status: "ready",
+    eligibilityEvidenceRef: "evidence/eligibility.md",
+    eligibilityVerifiedAt: "2026-08-20",
+    collectorCreatedEvidenceRef: "evidence/create.md",
+    collectorCreatedAt: "2026-08-20",
+    collectorRunEvidenceRef: "evidence/run.md",
+    collectorRunAt: "2026-08-21",
+  };
+  await upsertMarketPack(db, ready, new Date("2026-08-21T00:00:00Z"));
+  for (const mutation of [
+    { collectorId: "c_replacement_gpu_02" },
+    { catalogUrl: "https://example.jp/new-gpus" },
+    { allowedHosts: ["example.jp", "catalog.example.jp"] },
+    { sourceDisplayName: "Replacement Japan" },
+  ]) {
+    await assert.rejects(
+      upsertMarketPack(db, { ...ready, ...mutation }, new Date("2026-08-21T00:01:00Z")),
+      /ready collector and source metadata are immutable/,
+    );
+  }
+  assert.equal(db.rows.marketPacks.get("japan").collectorId, valid.collectorId);
+  assert.equal(db.rows.marketPacks.get("japan").catalogUrl, valid.catalogUrl);
+});
+
 test("route authenticates HMAC and does not echo provider evidence", async () => {
   const body = JSON.stringify({ ...valid, collectorRunEvidenceRef: "evidence/public/run-summary.json" });
   const db = fakeDb();

@@ -19,7 +19,7 @@ Public deployment: <https://abhijitmohanty.com/scrapper/>
 
 This repository is at the deployed, non-live judge-ready baseline. The
 storefront, protected pipeline, D1 schema, four-market schedule, Country Pack
-contract, and same-ID evidence ledger are implemented and verified by 76 core
+contract, and same-ID evidence ledger are implemented and verified by 77 core
 tests plus 6 production-render tests. The authoritative execution plan is [the
 Raster master plan](docs/plans/2026-08-21-raster-gpu-marketplace-master-plan.md).
 Live source eligibility must be verified immediately before creating collectors;

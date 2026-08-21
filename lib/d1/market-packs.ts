@@ -42,6 +42,12 @@ export type MarketPackResult = {
 
 export class MarketPackValidationError extends Error {}
 
+type StoredMarketPackBoundary = Pick<
+  MarketPackInput,
+  "slug" | "countryCode" | "currency" | "sourceSlug" | "sourceDisplayName" |
+  "baseUrl" | "catalogUrl" | "collectorId"
+> & { allowedHosts: string; status: MarketPackStatus };
+
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const countryPattern = /^[A-Z]{2}$/;
 const currencyPattern = /^[A-Z]{3}$/;
@@ -171,13 +177,22 @@ export function validateMarketPack(input: unknown, now = new Date()): MarketPack
 
 export async function upsertMarketPack(db: RasterDatabase, input: unknown, now = new Date()): Promise<MarketPackResult> {
   const value = validateMarketPack(input, now);
-  const existing = await getMarketPack(db, value.slug);
+  const existing = await getStoredMarketPackBoundary(db, value.slug);
   if (existing && (
     existing.sourceSlug !== value.sourceSlug
     || existing.countryCode !== value.countryCode
     || existing.currency !== value.currency
   )) {
     throw new MarketPackValidationError("country, currency, and source binding are immutable");
+  }
+  if (existing?.status === "ready" && (
+    existing.collectorId !== value.collectorId
+    || existing.baseUrl !== value.baseUrl
+    || existing.catalogUrl !== value.catalogUrl
+    || existing.allowedHosts !== JSON.stringify(value.allowedHosts)
+    || existing.sourceDisplayName !== value.sourceDisplayName
+  )) {
+    throw new MarketPackValidationError("ready collector and source metadata are immutable");
   }
   const timestamp = now.toISOString();
   const serializedHosts = JSON.stringify(value.allowedHosts);
@@ -216,6 +231,22 @@ export async function upsertMarketPack(db: RasterDatabase, input: unknown, now =
     sourceSlug: value.sourceSlug,
     status: value.status ?? "pending",
   };
+}
+
+async function getStoredMarketPackBoundary(db: RasterDatabase, slug: string): Promise<StoredMarketPackBoundary | undefined> {
+  const row = await db.select({
+    slug: schema.marketPacks.slug,
+    countryCode: schema.marketPacks.countryCode,
+    currency: schema.marketPacks.currency,
+    sourceSlug: schema.marketPacks.sourceSlug,
+    sourceDisplayName: schema.marketPacks.sourceDisplayName,
+    baseUrl: schema.marketPacks.baseUrl,
+    catalogUrl: schema.marketPacks.catalogUrl,
+    allowedHosts: schema.marketPacks.allowedHosts,
+    collectorId: schema.marketPacks.collectorId,
+    status: schema.marketPacks.status,
+  }).from(schema.marketPacks).where(eq(schema.marketPacks.slug, slug)).get();
+  return row ? { ...row, status: row.status as MarketPackStatus } : undefined;
 }
 
 export async function getMarketPack(db: RasterDatabase, slug: string): Promise<MarketPackResult | undefined> {
