@@ -33,12 +33,16 @@ Bright Data Scraper Studio collectors (one per eligible source)
 - **PostgreSQL via private Hyperdrive/VPC:** stores current offer state, price observations, collector runs, and
   quarantine records. Replays are idempotent; failed sources preserve last good
   data.
-- **Market packs:** PostgreSQL-owned country definitions remain pending until dated
-  eligibility, Collector creation, and successful run evidence exist. Only
-  ready packs are merged with the four baseline markets and exposed by the
-  selector. The HMAC-authenticated API atomically admits the pack and its
-  server-owned source metadata; arbitrary shopper-supplied currencies, URLs,
-  and Collector IDs are never accepted by the refresh path.
+- **Market packs:** PostgreSQL-owned country definitions are admitted pending-only.
+  Append-only, identity-bound evidence records and a persisted successful
+  non-empty run are required before a separate authenticated promotion
+  operation atomically enables both pack and source. Only the verified ready
+  boundary is merged with the four baseline markets and exposed by the selector;
+  pending packs remain health-ledger-only.
+- **Refresh plan:** a protected read-only query returns only a bounded,
+  deterministic list of static baseline and verified runtime source slugs. The
+  runtime resolver re-checks the same ready boundary before any provider call,
+  so demotion or malformed metadata fails closed.
 - **Storefront:** read-only catalog, same-currency filters/sorts, freshness and
   health labels, source attribution, and safe outbound links. No checkout.
 - **Public route:** the portfolio origin proxies only `/scrapper/` to Raster's

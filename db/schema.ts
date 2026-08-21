@@ -70,10 +70,41 @@ export const marketPacks = pgTable("market_packs", {
   eligibilityEvidenceRef: text("eligibility_evidence_ref"), eligibilityVerifiedAt: text("eligibility_verified_at"), collectorCreatedEvidenceRef: text("collector_created_evidence_ref"),
   collectorCreatedAt: text("collector_created_at"), collectorRunEvidenceRef: text("collector_run_evidence_ref"), collectorRunAt: text("collector_run_at"),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`), updatedAt: text("updated_at").notNull().default(sql`CURRENT_TIMESTAMP`),
-}, () => [check("market_packs_status_check", sql`status IN ('pending', 'ready')`), check("market_packs_code_currency_check", sql`char_length(country_code) = 2 AND country_code = upper(country_code) AND char_length(currency) = 3 AND currency = upper(currency)`)]);
+}, (table) => [
+  uniqueIndex("market_packs_slug_source_unique").on(table.slug, table.sourceSlug),
+  check("market_packs_status_check", sql`status IN ('pending', 'ready')`),
+  check("market_packs_code_currency_check", sql`char_length(country_code) = 2 AND country_code = upper(country_code) AND char_length(currency) = 3 AND currency = upper(currency)`),
+]);
+
+/** Server-owned, append-only proof for one exact Country Pack boundary. */
+export const marketPackEvidence = pgTable("market_pack_evidence", {
+  id: serial("id").primaryKey(),
+  packSlug: text("pack_slug").notNull(),
+  sourceSlug: text("source_slug").notNull(),
+  collectorId: text("collector_id").notNull(),
+  evidenceType: text("evidence_type").notNull(),
+  verifiedAt: text("verified_at").notNull(),
+  verificationMethod: text("verification_method").notNull(),
+  verificationStatus: text("verification_status").notNull().default("verified"),
+  artifactRef: text("artifact_ref").notNull(),
+  artifactSha256: text("artifact_sha256").notNull(),
+  runId: text("run_id"),
+  providerResponseId: text("provider_response_id"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  index("market_pack_evidence_boundary_idx").on(table.packSlug, table.sourceSlug, table.collectorId, table.evidenceType),
+  uniqueIndex("market_pack_evidence_type_boundary_idx").on(table.packSlug, table.sourceSlug, table.collectorId, table.evidenceType),
+  check("market_pack_evidence_type_check", sql`evidence_type IN ('eligibility', 'collector_creation', 'successful_run')`),
+  check("market_pack_evidence_status_check", sql`verification_status = 'verified'`),
+  check("market_pack_evidence_collector_check", sql`collector_id ~ '^c_[A-Za-z0-9_-]{2,127}$'`),
+  check("market_pack_evidence_hash_check", sql`artifact_sha256 ~ '^[a-fA-F0-9]{64}$'`),
+  check("market_pack_evidence_artifact_ref_check", sql`artifact_ref ~ '^evidence/[A-Za-z0-9][A-Za-z0-9._/-]{0,254}$' AND artifact_ref NOT LIKE '%..%' AND artifact_ref NOT LIKE '%//%'`),
+  check("market_pack_evidence_run_identity_check", sql`(evidence_type = 'successful_run' AND run_id IS NOT NULL AND provider_response_id IS NOT NULL) OR (evidence_type <> 'successful_run' AND run_id IS NULL AND provider_response_id IS NULL)`),
+]);
 
 export type SourceRow = typeof sources.$inferSelect;
 export type ProductRow = typeof products.$inferSelect;
 export type OfferRow = typeof offers.$inferSelect;
 export type MarketPackRow = typeof marketPacks.$inferSelect;
+export type MarketPackEvidenceRow = typeof marketPackEvidence.$inferSelect;
 export type HealingEventRow = typeof healingEvents.$inferSelect;

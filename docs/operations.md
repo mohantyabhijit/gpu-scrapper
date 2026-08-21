@@ -109,14 +109,20 @@ Country expansion is runtime-driven through the authenticated Country Pack
 route and does not require a code deploy. To add a market safely:
 
 1. Submit its route slug, ISO-style market code, currency, locale, symbol, and a
-   server-recognized retailer slug to the signed Country Pack route.
-2. Record dated public-data eligibility and Bright Data pre-built-library
-   exclusion evidence. The pack remains pending and is not selectable.
-3. Create and run a source-specific custom Scraper Studio collector, record its
-   real `c_*` ID, and validate its output against the shared contract.
-4. Submit the sanitized creation/run evidence. One PostgreSQL transaction marks the
-   pack ready and binds the server-resolved source; it then appears in the
-   selector without redeploying Raster.
+   server-recognized retailer slug to the signed Country Pack admission route.
+   Admission always creates a pending, disabled pack; caller status and legacy
+   evidence fields are rejected.
+2. Record dated eligibility/operator and custom-Collector verification through
+   the separate authenticated evidence route. Each record is bound to the exact
+   pack/source/Collector boundary and carries a safe artifact reference and
+   SHA-256.
+3. Create and run a source-specific custom Scraper Studio collector, persist the
+   exact successful non-empty `collectorId`/`responseId` run, then record its
+   normalized-output evidence.
+4. Submit only the pack slug to the authenticated promotion route. One
+   PostgreSQL transaction verifies all three ordered evidence types and the
+   persisted run, then marks pack and source ready/enabled; it appears in the
+   selector and refresh plan without redeploying Raster.
 
 The selector, validation, currency formatting, and PostgreSQL query layer merge ready
 Country Packs with the baseline registry. Shopper input cannot supply a source
@@ -124,11 +130,10 @@ URL or Collector ID, and an admitted source binding is immutable.
 
 ### Exact Country Pack rehearsal
 
-The committed pending and ready files under `examples/` are non-runnable
-templates: the `.example` host, `c_REPLACE_AFTER_CREATE`, and date placeholders
-are not source or live-collector claims. Copy them outside the repository,
-replace every placeholder only after eligibility and create/run proof exists,
-then use the HTTPS production endpoint:
+The committed pending file under `examples/` is a non-runnable template: the
+`.example` host and `c_REPLACE_AFTER_CREATE` are not source or live-collector
+claims. Copy it outside the repository, replace placeholders only after the
+server-side operator checks, then use the HTTPS production endpoint:
 
 ```bash
 export RASTER_MARKET_PACK_URL='https://abhijitmohanty.com/scrapper/api/market-packs'
@@ -141,14 +146,15 @@ node scripts/sign-market-pack.mjs \
 
 At this point `/scrapper/data-health` shows the pack as pending and the shopper
 selector must not contain it. After the real collector output passes the shared
-contract, copy the exact same country/source/collector boundary into the ready
-payload, add only repository-local sanitized `evidence/...` references and
-their ISO dates, then submit:
+contract, submit one typed record each to `/api/market-packs/evidence`
+(eligibility, collector creation, and successful run, including the persisted
+run/response identity), then submit only `{"slug":"japan"}` to
+`/api/market-packs/promote`:
 
 ```bash
 node scripts/sign-market-pack.mjs \
-  --url "$RASTER_MARKET_PACK_URL" \
-  --file '/secure/path/country-pack.ready.json'
+  --url "$RASTER_MARKET_PACK_URL/promote" \
+  --file '/secure/path/country-pack.promote.json'
 # safe response: {"slug":"japan","status":"ready"}
 ```
 
@@ -156,7 +162,8 @@ Refresh `/scrapper/data-health`, then the home page. The ledger must show ready
 and the country must enter the selector without a deploy. Record the safe
 responses and browser state; never record the HMAC secret or raw provider body.
 An already-ready pack cannot change its country, currency, source, collector,
-URL/host boundary, or source identity while reusing old evidence.
+URL/host boundary, or source identity while reusing old evidence. The protected
+refresh-plan response contains only bounded source slugs and counts.
 
 ## Signing contract
 

@@ -16,7 +16,7 @@ artifact, commit, Action run, or public URL as each gate is completed.
 | Downstream product | Normalized offers rendered in storefront | <https://abhijitmohanty.com/scrapper/> and `docs/qa-report.md` | deployed fixture slice; live ingestion pending |
 | Prompt-to-production | Collector output crosses validation, hosted PostgreSQL, and storefront boundaries | sanitized row, PostgreSQL run, public offer card | pending |
 | Goal/schedule | One bounded market/source slice runs unattended on schedule | `.github/workflows/collect.yml`, Action summary | per-slice locking and four-country schedule implemented; live run pending |
-| Runtime country onboarding | Ready Country Pack appears in the selector only after eligibility, collector, and contract evidence | `/data-health` Country Packs ledger, sanitized onboarding artifact, PostgreSQL market-pack row | atomic admission contract implemented; real Country Pack pending |
+| Runtime country onboarding | Ready Country Pack appears in the selector only after eligibility, collector, and contract evidence | `/data-health` Country Packs ledger, append-only evidence ledger, PostgreSQL market-pack row, protected refresh plan | pending-only admission, evidence-bound promotion, and fail-closed runtime seam implemented; real Country Pack pending |
 | Self-healing hero | Same `c_*` ID recovers after a controlled break | `evidence/healing/` before/preview/after set | pending |
 | Safety and honesty | Freshness, stale/degraded labels, source links, no checkout claim | storefront QA and README | baseline |
 

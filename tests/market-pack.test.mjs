@@ -108,29 +108,9 @@ test("validates a pending pack and rejects unsafe onboarding fields", () => {
   assert.throws(() => validateMarketPack({ ...valid, collectorRunEvidenceRef: "evidence/../raw/run.json" }), /collectorRunEvidenceRef/);
 });
 
-test("ready requires dated eligibility, creation, and run evidence", () => {
-  assert.throws(() => validateMarketPack({ ...valid, status: "ready" }, new Date("2026-08-21T00:00:00Z")), /ready packs require/);
-  const result = validateMarketPack({
-    ...valid,
-    status: "ready",
-    eligibilityEvidenceRef: "evidence/eligibility.md",
-    eligibilityVerifiedAt: "2026-08-20",
-    collectorCreatedEvidenceRef: "evidence/create.md",
-    collectorCreatedAt: "2026-08-20",
-    collectorRunEvidenceRef: "evidence/run.md",
-    collectorRunAt: "2026-08-21",
-  }, new Date("2026-08-21T00:00:00Z"));
-  assert.equal(result.status, "ready");
-  assert.throws(() => validateMarketPack({
-    ...valid,
-    status: "ready",
-    eligibilityEvidenceRef: "evidence/eligibility.md",
-    eligibilityVerifiedAt: "2026-08-21",
-    collectorCreatedEvidenceRef: "evidence/create.md",
-    collectorCreatedAt: "2026-08-20",
-    collectorRunEvidenceRef: "evidence/run.md",
-    collectorRunAt: "2026-08-21",
-  }, new Date("2026-08-21T00:00:00Z")), /eligibility evidence must predate/);
+test("ready and legacy evidence claims are rejected at admission", () => {
+  assert.throws(() => validateMarketPack({ ...valid, status: "ready" }), /pending-only/);
+  assert.throws(() => validateMarketPack({ ...valid, eligibilityEvidenceRef: "evidence/eligibility.md" }), /server-owned evidence/);
 });
 
 test("upsert atomically admits the market and its server-resolved source", async () => {
@@ -163,36 +143,8 @@ test("an admitted Country Pack keeps its country, currency, and source binding",
   assert.equal(db.rows.sources.has("replacement-japan"), false);
 });
 
-test("a ready Country Pack cannot reuse evidence while swapping its collector boundary", async () => {
-  const db = fakeDb();
-  const ready = {
-    ...valid,
-    status: "ready",
-    eligibilityEvidenceRef: "evidence/eligibility.md",
-    eligibilityVerifiedAt: "2026-08-20",
-    collectorCreatedEvidenceRef: "evidence/create.md",
-    collectorCreatedAt: "2026-08-20",
-    collectorRunEvidenceRef: "evidence/run.md",
-    collectorRunAt: "2026-08-21",
-  };
-  await upsertMarketPack(db, ready, new Date("2026-08-21T00:00:00Z"));
-  for (const mutation of [
-    { collectorId: "c_replacement_gpu_02" },
-    { catalogUrl: "https://example.jp/new-gpus" },
-    { allowedHosts: ["example.jp", "catalog.example.jp"] },
-    { sourceDisplayName: "Replacement Japan" },
-  ]) {
-    await assert.rejects(
-      upsertMarketPack(db, { ...ready, ...mutation }, new Date("2026-08-21T00:01:00Z")),
-      /ready collector and source metadata are immutable/,
-    );
-  }
-  assert.equal(db.rows.marketPacks.get("japan").collectorId, valid.collectorId);
-  assert.equal(db.rows.marketPacks.get("japan").catalogUrl, valid.catalogUrl);
-});
-
-test("route authenticates HMAC and does not echo provider evidence", async () => {
-  const body = JSON.stringify({ ...valid, collectorRunEvidenceRef: "evidence/public/run-summary.json" });
+test("route authenticates HMAC and returns only the pending admission summary", async () => {
+  const body = JSON.stringify(valid);
   const db = fakeDb();
   const response = await handleMarketPackRequest(await request(body), {
     environment: { RASTER_INGEST_HMAC_SECRET: "market-pack-secret" },

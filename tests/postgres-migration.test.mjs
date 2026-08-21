@@ -37,15 +37,15 @@ test("PostgreSQL migration installs the complete schema and migration journal", 
     SELECT table_name FROM information_schema.tables
     WHERE table_schema = 'public' AND table_name IN
       ('sources', 'products', 'offers', 'price_observations', 'collector_runs',
-       'quarantined_rows', 'request_receipts', 'healing_events', 'market_packs')
+       'quarantined_rows', 'request_receipts', 'healing_events', 'market_packs', 'market_pack_evidence')
     ORDER BY table_name
   `;
   assert.deepEqual(tables.map((row) => row.table_name), [
-    "collector_runs", "healing_events", "market_packs", "offers", "price_observations",
+    "collector_runs", "healing_events", "market_pack_evidence", "market_packs", "offers", "price_observations",
     "products", "quarantined_rows", "request_receipts", "sources",
   ]);
   const migrations = await fixture.sql`SELECT count(*)::int AS count FROM drizzle.__drizzle_migrations`;
-  assert.equal(migrations[0].count, 3);
+  assert.equal(migrations[0].count, 4);
 });
 
 test("PostgreSQL integrity triggers enforce Country Pack identity and ready boundaries", async () => {
@@ -61,11 +61,7 @@ test("PostgreSQL integrity triggers enforce Country Pack identity and ready boun
     /country and currency are immutable/,
   );
   await fixture.sql`UPDATE market_packs SET catalog_url = 'https://example.jp/new-gpus' WHERE slug = 'japan'`;
-  await fixture.sql`UPDATE market_packs SET status = 'ready' WHERE slug = 'japan'`;
-  await assert.rejects(
-    fixture.sql`UPDATE market_packs SET collector_id = 'c_replacement' WHERE slug = 'japan'`,
-    /ready market pack collector boundary is immutable/,
-  );
+  await assert.rejects(fixture.sql`UPDATE market_packs SET status = 'ready' WHERE slug = 'japan'`, /requires ordered verified evidence/);
 });
 
 test("PostgreSQL healing evidence is append-only and keeps relational constraints", async () => {

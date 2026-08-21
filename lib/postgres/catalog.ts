@@ -267,11 +267,20 @@ export async function loadCatalog(options: {
           catalogUrl: schema.marketPacks.catalogUrl,
           symbol: schema.marketPacks.symbol,
           sourceDisplayName: schema.marketPacks.sourceDisplayName,
-          eligibilityEvidenceRef: schema.marketPacks.eligibilityEvidenceRef,
-          collectorCreatedEvidenceRef: schema.marketPacks.collectorCreatedEvidenceRef,
-          collectorRunEvidenceRef: schema.marketPacks.collectorRunEvidenceRef,
           status: schema.marketPacks.status,
         }).from(schema.marketPacks);
+        const evidenceRows = await db.select({
+          packSlug: schema.marketPackEvidence.packSlug,
+          evidenceType: schema.marketPackEvidence.evidenceType,
+          verificationStatus: schema.marketPackEvidence.verificationStatus,
+        }).from(schema.marketPackEvidence);
+        const evidenceByPack = new Map<string, Set<string>>();
+        for (const evidence of evidenceRows) {
+          if (evidence.verificationStatus !== "verified") continue;
+          const types = evidenceByPack.get(evidence.packSlug) ?? new Set<string>();
+          types.add(evidence.evidenceType);
+          evidenceByPack.set(evidence.packSlug, types);
+        }
         return rows.map((row) => ({
             slug: row.slug,
             code: row.code,
@@ -279,13 +288,13 @@ export async function loadCatalog(options: {
             currency: row.currency,
             locale: row.locale,
             symbol: row.symbol,
-            enabled: row.status === "ready",
-            ready: row.status === "ready",
+            enabled: row.status === "ready" && (evidenceByPack.get(row.slug)?.size ?? 0) >= 3,
+            ready: row.status === "ready" && ["eligibility", "collector_creation", "successful_run"].every((type) => evidenceByPack.get(row.slug)?.has(type)),
             runtime: true,
             sourceDisplayName: row.sourceDisplayName,
-            eligibilityProven: Boolean(row.eligibilityEvidenceRef),
-            collectorCreatedProven: Boolean(row.collectorCreatedEvidenceRef),
-            collectorRunProven: Boolean(row.collectorRunEvidenceRef),
+            eligibilityProven: evidenceByPack.get(row.slug)?.has("eligibility") ?? false,
+            collectorCreatedProven: evidenceByPack.get(row.slug)?.has("collector_creation") ?? false,
+            collectorRunProven: evidenceByPack.get(row.slug)?.has("successful_run") ?? false,
           }));
       });
     } catch {

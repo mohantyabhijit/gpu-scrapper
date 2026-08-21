@@ -1,13 +1,39 @@
 import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import * as schema from "../../db/schema.ts";
-import { getSource, isKnownSource, type CollectorId, type CollectorRole, type SourceDefinition, type SourceRole, type SourceSlug } from "../../config/sources.ts";
+import { getSource, isKnownSource, sourceRegistry, type CollectorId, type CollectorRole, type SourceDefinition, type SourceRole, type SourceSlug } from "../../config/sources.ts";
+import { collectorForSource } from "../brightdata/client.ts";
 import { MAX_RESPONSE_ID_LENGTH } from "../brightdata/client.ts";
 import type { IngestionResult } from "../ingest.ts";
 import type { RefreshFailureCode, RefreshFailureInput } from "../brightdata/refresh.ts";
 
 export type RasterDatabase = PostgresJsDatabase<typeof schema>;
 type RasterStatement = PromiseLike<unknown>;
+
+export const MAX_REFRESH_PLAN_SOURCES = 64;
+
+/** Public response deliberately contains only bounded, deterministic source slugs. */
+export function refreshPlanResponse(sourceSlugs: readonly string[], max = MAX_REFRESH_PLAN_SOURCES): { sourceSlugs: string[]; count: number } {
+  const unique = [...new Set(sourceSlugs.filter((slug) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)))].sort().slice(0, max);
+  return { sourceSlugs: unique, count: unique.length };
+}
+
+export async function queryRefreshPlan(db: RasterDatabase, role: CollectorRole = "combined", max = MAX_REFRESH_PLAN_SOURCES): Promise<{ sourceSlugs: string[]; count: number }> {
+  const baseline = Object.values(sourceRegistry)
+    .filter((source) => source.enabled && Boolean(collectorForSource(source, role)))
+    .map((source) => source.slug);
+  const runtimeRows = await db.select({ slug: schema.sources.slug, collectorIds: schema.sources.collectorIds })
+    .from(schema.sources)
+    .innerJoin(schema.marketPacks, eq(schema.marketPacks.sourceSlug, schema.sources.slug))
+    .where(and(eq(schema.marketPacks.status, "ready"), eq(schema.sources.onboardingStatus, "ready"), eq(schema.sources.enabled, true)));
+  const dynamic = runtimeRows.flatMap((row) => {
+    try {
+      const ids = JSON.parse(row.collectorIds) as Record<string, unknown>;
+      return typeof ids[role] === "string" && /^c_[A-Za-z0-9_-]{2,127}$/.test(ids[role] as string) ? [row.slug] : [];
+    } catch { return []; }
+  });
+  return refreshPlanResponse([...baseline, ...dynamic], max);
+}
 
 export type PersistenceContext = {
   runId: string;
@@ -48,8 +74,14 @@ export function createPostgresSourceResolver(db: RasterDatabase) {
   return async (slug: string): Promise<SourceDefinition | undefined> => {
     const staticSource = isKnownSource(slug) ? getSource(slug) : undefined;
     const [row] = await db.select().from(schema.sources).where(eq(schema.sources.slug, slug)).limit(1);
-    if (!row) return staticSource;
+    if (!row) {
+      return staticSource && staticSource.enabled && Object.values(staticSource.collectorIds).some((id) => /^c_[A-Za-z0-9_-]{2,127}$/.test(id)) ? staticSource : undefined;
+    }
     if (row.onboardingStatus !== "ready") return undefined;
+    if (!staticSource) {
+      const [pack] = await db.select({ status: schema.marketPacks.status }).from(schema.marketPacks).where(eq(schema.marketPacks.sourceSlug, slug)).limit(1);
+      if (!pack || pack.status !== "ready") return undefined;
+    }
     const allowedHosts = parseJson<readonly string[]>(row.allowedHosts, staticSource?.allowedHosts ?? []);
     const collectorIds = parseJson<Partial<Record<CollectorRole, CollectorId>>>(row.collectorIds, staticSource?.collectorIds ?? {});
     const source: SourceDefinition = {
@@ -65,7 +97,7 @@ export function createPostgresSourceResolver(db: RasterDatabase) {
       collectorIds,
       collectorRoles: Object.keys(collectorIds) as CollectorRole[],
     };
-    if (!source.enabled || !source.catalogUrl || source.allowedHosts.length === 0 || Object.keys(source.collectorIds).length === 0) return undefined;
+    if (!source.enabled || !source.catalogUrl || source.allowedHosts.length === 0 || !Object.values(source.collectorIds).some((id) => /^c_[A-Za-z0-9_-]{2,127}$/.test(id))) return undefined;
     return source;
   };
 }
@@ -252,6 +284,9 @@ function runAndQuarantineUpserts(
   status: PersistenceResult["status"],
 ): RasterStatement[] {
   const source = context.source ?? getSource(context.sourceSlug);
+  if (status === "healthy" && (!context.collectorId || !context.responseId)) {
+    throw new Error("successful collector runs require collectorId and responseId");
+  }
   assertCollectorBelongsToSource(source, context.collectorId);
   const statements: RasterStatement[] = [db.insert(schema.collectorRuns).values({
     runId: context.runId,
