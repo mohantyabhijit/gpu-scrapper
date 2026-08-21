@@ -2,19 +2,25 @@
 
 Verified on 2026-08-21 against
 <https://abhijitmohanty.com/scrapper/> after Cloudflare Worker version
-`1a87d810-a018-4172-a7b5-39d1b32f45a1` was deployed.
+`463ffe5b-be7f-4de9-82d0-f6cb4d77eceb` was deployed from commit `206b5e2`.
 
 ## Automated gates
 
-- 66/66 unit, migration, ingestion, auth, replay, retry-safety, Country Pack, and healing
+- 71/71 unit, migration, ingestion, auth, replay, rate-limit, retry-safety,
+  Country Pack, and healing
   evidence tests pass.
-- 5/5 production server-render tests pass.
+- 6/6 production server-render tests pass.
 - TypeScript, ESLint, `git diff --check`, the deployment dry run, and the
   repository secret scan pass.
+- Both GitHub `Raster quality` runs for commit `206b5e2` pass, and
+  `actionlint v1.7.12` accepts the scheduled and quality workflows.
 - Remote D1 contains all five applied migrations and the expected production
   tables, including `market_packs`, `request_receipts`, and `healing_events`.
   Country Pack tests also force the second batched write to fail and verify the
   first write is rolled back.
+- A production D1 binding smoke check inserted and read a uniquely named QA
+  receipt, immediately deleted it, and verified `residue = 0`. No catalog row
+  was touched.
 - The protected refresh route rejects an unsigned request with HTTP 401. A
   correctly signed request reaches the route and returns the expected HTTP 503
   while live Collector IDs/provider access remain intentionally unconfigured.
@@ -28,19 +34,23 @@ still a separate release gate.
 
 | Route / flow | Status | Notes |
 | --- | --- | --- |
-| `/scrapper/` | Pass | Hero, disclosure, navigation, filters, cards, retailer attribution, and local-currency copy render. |
-| Market + search | Pass | Selecting India and filtering `5070` produces `?market=india&q=5070...`, INR output, and removes the 5080 card. |
+| `/scrapper/` | Pass | Hero, explicit fixture disclosure, navigation, market/search/availability/sort controls, multi-select filters, cards, exact UTC timestamps, source attribution, and local-currency copy render. |
+| Multi-filter + sort | Pass | Selecting RTX 5080, B&H Photo, and price-high produces a deterministic repeated-filter URL, removable chips, and exactly one matching offer. |
 | `/scrapper/how-it-works` | Pass | Country Pack, custom collector, normalization, and same-ID repair stages render. |
 | `/scrapper/data-health` | Pass | Honest no-live-claim state, four markets, Country Pack ledger, seven-stage heal timeline, and pending evidence gates render. |
-| `/scrapper/gpu/rtx-5070-ti?market=india` | Pass | Market-local product detail renders with no application error. |
-| Mobile 390 × 844 | Pass | Hero, primary navigation, market selector, and cards render with no horizontal overflow (`scrollWidth = innerWidth = 390`). |
+| `/scrapper/gpu/rtx-5080?market=us` | Pass | Market-local product detail renders with no application error. |
+| Mobile 390 × 844 | Pass | Homepage, method, health, and detail routes render with no horizontal overflow (`scrollWidth = innerWidth = 390`). |
+| Keyboard focus | Pass | Representative brand, navigation, select, text input, checkbox, button, and outbound-link controls expose a `2px` solid lime focus outline. |
+| Retailer exits | Pass | Fixture cards preserve the expected public Micro Center and B&H HTTPS destinations and open them with `target="_blank" rel="noreferrer"`. |
 | Portfolio isolation | Pass | `/` and `/data-health` remain portfolio routes; only `/scrapper/` is proxied to Raster. |
 | Protected API | Pass | Unsigned `POST /scrapper/api/refresh` returns sanitized `401 {"error":"unauthorized"}`. |
+| Screenshot artifact | Skip | The in-app browser completed DOM, interaction, viewport, and console checks but its screenshot capture returned no image. No screenshot is claimed in this report. |
 
-No browser console warnings or errors were recorded on the final production
-homepage pass. The page exposes semantic headings, labelled controls,
-navigation, regions, status text, and visible fixture/live disclosures. A
-formal assistive-technology audit remains part of final submission polish.
+No browser console warnings or errors were recorded across the final production
+route pass. The page exposes semantic headings, labelled controls, navigation,
+regions, status text, exact timestamps, and visible fixture/live disclosures.
+A formal automated accessibility scan and a retained responsive screenshot
+remain part of final submission polish.
 
 ## Known honest limitations
 

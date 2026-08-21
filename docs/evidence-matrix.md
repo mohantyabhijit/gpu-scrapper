@@ -9,14 +9,14 @@ artifact, commit, Action run, or public URL as each gate is completed.
 | Long-tail target | Pre-built-library exclusion and source eligibility | `docs/source-eligibility.md` plus dated evidence | pending |
 | Public data only | Signed-out URLs and data-boundary review | `docs/security.md`, source register | baseline |
 | Collector as production API | Trigger/schedule feeding D1 and storefront | GitHub Action summary, run record, public catalog | pending |
-| Terminal is the UI | Reproducible CLI commands and concise outputs | `docs/demo-script.md`, sanitized transcript | pending |
-| Code ownership | Versioned manifests, validator, normalizer, pipeline | repository code, 64 automated tests, and public commit history | implemented |
+| Terminal is the UI | Reproducible CLI commands and concise outputs | `docs/demo-script.md`, sanitized transcript | commands implemented; live transcript pending |
+| Code ownership | Versioned manifests, validator, normalizer, pipeline | repository code, 71 core tests, 6 rendered-output tests, and public commit history | implemented |
 | Self-healing | Before/preview/after proof using same Collector ID | `evidence/healing/` | pending |
-| Scrapers in CI | Scheduled/manual workflow with green validation | `.github/workflows/collect.yml` and Action run | pending |
+| Scrapers in CI | Scheduled/manual workflow with green validation | `.github/workflows/collect.yml` and Action run | four-market matrix and syntax validated; live run pending |
 | Downstream product | Normalized offers rendered in storefront | <https://abhijitmohanty.com/scrapper/> and `docs/qa-report.md` | deployed fixture slice; live ingestion pending |
 | Prompt-to-production | Collector output crosses validation, D1, and storefront boundaries | sanitized row, D1 run, public offer card | pending |
-| Goal/schedule | One bounded market/source slice runs unattended on schedule | `.github/workflows/collect.yml`, Action summary | pending |
-| Runtime country onboarding | Ready Country Pack appears in the selector only after eligibility, collector, and contract evidence | `/data-health` Country Packs ledger, sanitized onboarding artifact, D1 market-pack row | pending |
+| Goal/schedule | One bounded market/source slice runs unattended on schedule | `.github/workflows/collect.yml`, Action summary | per-slice locking and four-country schedule implemented; live run pending |
+| Runtime country onboarding | Ready Country Pack appears in the selector only after eligibility, collector, and contract evidence | `/data-health` Country Packs ledger, sanitized onboarding artifact, D1 market-pack row | atomic admission contract implemented; real Country Pack pending |
 | Self-healing hero | Same `c_*` ID recovers after a controlled break | `evidence/healing/` before/preview/after set | pending |
 | Safety and honesty | Freshness, stale/degraded labels, source links, no checkout claim | storefront QA and README | baseline |
 
