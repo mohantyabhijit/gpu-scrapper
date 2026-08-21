@@ -88,6 +88,13 @@ test("publishes judge-facing data health without fabricating live state", async 
   assert.match(html, /USD|GBP|INR|SGD/);
   assert.match(html, /NO LIVE/);
   assert.match(html, /Pending.*not configured/);
+  assert.match(html, /What is live vs fixture/);
+  assert.match(html, /fixture rows only/);
+  assert.match(html, /Live provider/);
+  assert.match(html, /Policy: same-ID repair/);
+  assert.match(html, /data-evidence-kind="fixture"/);
+  assert.match(html, /data-evidence-kind="provider"/);
+  assert.match(html, /data-evidence-kind="policy"/);
   assert.match(html, /last-known-good|last known-good/i);
   assert.match(html, /quarantine/);
   assert.match(html, /self-heal|heal/i);

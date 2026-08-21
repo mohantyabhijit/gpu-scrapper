@@ -104,3 +104,30 @@ h1 em,h2 em { color:var(--lime); font-style:normal; }
   .pipeline-row { padding:18px 15px; }
   .evidence-card { padding:24px; }
 }
+.health-legend { display:grid; grid-template-columns:1fr 2fr; gap:8%; align-items:center; padding:34px 8%; border-bottom:1px solid var(--line); background:#0d100f; }
+.health-legend h2 { margin:0; font:500 clamp(25px,3vw,38px)/1.05 Georgia,serif; letter-spacing:-.05em; }
+.health-legend dl { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin:0; }
+.health-legend dl>div { min-width:0; padding:15px; border:1px solid var(--line); background:var(--panel); }
+.health-legend dt { margin-bottom:8px; color:#7f887e; font:10px ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.1em; text-transform:uppercase; }
+.health-legend dd { display:flex; align-items:flex-start; gap:8px; margin:0; color:#d1d4ce; font-size:12px; line-height:1.45; }
+.legend-dot { flex:0 0 auto; width:8px; height:8px; margin-top:4px; border-radius:50%; }
+.legend-fixture { background:var(--lime); box-shadow:0 0 0 4px #b9ef6a18; }
+.legend-pending { background:var(--orange); box-shadow:0 0 0 4px #f2a15f18; }
+.legend-policy { background:var(--red); box-shadow:0 0 0 4px #ff625818; }
+.pipeline-copy { min-width:0; }
+.evidence-list { display:flex; flex-wrap:wrap; gap:7px; margin:12px 0 0; padding:0; list-style:none; }
+.evidence-chip { padding:5px 7px; border:1px solid #3b4539; color:#b7c1b2; font:9px ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.04em; text-transform:uppercase; }
+.evidence-chip-fixture { border-color:#526747; color:var(--lime); }
+.evidence-chip-provider { border-color:#795a41; color:var(--orange); }
+.evidence-chip-policy { border-color:#6b4e52; color:#ff9a8c; }
+.evidence-chip a { color:inherit; text-decoration:underline; text-underline-offset:3px; }
+@media (max-width:850px) {
+  .health-legend { grid-template-columns:1fr; gap:22px; padding:30px 6%; }
+}
+@media (max-width:520px) {
+  .health-legend { padding:28px 5%; }
+  .health-legend dl { grid-template-columns:1fr; }
+  .health-legend dl>div { padding:13px; }
+  .evidence-list { gap:6px; }
+  .evidence-chip { max-width:100%; overflow-wrap:anywhere; }
+}
