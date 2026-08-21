@@ -133,11 +133,11 @@ export async function POST(request: Request): Promise<Response> {
 function runtimeSourceResolver(): SourceResolver {
   return async (slug) => {
     try {
-      const [{ getDb }, { createD1SourceResolver }] = await Promise.all([
+      const [{ getDb }, { createPostgresSourceResolver }] = await Promise.all([
         import("../../../db/index.ts"),
         import("../../../lib/d1/repository.ts"),
       ]);
-      return createD1SourceResolver(getDb())(slug);
+      return createPostgresSourceResolver(getDb())(slug);
     } catch {
       return isKnownSource(slug) ? getSource(slug) : undefined;
     }

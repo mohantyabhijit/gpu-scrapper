@@ -13,10 +13,12 @@
     "test:unit": "node --experimental-strip-types --test tests/collector-contract.test.mjs tests/normalization.test.mjs tests/ingestion.test.mjs tests/refresh-client.test.mjs tests/refresh-route.test.mjs tests/replay.test.mjs tests/workflow-sign-refresh.test.mjs tests/persistence.test.mjs tests/evidence-sanitizer.test.mjs tests/catalog-repository.test.mjs tests/market-registry.test.mjs tests/market-pack.test.mjs tests/healing-evidence.test.mjs tests/migration.test.mjs",
     "test:render": "npm run build && node --test tests/rendered-html.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:postgres": "node scripts/migrate-postgres.mjs"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",
+    "postgres": "3.4.7",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },

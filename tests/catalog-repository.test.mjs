@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { classifyFreshness, loadCatalog, mapD1Offer } from "../lib/d1/catalog.ts";
+import { classifyFreshness, loadCatalog, mapPostgresOffer } from "../lib/d1/catalog.ts";
 
 const validRow = {
   offerKey: "central-computer:rtx-5080-1",
@@ -26,7 +26,7 @@ const validRow = {
 };
 
 test("maps a normalized D1 row to one market-local storefront offer", () => {
-  const offer = mapD1Offer(validRow, undefined, new Date("2026-08-21T12:00:00.000Z"));
+  const offer = mapPostgresOffer(validRow, undefined, new Date("2026-08-21T12:00:00.000Z"));
   assert.ok(offer);
   assert.equal(offer.market, "us");
   assert.equal(offer.currency, "USD");
@@ -51,12 +51,12 @@ test("freshness uses explicit 24 and 48 hour UTC thresholds", () => {
 
 test("availability and source health remain separate signals", () => {
   const now = new Date("2026-08-21T12:00:00.000Z");
-  const unavailable = mapD1Offer({ ...validRow, availability: "out_of_stock" }, undefined, now);
+  const unavailable = mapPostgresOffer({ ...validRow, availability: "out_of_stock" }, undefined, now);
   assert.equal(unavailable.availability, "Unavailable");
   assert.equal(unavailable.healthState, "unavailable");
   assert.equal(unavailable.freshnessState, "fresh");
 
-  const degraded = mapD1Offer({ ...validRow, health: "degraded", observedAt: "2026-08-19T10:00:00.000Z" }, undefined, now);
+  const degraded = mapPostgresOffer({ ...validRow, health: "degraded", observedAt: "2026-08-19T10:00:00.000Z" }, undefined, now);
   assert.equal(degraded.availability, "In stock");
   assert.equal(degraded.healthState, "degraded");
   assert.equal(degraded.freshnessState, "stale");
@@ -64,11 +64,11 @@ test("availability and source health remain separate signals", () => {
 });
 
 test("rejects cross-market currency and untrusted retailer rows", () => {
-  assert.equal(mapD1Offer({ ...validRow, offerCurrency: "GBP" }), undefined);
-  assert.equal(mapD1Offer({ ...validRow, productUrl: "https://evil.example/gpu" }), undefined);
-  assert.equal(mapD1Offer({ ...validRow, sourceMarket: "UK" }), undefined);
-  assert.equal(mapD1Offer({ ...validRow, sourceEnabled: false }), undefined);
-  assert.equal(mapD1Offer({ ...validRow, sourceOnboardingStatus: "pending" }), undefined);
+  assert.equal(mapPostgresOffer({ ...validRow, offerCurrency: "GBP" }), undefined);
+  assert.equal(mapPostgresOffer({ ...validRow, productUrl: "https://evil.example/gpu" }), undefined);
+  assert.equal(mapPostgresOffer({ ...validRow, sourceMarket: "UK" }), undefined);
+  assert.equal(mapPostgresOffer({ ...validRow, sourceEnabled: false }), undefined);
+  assert.equal(mapPostgresOffer({ ...validRow, sourceOnboardingStatus: "pending" }), undefined);
 });
 
 test("loadCatalog uses injected D1 rows and reports real counts", async () => {
@@ -81,7 +81,7 @@ test("loadCatalog uses injected D1 rows and reports real counts", async () => {
       return [validRow];
     },
   });
-  assert.equal(snapshot.source, "d1");
+  assert.equal(snapshot.source, "postgres");
   assert.equal(snapshot.liveOfferCount, 1);
   assert.equal(snapshot.rejectedRows, 0);
   assert.equal(snapshot.offers[0].id, validRow.offerKey);

@@ -116,12 +116,13 @@ export async function recordHealingEvent(
   now = new Date(),
 ): Promise<{ sessionId: string; stage: HealingStage; nextStage?: HealingStage; complete: boolean }> {
   const event = validateHealingEvent(input, now);
-  const source = await db.select({
+  const sourceRows = await db.select({
     slug: schema.sources.slug,
     collectorIds: schema.sources.collectorIds,
     enabled: schema.sources.enabled,
     onboardingStatus: schema.sources.onboardingStatus,
-  }).from(schema.sources).where(eq(schema.sources.slug, event.sourceSlug)).get();
+  }).from(schema.sources).where(eq(schema.sources.slug, event.sourceSlug)).limit(1);
+  const source = sourceRows[0];
   if (!source || !source.enabled || source.onboardingStatus !== "ready") {
     throw new HealingEvidenceValidationError("source must be ready before healing evidence can be recorded");
   }
@@ -136,7 +137,7 @@ export async function recordHealingEvent(
     occurredAt: schema.healingEvents.occurredAt,
   }).from(schema.healingEvents)
     .where(eq(schema.healingEvents.sessionId, event.sessionId))
-    .orderBy(asc(schema.healingEvents.id)).all();
+    .orderBy(asc(schema.healingEvents.id));
   if (existing.some((row) => row.sourceSlug !== event.sourceSlug || row.collectorId !== event.collectorId)) {
     throw new HealingEvidenceValidationError("a healing session must keep the same source and Collector ID");
   }
@@ -148,7 +149,7 @@ export async function recordHealingEvent(
     throw new HealingEvidenceValidationError("occurredAt must be later than the previous stage");
   }
   try {
-    await db.insert(schema.healingEvents).values(event).run();
+    await db.insert(schema.healingEvents).values(event);
   } catch {
     throw new HealingEvidenceValidationError("healing event conflicts with an existing stage");
   }
@@ -157,8 +158,9 @@ export async function recordHealingEvent(
 }
 
 export async function loadLatestHealingSession(db: RasterDatabase): Promise<HealingSession | undefined> {
-  const latest = await db.select({ sessionId: schema.healingEvents.sessionId })
-    .from(schema.healingEvents).orderBy(desc(schema.healingEvents.id)).limit(1).get();
+  const latestRows = await db.select({ sessionId: schema.healingEvents.sessionId })
+    .from(schema.healingEvents).orderBy(desc(schema.healingEvents.id)).limit(1);
+  const latest = latestRows[0];
   if (!latest) return undefined;
   const rows = await db.select({
     id: schema.healingEvents.id,
@@ -172,7 +174,7 @@ export async function loadLatestHealingSession(db: RasterDatabase): Promise<Heal
     acceptedCount: schema.healingEvents.acceptedCount,
   }).from(schema.healingEvents)
     .where(eq(schema.healingEvents.sessionId, latest.sessionId))
-    .orderBy(asc(schema.healingEvents.id)).all();
+    .orderBy(asc(schema.healingEvents.id));
   if (rows.length === 0) return undefined;
   const stages = rows.map((row) => row.stage);
   const nextStage = nextHealingStage(stages);

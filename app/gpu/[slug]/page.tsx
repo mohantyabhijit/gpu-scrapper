@@ -19,7 +19,7 @@ export default async function GpuDetail({ params, searchParams }: { params: Prom
   const modelOffers = snapshot.offers.filter((offer) => offer.modelSlug === slug && offer.market === market && offer.currency === marketInfo.currency);
   const fixtureModel = models.find((item) => item.slug === slug);
   const model = fixtureModel ?? (modelOffers[0] ? { slug, name: modelOffers[0].model, vram: modelOffers[0].vram } : undefined);
-  const liveRead = snapshot.source === "d1";
+  const liveRead = snapshot.source === "postgres";
   if (!model || modelOffers.length === 0) return <main className="site-shell empty-route"><Link href="/" className="brand"><span className="brand-mark" aria-hidden="true">R</span><span>raster<span className="brand-dot">.</span></span></Link><h1>No {marketInfo.label} offer for that GPU.</h1><p>This market is enabled, but no normalized offer has been published for this model yet. Raster does not substitute another country’s rows.</p><Link className="button button-primary" href={`/?market=${market}`}>Back to {marketInfo.label}</Link></main>;
   const purchasableOffers = modelOffers.filter((offer) => offer.availability === "In stock" || offer.availability === "Low stock");
   const lowest = [...(purchasableOffers.length > 0 ? purchasableOffers : modelOffers)].sort((a, b) => a.price - b.price)[0];

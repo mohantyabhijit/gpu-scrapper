@@ -1,12 +1,11 @@
-import type { DrizzleD1Database } from "drizzle-orm/d1";
-import type { BatchItem } from "drizzle-orm/batch";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { eq } from "drizzle-orm";
 import * as schema from "../../db/schema.ts";
 import { getSource, isKnownSource, type CollectorId, type CollectorRole, type SourceDefinition, type SourceRole, type SourceSlug } from "../../config/sources.ts";
 import type { IngestionResult } from "../ingest.ts";
 
-export type RasterDatabase = DrizzleD1Database<typeof schema>;
-type RasterBatchItem = BatchItem<"sqlite">;
+export type RasterDatabase = PostgresJsDatabase<typeof schema>;
+type RasterStatement = PromiseLike<unknown>;
 
 export type PersistenceContext = {
   runId: string;
@@ -32,11 +31,11 @@ function parseJson<T>(value: unknown, fallback: T): T {
   try { return JSON.parse(value) as T; } catch { return fallback; }
 }
 
-/** Resolve operator-owned D1 source metadata; static registry remains the fallback. */
-export function createD1SourceResolver(db: RasterDatabase) {
+/** Resolve operator-owned PostgreSQL source metadata; static registry remains the fallback. */
+export function createPostgresSourceResolver(db: RasterDatabase) {
   return async (slug: string): Promise<SourceDefinition | undefined> => {
     const staticSource = isKnownSource(slug) ? getSource(slug) : undefined;
-    const row = await db.select().from(schema.sources).where(eq(schema.sources.slug, slug)).get();
+    const [row] = await db.select().from(schema.sources).where(eq(schema.sources.slug, slug)).limit(1);
     if (!row) return staticSource;
     if (row.onboardingStatus !== "ready") return undefined;
     const allowedHosts = parseJson<readonly string[]>(row.allowedHosts, staticSource?.allowedHosts ?? []);
@@ -85,7 +84,7 @@ function assertBatchBelongsToSource(result: IngestionResult, context: Persistenc
   }
 }
 
-function sourceUpsert(db: RasterDatabase, source: SourceDefinition): RasterBatchItem {
+function sourceUpsert(db: RasterDatabase, source: SourceDefinition): RasterStatement {
   const timestamp = new Date().toISOString();
   const sourceValues = {
     displayName: source.displayName,
@@ -110,8 +109,8 @@ function sourceUpsert(db: RasterDatabase, source: SourceDefinition): RasterBatch
   });
 }
 
-function productUpserts(db: RasterDatabase, result: IngestionResult, observedAt: string): RasterBatchItem[] {
-  const statements: RasterBatchItem[] = [];
+function productUpserts(db: RasterDatabase, result: IngestionResult, observedAt: string): RasterStatement[] {
+  const statements: RasterStatement[] = [];
   for (const product of result.products) {
     statements.push(db.insert(schema.products).values({
       identityKey: product.identityKey,
@@ -144,8 +143,8 @@ function offerAndObservationUpserts(
   db: RasterDatabase,
   result: IngestionResult,
   runId: string,
-): RasterBatchItem[] {
-  const statements: RasterBatchItem[] = [];
+): RasterStatement[] {
+  const statements: RasterStatement[] = [];
   for (const offer of result.offers) {
     statements.push(db.insert(schema.offers).values({
       offerKey: offer.offerKey,
@@ -202,9 +201,9 @@ function runAndQuarantineUpserts(
   result: IngestionResult,
   context: PersistenceContext,
   status: PersistenceResult["status"],
-): RasterBatchItem[] {
+): RasterStatement[] {
   const source = context.source ?? getSource(context.sourceSlug);
-  const statements: RasterBatchItem[] = [db.insert(schema.collectorRuns).values({
+  const statements: RasterStatement[] = [db.insert(schema.collectorRuns).values({
     runId: context.runId,
     sourceSlug: context.sourceSlug,
     market: source.region,
@@ -244,20 +243,20 @@ function degradedOfferUpdate(
   db: RasterDatabase,
   sourceSlug: SourceSlug,
   observedAt: string,
-): RasterBatchItem {
+): RasterStatement {
   return db.update(schema.offers)
     .set({ health: "degraded", updatedAt: observedAt })
     .where(eq(schema.offers.sourceSlug, sourceSlug));
 }
 
-function buildPersistenceBatch(
+function buildPersistenceStatements(
   db: RasterDatabase,
   result: IngestionResult,
   context: PersistenceContext,
   status: PersistenceResult["status"],
-): [RasterBatchItem, ...RasterBatchItem[]] {
+): RasterStatement[] {
   const source = context.source ?? getSource(context.sourceSlug);
-  const statements: RasterBatchItem[] = [sourceUpsert(db, source)];
+  const statements: RasterStatement[] = [sourceUpsert(db, source)];
   if (status === "degraded") {
     // Degrade the previous snapshot first; accepted rows in this run are then
     // restored to healthy by their upserts below.
@@ -266,14 +265,10 @@ function buildPersistenceBatch(
   statements.push(...productUpserts(db, result, context.observedAt));
   statements.push(...offerAndObservationUpserts(db, result, context.runId));
   statements.push(...runAndQuarantineUpserts(db, result, { ...context, source }, status));
-  return statements as [RasterBatchItem, ...RasterBatchItem[]];
+  return statements;
 }
 
-/*
- * D1's batch API is the atomic write boundary. Do not replace this with
- * db.transaction: D1 auto-commits individual statements and does not provide
- * the production atomicity guarantees needed for a multi-table ingest.
- */
+/** Persist the complete normalized run in one hosted PostgreSQL transaction. */
 export async function persistIngestion(
   db: RasterDatabase,
   result: IngestionResult,
@@ -282,7 +277,11 @@ export async function persistIngestion(
   if (!context.runId.trim()) throw new Error("runId is required");
   assertBatchBelongsToSource(result, context);
   const status = statusFor(result, context.status);
-  await db.batch(buildPersistenceBatch(db, result, context, status));
+  await db.transaction(async (tx) => {
+    for (const statement of buildPersistenceStatements(tx as RasterDatabase, result, context, status)) {
+      await statement;
+    }
+  });
   return {
     runId: context.runId,
     productsUpserted: result.products.length,

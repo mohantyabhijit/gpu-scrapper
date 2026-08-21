@@ -47,20 +47,21 @@ export function createReplayGuard(db: RasterDatabase, now = () => new Date()): R
   return async (route, timestamp, body) => {
     const createdAt = now();
     // Refresh requests contain one source. Its client-side trigger/poll bound
-    // is 6m15s; keep the claim for one extra minute for validation and D1.
+    // is 6m15s; keep the claim for one extra minute for validation and storage.
     // The HMAC itself expires sooner, so an identical signed request cannot
     // reclaim this lease while the bounded owner may still be running.
     const leaseExpiresAt = new Date(createdAt.getTime() + MAX_PROVIDER_RUN_MS + 60_000);
     const completedExpiresAt = new Date(createdAt.getTime() + 10 * 60 * 1000);
     const ownerToken = createdAt.toISOString();
     const key = await requestDigest(route, timestamp, body);
-    await db.delete(schema.requestReceipts).where(lt(schema.requestReceipts.expiresAt, createdAt.toISOString())).run();
-    const inserted = await db.insert(schema.requestReceipts).values({
+    await db.delete(schema.requestReceipts).where(lt(schema.requestReceipts.expiresAt, createdAt.toISOString()));
+    const insertedRows = await db.insert(schema.requestReceipts).values({
       key,
       route,
       createdAt: ownerToken,
       expiresAt: leaseExpiresAt.toISOString(),
-    }).onConflictDoNothing({ target: schema.requestReceipts.key }).returning({ key: schema.requestReceipts.key }).get();
+    }).onConflictDoNothing({ target: schema.requestReceipts.key }).returning({ key: schema.requestReceipts.key });
+    const inserted = insertedRows[0];
     return {
       acquired: Boolean(inserted),
       complete: async () => {
@@ -70,8 +71,7 @@ export function createReplayGuard(db: RasterDatabase, now = () => new Date()): R
             .where(and(
               eq(schema.requestReceipts.key, key),
               eq(schema.requestReceipts.createdAt, ownerToken),
-            ))
-            .run();
+            ));
         }
       },
       release: async () => {
@@ -79,7 +79,7 @@ export function createReplayGuard(db: RasterDatabase, now = () => new Date()): R
           await db.delete(schema.requestReceipts).where(and(
             eq(schema.requestReceipts.key, key),
             eq(schema.requestReceipts.createdAt, ownerToken),
-          )).run();
+          ));
         }
       },
     };
@@ -97,17 +97,19 @@ export function createSourceRateGuard(
     const ownerToken = createdAt.toISOString();
     const key = await requestDigest("refresh-rate", "0", sourceSlug);
     const leaseExpiresAt = new Date(createdAt.getTime() + MAX_PROVIDER_RUN_MS + 60_000);
-    await db.delete(schema.requestReceipts).where(lt(schema.requestReceipts.expiresAt, createdAt.toISOString())).run();
-    const inserted = await db.insert(schema.requestReceipts).values({
+    await db.delete(schema.requestReceipts).where(lt(schema.requestReceipts.expiresAt, createdAt.toISOString()));
+    const insertedRows = await db.insert(schema.requestReceipts).values({
       key,
       route: "refresh-rate",
       createdAt: ownerToken,
       expiresAt: leaseExpiresAt.toISOString(),
-    }).onConflictDoNothing({ target: schema.requestReceipts.key }).returning({ key: schema.requestReceipts.key }).get();
-    const existing = inserted ? undefined : await db.select({ expiresAt: schema.requestReceipts.expiresAt })
+    }).onConflictDoNothing({ target: schema.requestReceipts.key }).returning({ key: schema.requestReceipts.key });
+    const inserted = insertedRows[0];
+    const existingRows = inserted ? [] : await db.select({ expiresAt: schema.requestReceipts.expiresAt })
       .from(schema.requestReceipts)
       .where(eq(schema.requestReceipts.key, key))
-      .get();
+      .limit(1);
+    const existing = existingRows[0];
     const retryAfterSeconds = existing
       ? Math.max(1, Math.ceil((new Date(existing.expiresAt).getTime() - createdAt.getTime()) / 1_000))
       : 0;
@@ -122,8 +124,7 @@ export function createSourceRateGuard(
           .where(and(
             eq(schema.requestReceipts.key, key),
             eq(schema.requestReceipts.createdAt, ownerToken),
-          ))
-          .run();
+          ));
       },
     };
   };

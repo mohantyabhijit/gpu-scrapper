@@ -2,13 +2,13 @@ import { isKnownSource, sourceHostIsAllowed } from "../../config/sources.ts";
 import * as schema from "../../db/schema.ts";
 import { offers as fixtureOffers, type Currency, type Market, type Offer } from "../../app/catalog.ts";
 import { marketRegistry, type MarketDefinition } from "../../config/markets.ts";
-import type { DrizzleD1Database } from "drizzle-orm/d1";
+import type { PostgresJsDatabase } from "drizzle-orm/postgres-js";
 import { and, eq } from "drizzle-orm";
 import { loadLatestHealingSession, type HealingSession } from "./healing-evidence.ts";
 
-type CatalogDatabase = DrizzleD1Database<typeof schema>;
+type CatalogDatabase = PostgresJsDatabase<typeof schema>;
 
-type D1CatalogRow = {
+type PostgresCatalogRow = {
   readonly offerKey: string;
   readonly sourceSlug: string;
   readonly offerMarket: string;
@@ -32,7 +32,7 @@ type D1CatalogRow = {
 };
 
 export type CatalogSnapshot = {
-  readonly source: "d1" | "fixture";
+  readonly source: "postgres" | "fixture";
   readonly offers: readonly Offer[];
   readonly liveOfferCount: number | null;
   readonly rejectedRows: number;
@@ -42,7 +42,7 @@ export type CatalogSnapshot = {
   readonly fallbackReason?: "database-unavailable" | "database-empty" | "database-no-valid-rows";
 };
 
-export type CatalogQuery = (market?: MarketDefinition, modelSlug?: string) => Promise<readonly D1CatalogRow[]>;
+export type CatalogQuery = (market?: MarketDefinition, modelSlug?: string) => Promise<readonly PostgresCatalogRow[]>;
 export type MarketQuery = () => Promise<readonly MarketDefinition[]>;
 
 /** Read the latest append-only healing proof without making catalog reads depend on it. */
@@ -99,11 +99,11 @@ export function classifyFreshness(observedAt: string, now = new Date()): Offer["
 }
 
 /**
- * Convert one normalized D1 join row into the storefront's view model.
+ * Convert one normalized PostgreSQL join row into the storefront's view model.
  * Invalid or cross-market rows are rejected here so callers cannot compare
  * mismatched currencies even if a database contains a bad historical row.
  */
-export function mapD1Offer(row: D1CatalogRow, definitions: readonly MarketDefinition[] = Object.values(marketRegistry), now = new Date()): Offer | undefined {
+export function mapPostgresOffer(row: PostgresCatalogRow, definitions: readonly MarketDefinition[] = Object.values(marketRegistry), now = new Date()): Offer | undefined {
   const marketCode = viewMarketCode(row.offerMarket);
   const market = definitions.find((definition) => definition.code === marketCode);
   const currency = viewCurrency(row.offerCurrency.toUpperCase());
@@ -166,7 +166,7 @@ export function mapD1Offer(row: D1CatalogRow, definitions: readonly MarketDefini
   };
 }
 
-async function queryD1Rows(db: CatalogDatabase, market?: MarketDefinition, modelSlug?: string): Promise<readonly D1CatalogRow[]> {
+async function queryPostgresRows(db: CatalogDatabase, market?: MarketDefinition, modelSlug?: string): Promise<readonly PostgresCatalogRow[]> {
   const selection = db.select({
     offerKey: schema.offers.offerKey,
     sourceSlug: schema.offers.sourceSlug,
@@ -194,27 +194,27 @@ async function queryD1Rows(db: CatalogDatabase, market?: MarketDefinition, model
 
   const marketCode = market?.code;
   const currency = market?.currency;
-  let rows: readonly D1CatalogRow[];
+  let rows: readonly PostgresCatalogRow[];
   if (market && marketCode && currency && modelSlug) {
     rows = await selection.where(and(
       eq(schema.offers.market, marketCode),
       eq(schema.offers.currency, currency),
       eq(schema.products.slug, modelSlug),
-    )).all() as unknown as readonly D1CatalogRow[];
+    )) as unknown as readonly PostgresCatalogRow[];
   } else if (market && marketCode && currency) {
     rows = await selection.where(and(
       eq(schema.offers.market, marketCode),
       eq(schema.offers.currency, currency),
-    )).all() as unknown as readonly D1CatalogRow[];
+    )) as unknown as readonly PostgresCatalogRow[];
   } else if (market && marketCode && modelSlug) {
     rows = await selection.where(and(
       eq(schema.offers.market, marketCode),
       eq(schema.products.slug, modelSlug),
-    )).all() as unknown as readonly D1CatalogRow[];
+    )) as unknown as readonly PostgresCatalogRow[];
   } else if (modelSlug) {
-    rows = await selection.where(eq(schema.products.slug, modelSlug)).all() as unknown as readonly D1CatalogRow[];
+    rows = await selection.where(eq(schema.products.slug, modelSlug)) as unknown as readonly PostgresCatalogRow[];
   } else {
-    rows = await selection.all() as unknown as readonly D1CatalogRow[];
+    rows = await selection as unknown as readonly PostgresCatalogRow[];
   }
   return rows;
 }
@@ -238,7 +238,7 @@ function fixtureSnapshot(
 }
 
 /**
- * Read normalized offers when D1 is available, otherwise return the clearly
+ * Read normalized offers when hosted PostgreSQL is available, otherwise return the clearly
  * labelled fixture catalog. The query is injectable for deterministic tests.
  */
 export async function loadCatalog(options: {
@@ -255,7 +255,7 @@ export async function loadCatalog(options: {
     try {
       const { getDb } = await import("../../db/index.ts");
       const db = getDb();
-      query = (market, modelSlug) => queryD1Rows(db, market, modelSlug);
+      query = (market, modelSlug) => queryPostgresRows(db, market, modelSlug);
       marketQuery = marketQuery ?? (async () => {
         const rows = await db.select({
           slug: schema.marketPacks.slug,
@@ -271,7 +271,7 @@ export async function loadCatalog(options: {
           collectorCreatedEvidenceRef: schema.marketPacks.collectorCreatedEvidenceRef,
           collectorRunEvidenceRef: schema.marketPacks.collectorRunEvidenceRef,
           status: schema.marketPacks.status,
-        }).from(schema.marketPacks).all();
+        }).from(schema.marketPacks);
         return rows.map((row) => ({
             slug: row.slug,
             code: row.code,
@@ -306,12 +306,12 @@ export async function loadCatalog(options: {
     }
     const selectedMarket = markets.find((market) => market.slug === options.market) ?? marketRegistry.us;
     const rows = await query(selectedMarket, options.modelSlug);
-    const mapped = rows.map((row) => mapD1Offer(row, markets)).filter((offer): offer is Offer => Boolean(offer));
+    const mapped = rows.map((row) => mapPostgresOffer(row, markets)).filter((offer): offer is Offer => Boolean(offer));
     if (mapped.length === 0) {
       return fixtureSnapshot(rows.length > 0 ? "database-no-valid-rows" : "database-empty", markets, marketPacks, selectedMarket);
     }
     return {
-      source: "d1",
+      source: "postgres",
       offers: mapped,
       markets,
       marketPacks,

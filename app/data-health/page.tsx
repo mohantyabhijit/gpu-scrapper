@@ -94,7 +94,7 @@ const healingTime = new Intl.DateTimeFormat("en-GB", {
 
 export default async function DataHealth() {
   const [snapshot, healing] = await Promise.all([loadCatalog(), loadHealingEvidence()]);
-  const liveRead = snapshot.source === "d1";
+  const liveRead = snapshot.source === "postgres";
   const liveRowsLabel = liveRead
     ? `${snapshot.liveOfferCount ?? snapshot.offers.length} normalized D1 rows`
     : snapshot.fallbackReason === "database-empty"

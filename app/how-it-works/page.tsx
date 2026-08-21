@@ -3,7 +3,7 @@ import { loadCatalog } from "../../lib/d1/catalog";
 
 export default async function HowItWorks() {
   const snapshot = await loadCatalog();
-  const liveRead = snapshot.source === "d1";
+  const liveRead = snapshot.source === "postgres";
   return <main className="site-shell method-page">
     <div className="demo-banner" role="note"><span className="pulse-dot" aria-hidden="true" /><strong>{liveRead ? "D1 NORMALIZED READ" : "FIXTURE CATALOG"}</strong><span>{liveRead ? "The storefront is reading validated D1 rows; collector proof remains separately visible in Data Health." : "The offers currently shown are clearly labelled demo fixtures."}</span></div>
     <header className="topbar"><Link href="/" className="brand"><span className="brand-mark">R</span><span>raster<span className="brand-dot">.</span></span></Link><nav className="main-nav" aria-label="Primary navigation"><Link href="/#offers">Compare offers</Link><Link href="/how-it-works" aria-current="page">How it works</Link><Link href="/data-health">Data health</Link></nav><span className="status-chip"><span className="status-dot" /> {liveRead ? "d1 view" : "fixture view"}</span></header>

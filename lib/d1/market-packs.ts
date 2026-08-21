@@ -196,10 +196,6 @@ export async function upsertMarketPack(db: RasterDatabase, input: unknown, now =
   }
   const timestamp = now.toISOString();
   const serializedHosts = JSON.stringify(value.allowedHosts);
-  const packStatement = db.insert(schema.marketPacks).values({ ...value, allowedHosts: serializedHosts, updatedAt: timestamp }).onConflictDoUpdate({
-    target: schema.marketPacks.slug,
-    set: { ...value, allowedHosts: serializedHosts, updatedAt: timestamp },
-  });
   const ready = value.status === "ready";
   const sourceValues = {
     slug: value.sourceSlug,
@@ -216,11 +212,18 @@ export async function upsertMarketPack(db: RasterDatabase, input: unknown, now =
     enabled: ready,
     updatedAt: timestamp,
   };
-  const sourceStatement = db.insert(schema.sources).values(sourceValues).onConflictDoUpdate({
-    target: schema.sources.slug,
-    set: sourceValues,
+  await db.transaction(async (tx) => {
+    // PostgreSQL enforces market_packs.source_slug as a real foreign key, so
+    // create/update the source first inside the same atomic transaction.
+    await tx.insert(schema.sources).values(sourceValues).onConflictDoUpdate({
+      target: schema.sources.slug,
+      set: sourceValues,
+    });
+    await tx.insert(schema.marketPacks).values({ ...value, allowedHosts: serializedHosts, updatedAt: timestamp }).onConflictDoUpdate({
+      target: schema.marketPacks.slug,
+      set: { ...value, allowedHosts: serializedHosts, updatedAt: timestamp },
+    });
   });
-  await db.batch([packStatement, sourceStatement]);
   return {
     slug: value.slug,
     countryCode: value.countryCode,
@@ -234,7 +237,7 @@ export async function upsertMarketPack(db: RasterDatabase, input: unknown, now =
 }
 
 async function getStoredMarketPackBoundary(db: RasterDatabase, slug: string): Promise<StoredMarketPackBoundary | undefined> {
-  const row = await db.select({
+  const rows = await db.select({
     slug: schema.marketPacks.slug,
     countryCode: schema.marketPacks.countryCode,
     currency: schema.marketPacks.currency,
@@ -245,12 +248,13 @@ async function getStoredMarketPackBoundary(db: RasterDatabase, slug: string): Pr
     allowedHosts: schema.marketPacks.allowedHosts,
     collectorId: schema.marketPacks.collectorId,
     status: schema.marketPacks.status,
-  }).from(schema.marketPacks).where(eq(schema.marketPacks.slug, slug)).get();
+  }).from(schema.marketPacks).where(eq(schema.marketPacks.slug, slug)).limit(1);
+  const row = rows[0];
   return row ? { ...row, status: row.status as MarketPackStatus } : undefined;
 }
 
 export async function getMarketPack(db: RasterDatabase, slug: string): Promise<MarketPackResult | undefined> {
-  const row = await db.select({
+  const rows = await db.select({
     slug: schema.marketPacks.slug,
     countryCode: schema.marketPacks.countryCode,
     label: schema.marketPacks.label,
@@ -259,6 +263,7 @@ export async function getMarketPack(db: RasterDatabase, slug: string): Promise<M
     symbol: schema.marketPacks.symbol,
     sourceSlug: schema.marketPacks.sourceSlug,
     status: schema.marketPacks.status,
-  }).from(schema.marketPacks).where(eq(schema.marketPacks.slug, slug)).get();
+  }).from(schema.marketPacks).where(eq(schema.marketPacks.slug, slug)).limit(1);
+  const row = rows[0];
   return row ? { ...row, status: row.status as MarketPackStatus } : undefined;
 }

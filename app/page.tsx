@@ -78,7 +78,7 @@ export default async function Home({ searchParams }: { searchParams?: SearchPara
   const purchasableOffers = marketOffers.filter((offer) => offer.availability === "In stock" || offer.availability === "Low stock");
   const lowest = [...purchasableOffers].sort((a, b) => a.price - b.price || defaultOfferOrder(a, b))[0];
   const sources = Array.from(new Set(marketOffers.map((offer) => offer.source)));
-  const liveRead = snapshot.source === "d1";
+  const liveRead = snapshot.source === "postgres";
   const catalogLabel = liveRead ? "D1 CATALOG" : "FIXTURE CATALOG";
   const catalogMessage = liveRead
     ? `${snapshot.liveOfferCount ?? marketOffers.length} normalized rows read from D1. Verify price and stock at the retailer.`
