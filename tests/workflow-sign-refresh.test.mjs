@@ -2,9 +2,65 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { createPayload, MAX_TIMEOUT_MS, parseSlice, RefreshResponseError, runRefresh, signatureFor } from "../scripts/sign-refresh.mjs";
+import { load as parseYaml } from "js-yaml";
+import { createPayload, MAX_SUMMARY_INTEGER, MAX_TIMEOUT_MS, parseSlice, RefreshResponseError, runRefresh, signatureFor } from "../scripts/sign-refresh.mjs";
 import { MAX_PROVIDER_RUN_MS } from "../lib/brightdata/client.ts";
 import { parseRefreshRequest } from "../lib/brightdata/refresh.ts";
+
+const APPROVED_SECRET_STEP_NAMES = new Set([
+  "Validate protected refresh inputs",
+  "Trigger one market/source slice",
+]);
+
+function assertWorkflowPolicy(workflow) {
+  const document = parseYaml(workflow);
+  assert.ok(document && typeof document === "object" && !Array.isArray(document), "workflow must be a YAML mapping");
+  assert.deepEqual(document.permissions, { contents: "read" }, "workflow permissions must be contents: read only");
+  assert.ok(document.jobs && typeof document.jobs === "object" && !Array.isArray(document.jobs), "workflow must define jobs");
+
+  let approvedEnvBlocks = 0;
+  let secretReferences = 0;
+  const approvedSecretSteps = new Set();
+  const secretReference = /(?:^|[^\w])secrets\.[A-Za-z_][\w-]*/;
+  const scan = (value, allowed, approvedStepName) => {
+    if (typeof value === "string") {
+      if (secretReference.test(value)) {
+        secretReferences += 1;
+        if (allowed) approvedSecretSteps.add(approvedStepName);
+        assert.equal(allowed, true, "secrets.* references must stay in approved step env blocks");
+      }
+      return;
+    }
+    if (Array.isArray(value)) {
+      for (const item of value) scan(item, allowed, approvedStepName);
+      return;
+    }
+    if (!value || typeof value !== "object") return;
+    for (const child of Object.values(value)) scan(child, allowed, approvedStepName);
+  };
+
+  for (const [key, value] of Object.entries(document)) {
+    if (key !== "jobs") scan(value, false);
+  }
+  for (const [jobName, job] of Object.entries(document.jobs)) {
+    assert.ok(job && typeof job === "object" && !Array.isArray(job), `${jobName} must be a mapping`);
+    assert.deepEqual(job.permissions, { contents: "read" }, `${jobName} permissions must be contents: read only`);
+    for (const [key, value] of Object.entries(job)) {
+      if (key !== "steps") scan(value, false);
+    }
+    assert.ok(Array.isArray(job.steps), `${jobName} must define steps`);
+    for (const step of job.steps) {
+      assert.ok(step && typeof step === "object" && !Array.isArray(step), "workflow steps must be mappings");
+      const approved = APPROVED_SECRET_STEP_NAMES.has(step.name);
+      if (approved && Object.hasOwn(step, "env")) approvedEnvBlocks += 1;
+      for (const [key, value] of Object.entries(step)) scan(value, approved && key === "env", step.name);
+    }
+  }
+  assert.equal(approvedEnvBlocks, 2, "exactly two approved secret-bearing step env blocks are required");
+  assert.equal(approvedSecretSteps.size, 2, "both approved env blocks should contain a secret reference");
+  assert.ok(secretReferences > 0, "workflow should contain at least one secret reference");
+  return document;
+}
 
 test("refresh slices are allowlisted and role payloads stay deterministic", () => {
   assert.deepEqual(parseSlice("us-central-computer"), {
@@ -43,6 +99,7 @@ test("workflow schedules every baseline market as an independently locked slice"
 
 test("workflow gates production secrets and pins deterministic setup", async () => {
   const workflow = await readFile(new URL("../.github/workflows/collect.yml", import.meta.url), "utf8");
+  assertWorkflowPolicy(workflow);
   assert.match(workflow, /if: \$\{\{ github\.ref == 'refs\/heads\/main' && \(github\.event_name == 'schedule' \|\| github\.event_name == 'workflow_dispatch'\) \}\}/);
   assert.match(workflow, /environment: raster-production/);
   assert.match(workflow, /timeout-minutes: (?:1[0-9]|[2-9][0-9])/);
@@ -60,6 +117,21 @@ test("workflow gates production secrets and pins deterministic setup", async () 
   const summary = workflow.slice(workflow.indexOf("- name: Publish safe job summary"));
   assert.doesNotMatch(summary, /secrets\./);
   assert.doesNotMatch(workflow, /\n{4}env:\n {6}RASTER_REFRESH_URL:/);
+});
+
+test("workflow policy catches inline job env secrets and tolerates reordered step env mappings", async () => {
+  const workflow = await readFile(new URL("../.github/workflows/collect.yml", import.meta.url), "utf8");
+  const reordered = workflow.replace(
+    / {8}env:\n {10}RASTER_REFRESH_URL: \$\{\{ secrets\.RASTER_REFRESH_URL \}\}\n {10}RASTER_INGEST_HMAC_SECRET: \$\{\{ secrets\.RASTER_INGEST_HMAC_SECRET \}\}\n {10}RASTER_REFRESH_SLICE: \$\{\{ matrix\.slice \}\}/g,
+    "        env:\n          RASTER_REFRESH_SLICE: ${{ matrix.slice }}\n          RASTER_INGEST_HMAC_SECRET: ${{ secrets.RASTER_INGEST_HMAC_SECRET }}\n          RASTER_REFRESH_URL: ${{ secrets.RASTER_REFRESH_URL }}",
+  );
+  assertWorkflowPolicy(reordered);
+
+  const inlineJobEnv = reordered.replace(
+    "  refresh:\n    if:",
+    "  refresh:\n    env: { RASTER_REFRESH_URL: \"${{ secrets.RASTER_REFRESH_URL }}\" }\n    if:",
+  );
+  assert.throws(() => assertWorkflowPolicy(inlineJobEnv), /approved step env blocks/);
 });
 
 test("refresh sends one signed request and returns only safe response fields", async () => {
@@ -138,6 +210,44 @@ test("structured partial failures are bounded to safe slugs, codes, and counts",
   assert.equal(failure.summary.completed_sources[0].source_slug, "overclockers-uk");
   assert.equal(failure.summary.completed_sources[0].rows, 4);
   assert.equal(failure.summary.failed, 1);
+});
+
+test("fallback summary metrics accept only bounded non-negative integers", async () => {
+  const metricKeys = ["rows", "valid_rows", "quarantined_rows", "duration_ms"];
+  const secretShapedValues = [
+    "Authorization: Bearer provider-token",
+    "HMAC-SHA256=deadbeef",
+    "RASTER_INGEST_HMAC_SECRET=super-secret-value",
+    "123",
+  ];
+  for (const key of metricKeys) {
+    for (const value of secretShapedValues) {
+      const summary = await runRefresh({
+        url: "https://raster.example.test/api/refresh",
+        slice: "sg-dynacore",
+        secret: "offline-test-secret-value",
+        fetchImpl: async () => new Response(JSON.stringify({ [key]: value }), { status: 200 }),
+      });
+      assert.equal(Object.hasOwn(summary, key), false, `${key} must omit string values`);
+      assert.doesNotMatch(JSON.stringify(summary), /Authorization|HMAC|secret|Bearer|provider-token/i);
+    }
+  }
+
+  const summary = await runRefresh({
+    url: "https://raster.example.test/api/refresh",
+    slice: "sg-dynacore",
+    secret: "offline-test-secret-value",
+    fetchImpl: async () => new Response(JSON.stringify({
+      rows: 0,
+      valid_rows: MAX_SUMMARY_INTEGER,
+      quarantined_rows: -1,
+      duration_ms: MAX_SUMMARY_INTEGER + 1,
+    }), { status: 200 }),
+  });
+  assert.equal(summary.rows, 0);
+  assert.equal(summary.valid_rows, MAX_SUMMARY_INTEGER);
+  assert.equal(Object.hasOwn(summary, "quarantined_rows"), false);
+  assert.equal(Object.hasOwn(summary, "duration_ms"), false);
 });
 
 test("aborted refreshes fail with a bounded redacted error", async () => {

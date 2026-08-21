@@ -27,6 +27,9 @@ const SAFE_STATUSES = new Set(["completed", "empty", "failed", "not_configured",
 
 // Server bound: 6m15s provider work + 1m validation/persistence margin.
 export const MAX_TIMEOUT_MS = 435_000;
+// Keep values rendered in the job summary useful without allowing an arbitrary
+// provider response to smuggle huge numbers into logs or downstream tooling.
+export const MAX_SUMMARY_INTEGER = 1_000_000_000;
 
 export class RefreshResponseError extends Error {
   constructor(status, summary) {
@@ -83,6 +86,9 @@ function safeResponseSummary(text) {
     return { response: "non_object" };
   }
   const listLength = (value) => Array.isArray(value) ? value.length : undefined;
+  const safeNonNegativeInteger = (value) => (
+    Number.isSafeInteger(value) && value >= 0 && value <= MAX_SUMMARY_INTEGER ? value : undefined
+  );
   const safeSourceSlug = (value) => typeof value === "string" && SAFE_SOURCE_SLUGS.has(value) ? value : undefined;
   const safeCode = (value) => typeof value === "string" && SAFE_CODES.has(value) ? value : "unknown_error";
   const safeObservedAt = (value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value) ? value : undefined;
@@ -92,9 +98,9 @@ function safeResponseSummary(text) {
     const notConfigured = Array.isArray(parsed.notConfigured) ? parsed.notConfigured : [];
     const safeCompleted = completed.slice(0, 1).map((item) => ({
       source_slug: safeSourceSlug(item?.sourceSlug),
-      rows: Number.isSafeInteger(item?.rowCount) ? item.rowCount : undefined,
+      rows: safeNonNegativeInteger(item?.rowCount),
       observed_at: safeObservedAt(item?.observedAt),
-      attempts: Number.isSafeInteger(item?.attempts) ? item.attempts : undefined,
+      attempts: safeNonNegativeInteger(item?.attempts),
     }));
     const safeFailures = failed.slice(0, 1).map((item) => ({
       source_slug: safeSourceSlug(item?.sourceSlug),
@@ -112,16 +118,10 @@ function safeResponseSummary(text) {
     };
   }
   const allowedKeys = ["error", "status", "rows", "valid_rows", "quarantined_rows", "duration_ms"];
-  const safeValue = (value) => {
-    if (typeof value === "boolean") return value;
-    if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
-    if (typeof value === "string") return value.replace(/[\r\n]+/g, " ").slice(0, 120);
-    return undefined;
-  };
   return Object.fromEntries(
     allowedKeys
       .filter((key) => Object.hasOwn(parsed, key))
-      .map((key) => [key, key === "error" ? safeCode(parsed[key]) : key === "status" ? (SAFE_STATUSES.has(parsed[key]) ? parsed[key] : "unknown_status") : safeValue(parsed[key])])
+      .map((key) => [key, key === "error" ? safeCode(parsed[key]) : key === "status" ? (SAFE_STATUSES.has(parsed[key]) ? parsed[key] : "unknown_status") : safeNonNegativeInteger(parsed[key])])
       .filter(([, value]) => value !== undefined),
   );
 }
