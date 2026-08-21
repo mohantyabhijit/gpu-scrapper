@@ -135,6 +135,8 @@ workflow. Do not add a new retailer without updating the eligibility record.
 - [Evidence matrix](docs/evidence-matrix.md) — organizer expectation to proof.
 - [Demo script](docs/demo-script.md) — terminal-first judge walkthrough.
 - [Submission notes](docs/submission.md) — final release checklist.
+- [Production QA](docs/qa-report.md) — automated, browser, API, D1, and
+  deployment verification evidence.
 - [Rules compliance](docs/rules-compliance.md) — rule-by-rule proof ledger.
 - [Structured output example](examples/structured-output.json) — safe fixture
   showing the collector contract; live evidence remains a separate release gate.

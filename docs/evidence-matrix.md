@@ -10,10 +10,10 @@ artifact, commit, Action run, or public URL as each gate is completed.
 | Public data only | Signed-out URLs and data-boundary review | `docs/security.md`, source register | baseline |
 | Collector as production API | Trigger/schedule feeding D1 and storefront | GitHub Action summary, run record, public catalog | pending |
 | Terminal is the UI | Reproducible CLI commands and concise outputs | `docs/demo-script.md`, sanitized transcript | pending |
-| Code ownership | Versioned manifests, validator, normalizer, pipeline | repository code and tests | pending |
+| Code ownership | Versioned manifests, validator, normalizer, pipeline | repository code, 63 automated tests, and public commit history | implemented |
 | Self-healing | Before/preview/after proof using same Collector ID | `evidence/healing/` | pending |
 | Scrapers in CI | Scheduled/manual workflow with green validation | `.github/workflows/collect.yml` and Action run | pending |
-| Downstream product | Normalized offers rendered in storefront | public URL and browser screenshots | pending |
+| Downstream product | Normalized offers rendered in storefront | <https://abhijitmohanty.com/scrapper/> and `docs/qa-report.md` | deployed fixture slice; live ingestion pending |
 | Prompt-to-production | Collector output crosses validation, D1, and storefront boundaries | sanitized row, D1 run, public offer card | pending |
 | Goal/schedule | One bounded market/source slice runs unattended on schedule | `.github/workflows/collect.yml`, Action summary | pending |
 | Runtime country onboarding | Ready Country Pack appears in the selector only after eligibility, collector, and contract evidence | `/data-health` Country Packs ledger, sanitized onboarding artifact, D1 market-pack row | pending |
