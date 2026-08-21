@@ -75,3 +75,22 @@ test("publishes an honest method page", async () => {
   assert.doesNotMatch(html, /stable collector ID|bdata scraper heal <collector>/i);
   assert.match(html, /Raster is not the merchant/);
 });
+
+test("publishes judge-facing data health without fabricating live state", async () => {
+  const response = await render("/data-health");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+  assert.match(html, /DATA HEALTH/);
+  assert.match(html, /United States/);
+  assert.match(html, /United Kingdom/);
+  assert.match(html, /India/);
+  assert.match(html, /Singapore/);
+  assert.match(html, /USD|GBP|INR|SGD/);
+  assert.match(html, /NO LIVE/);
+  assert.match(html, /Pending.*not configured/);
+  assert.match(html, /last-known-good|last known-good/i);
+  assert.match(html, /quarantine/);
+  assert.match(html, /self-heal|heal/i);
+  assert.match(html, /brightdata\.com/);
+  assert.doesNotMatch(html, /c_gpu_|collectors online/i);
+});

@@ -1,0 +1,17 @@
+[
+  {
+    "source_slug": "central-computer",
+    "market": "US",
+    "title": "ASUS GeForce RTX 5080 16GB GDDR7",
+    "product_url": "https://www.centralcomputer.com/example-gpu-product.html",
+    "manufacturer": "ASUS",
+    "board_partner": "ASUS",
+    "mpn": "DEMO-RTX5080-16G",
+    "price": "1199.99",
+    "currency": "USD",
+    "availability": "in_stock",
+    "image_url": null,
+    "scraped_at": "2026-08-21T09:00:00.000Z",
+    "fixture": true
+  }
+]

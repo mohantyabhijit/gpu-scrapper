@@ -83,6 +83,17 @@ The release proof must include:
 See [docs/evidence-matrix.md](docs/evidence-matrix.md) and
 [docs/demo-script.md](docs/demo-script.md) for the judge-facing checklist.
 
+## AI-assistant disclosure
+
+This project is built with Codex and multiple GPT-5.6 Luna subagents for scoped
+research, data-contract work, UI implementation, automation, and QA. The human
+participant sets the product direction and source markets, reviews the plans and
+organizer constraints, decides what ships, supplies/rotates credentials through
+approved secret stores, and must understand and explain the final code. AI
+output is not accepted as proof: behavior is verified with tests, migrations,
+browser/accessibility checks, secret scans, public Git history, and live
+Scraper Studio evidence.
+
 ## Secrets and contributions
 
 The Bright Data key previously shared during setup is treated as exposed and
@@ -98,9 +109,14 @@ workflow. Do not add a new retailer without updating the eligibility record.
 - [Source eligibility](docs/source-eligibility.md) — candidate and go/no-go
   checklist.
 - [Security](docs/security.md) — secret, public-data, and refresh boundaries.
+- [Operations](docs/operations.md) — scheduled/manual refresh, signing, and
+  failure-safe runbook.
 - [Evidence matrix](docs/evidence-matrix.md) — organizer expectation to proof.
 - [Demo script](docs/demo-script.md) — terminal-first judge walkthrough.
 - [Submission notes](docs/submission.md) — final release checklist.
+- [Rules compliance](docs/rules-compliance.md) — rule-by-rule proof ledger.
+- [Structured output example](examples/structured-output.json) — safe fixture
+  showing the collector contract; live evidence remains a separate release gate.
 - [Master plan](docs/plans/2026-08-21-raster-gpu-marketplace-master-plan.md) —
   product, technical, sequencing, and verification contract.
 
