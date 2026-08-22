@@ -69,8 +69,8 @@ test("server markup keeps the progressive source-desk entry points", async () =>
 
 test("source-desk serialization retains saved offers outside the visible filter and stays provenance-first", async () => {
   const helper = new URL("../components/sourcing-desk-model.ts", import.meta.url).pathname;
-  const script = `import { buildSourcingBrief, canonicalizeStored, savedOffersOutsideVisibleNote, selectSourceDeskOffer, serializeSourceDesk } from ${JSON.stringify(helper)};
-    const catalog = [{ id: "safe", market: "us", model: "RTX 5090", brand: "Canonical", source: "Retailer", currency: "USD", price: 10, availability: "In stock", observedAt: "2026-08-21T10:00:00.000Z", healthState: "fixture", freshness: "fixture", productUrl: "https://example.com/gpu" }];
+  const script = `import { buildSourcingBrief, canonicalizeStored, readinessForOffer, readinessSummary, savedOffersOutsideVisibleNote, selectSourceDeskOffer, serializeSourceDesk } from ${JSON.stringify(helper)};
+    const catalog = [{ id: "safe", market: "us", model: "RTX 5090", brand: "Canonical", source: "Retailer", currency: "USD", price: 10, availability: "In stock", observedAt: "2026-08-21T10:00:00.000Z", healthState: "fixture", freshness: "fixture", freshnessState: "fixture", productUrl: "https://example.com/gpu" }];
     const other = { ...catalog[0], id: "uk", market: "uk", currency: "GBP" };
     const completeCatalog = [...catalog, other];
     const canonical = canonicalizeStored(JSON.stringify([{ id: "safe", market: "evil", price: 999 }]), completeCatalog);
@@ -82,16 +82,34 @@ test("source-desk serialization retains saved offers outside the visible filter 
     const filteredVisibleCatalog = completeCatalog.filter((offer) => offer.id !== "safe");
     const persistedSelection = serializeSourceDesk(canonical);
     const retainedAcrossFilter = canonicalizeStored(persistedSelection, completeCatalog);
+    const retainedAcrossMarketPage = canonicalizeStored(persistedSelection, [other]);
     const outsideCurrentFilters = savedOffersOutsideVisibleNote(retainedAcrossFilter, filteredVisibleCatalog.map((offer) => offer.id));
     const corrupted = canonicalizeStored(JSON.stringify([{ id: "missing" }]), completeCatalog);
     const mixedMarket = canonicalizeStored(JSON.stringify([{ id: "safe" }, { id: "uk" }]), completeCatalog);
-    console.log(JSON.stringify({ canonical, brief: buildSourcingBrief(canonical, "2026-08-22"), pending, replaced, storageBefore, storageDuringPending, storageAfterAcknowledgement, filteredVisibleCatalog, retainedAcrossFilter, outsideCurrentFilters, corrupted, mixedMarket }));`;
+    const sameMarketOtherCurrency = { ...catalog[0], id: "usd-gbp", currency: "GBP", healthState: "healthy", freshnessState: "fresh" };
+    const currencyPending = selectSourceDeskOffer([{ ...catalog[0], healthState: "healthy", freshnessState: "fresh" }], sameMarketOtherCurrency);
+    const fullDesk = Array.from({ length: 6 }, (_, index) => ({ ...catalog[0], id: 'us-' + index }));
+    const fullDeskReplacement = selectSourceDeskOffer(fullDesk, other, true);
+    const liveBase = { ...catalog[0], market: "singapore", currency: "SGD", healthState: "healthy", freshness: "observed recently", freshnessState: "fresh" };
+    const readiness = {
+      fixture: readinessForOffer(catalog[0]),
+      unknown: readinessForOffer({ ...liveBase, availability: "Unknown" }),
+      degraded: readinessForOffer({ ...liveBase, healthState: "degraded" }),
+      stale: readinessForOffer({ ...liveBase, freshnessState: "stale" }),
+      unavailable: readinessForOffer({ ...liveBase, availability: "Unavailable" }),
+      ready: readinessForOffer({ ...liveBase, availability: "Low stock" }),
+    };
+    const twoUnknown = [{ ...liveBase, id: "sg-one", model: "RTX 5070 Ti", availability: "Unknown" }, { ...liveBase, id: "sg-two", model: "RTX 5080", availability: "Unknown" }];
+    console.log(JSON.stringify({ canonical, brief: buildSourcingBrief(twoUnknown, "2026-08-22"), readiness, readinessSummary: readinessSummary(twoUnknown), pending, replaced, storageBefore, storageDuringPending, storageAfterAcknowledgement, filteredVisibleCatalog, retainedAcrossFilter, retainedAcrossMarketPage, outsideCurrentFilters, corrupted, mixedMarket, currencyPending, fullDeskReplacement }));`;
   const result = spawnSync(process.execPath, ["--experimental-strip-types", "--input-type=module", "-e", script], { encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr);
   const output = JSON.parse(result.stdout);
   assert.equal(output.canonical[0].market, "us");
   assert.equal(output.canonical[0].price, 10);
   assert.match(output.brief, /not a like-for-like comparison/);
+  assert.match(output.brief, /Sourcing readiness: 0 ready to verify · 2 availability unverified/);
+  assert.match(output.brief, /Readiness: Availability unverified · Next action: Verify stock at retailer/);
+  assert.match(output.brief, /Mixed GPU models — no like-for-like winner/);
   assert.match(output.brief, /Reminder \(2026-08-22\)/);
   assert.match(output.brief, /https:\/\/example\.com\/gpu/);
   assert.equal(output.pending.selected[0].id, "safe");
@@ -102,9 +120,21 @@ test("source-desk serialization retains saved offers outside the visible filter 
   assert.equal(output.filteredVisibleCatalog.length, 1);
   assert.equal(output.retainedAcrossFilter.length, 1);
   assert.equal(output.retainedAcrossFilter[0].id, "safe");
+  assert.equal(output.retainedAcrossMarketPage[0].id, "safe");
   assert.equal(output.outsideCurrentFilters, "1 saved offer outside current filters");
   assert.equal(output.corrupted.length, 0);
   assert.equal(output.mixedMarket.length, 0);
+  assert.equal(output.readiness.fixture.key, "demo-sample");
+  assert.equal(output.readiness.unknown.key, "availability-unverified");
+  assert.equal(output.readiness.degraded.key, "source-needs-review");
+  assert.equal(output.readiness.stale.key, "source-needs-review");
+  assert.equal(output.readiness.unavailable.key, "do-not-shortlist");
+  assert.equal(output.readiness.ready.key, "ready-to-verify");
+  assert.equal(output.readinessSummary.label, "0 ready to verify · 2 availability unverified");
+  assert.equal(output.readinessSummary.mixedModels, true);
+  assert.equal(output.currencyPending.pending.id, "usd-gbp");
+  assert.equal(output.fullDeskReplacement.selected.length, 1);
+  assert.equal(output.fullDeskReplacement.selected[0].id, "uk");
   const corrupted = spawnSync(process.execPath, ["--experimental-strip-types", "--input-type=module", "-e", `import { canonicalizeStored } from ${JSON.stringify(helper)}; console.log(canonicalizeStored("{broken", []).length);`], { encoding: "utf8" });
   assert.equal(corrupted.stdout.trim(), "0");
 });
