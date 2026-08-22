@@ -2,14 +2,15 @@ import type { CollectorRole, SourceDefinition, SourceSlug } from "../../config/s
 
 export const BRIGHTDATA_API_BASE = "https://api.brightdata.com";
 export const DEFAULT_TIMEOUT_MS = 15_000;
-export const DEFAULT_POLL_INTERVAL_MS = 1_000;
-export const DEFAULT_MAX_POLL_ATTEMPTS = 5;
+export const DEFAULT_POLL_INTERVAL_MS = 5_000;
+export const DEFAULT_MAX_POLL_ATTEMPTS = 72;
 export const MAX_TIMEOUT_MS = 30_000;
 export const MAX_POLL_INTERVAL_MS = 5_000;
-export const MAX_POLL_ATTEMPTS = 10;
+export const MAX_POLL_ATTEMPTS = 90;
 export const MAX_RESPONSE_ID_LENGTH = 256;
-export const MAX_PROVIDER_RUN_MS = MAX_TIMEOUT_MS * (1 + MAX_POLL_ATTEMPTS)
-  + MAX_POLL_INTERVAL_MS * (MAX_POLL_ATTEMPTS - 1);
+// Keep provider work to 6m15s, leaving the signed refresh workflow's 60s margin.
+// This is an elapsed-time deadline, not a request-count calculation.
+export const MAX_PROVIDER_RUN_MS = 375_000;
 
 export type BrightDataClientOptions = {
   apiKey?: string;
@@ -18,7 +19,9 @@ export type BrightDataClientOptions = {
   timeoutMs?: number;
   pollIntervalMs?: number;
   maxPollAttempts?: number;
+  overallTimeoutMs?: number;
   sleep?: (milliseconds: number) => Promise<void>;
+  now?: () => number;
 };
 
 export type BrightDataTrigger = {
@@ -99,13 +102,25 @@ export function createBrightDataClient(options: BrightDataClientOptions = {}) {
   const timeoutMs = Math.min(Math.max(options.timeoutMs ?? DEFAULT_TIMEOUT_MS, 100), MAX_TIMEOUT_MS);
   const pollIntervalMs = Math.min(Math.max(options.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS, 0), MAX_POLL_INTERVAL_MS);
   const maxPollAttempts = Math.min(Math.max(Math.floor(options.maxPollAttempts ?? DEFAULT_MAX_POLL_ATTEMPTS), 1), MAX_POLL_ATTEMPTS);
+  const overallTimeoutMs = Math.min(Math.max(Number(options.overallTimeoutMs) || MAX_PROVIDER_RUN_MS, 1_000), MAX_PROVIDER_RUN_MS);
   const sleep = options.sleep ?? ((milliseconds: number) => new Promise<void>((resolve) => setTimeout(resolve, milliseconds)));
+  const now = options.now ?? Date.now;
 
   if (!apiKey) throw new BrightDataError("not_configured", "Bright Data is not configured");
 
-  async function request(path: string, init: RequestInit): Promise<{ response: Response; payload: unknown }> {
+  async function request(
+    path: string,
+    init: RequestInit,
+    deadlineAt?: number,
+    responseId?: string,
+  ): Promise<{ response: Response; payload: unknown }> {
+    const remainingMs = deadlineAt === undefined ? undefined : deadlineAt - now();
+    if (remainingMs !== undefined && remainingMs <= 0) {
+      throw new BrightDataError("timeout", "Bright Data provider run deadline exceeded", undefined, responseId);
+    }
+    const requestTimeoutMs = remainingMs === undefined ? timeoutMs : Math.min(timeoutMs, Math.max(remainingMs, 1));
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
     try {
       const response = await fetchImpl(`${baseUrl}${path}`, {
         ...init,
@@ -124,28 +139,41 @@ export function createBrightDataClient(options: BrightDataClientOptions = {}) {
     } catch (error) {
       if (error instanceof BrightDataError) throw error;
       if (error instanceof DOMException && error.name === "AbortError") {
-        throw new BrightDataError("timeout", "Bright Data request timed out");
+        throw new BrightDataError("timeout", "Bright Data request timed out", undefined, responseId);
       }
-      throw new BrightDataError("provider_error", "Bright Data request could not be completed");
+      throw new BrightDataError("provider_error", "Bright Data request could not be completed", undefined, responseId);
     } finally {
       clearTimeout(timeout);
     }
   }
 
   async function triggerAndPoll(trigger: BrightDataTrigger): Promise<BrightDataRun> {
+    const deadlineAt = now() + overallTimeoutMs;
     const started = await request(`/dca/trigger?collector=${encodeURIComponent(trigger.collectorId)}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify([{ url: trigger.inputUrl }]),
-    });
+    }, deadlineAt);
     const responseId = responseIdFrom(started.payload);
     if (!responseId) throw new BrightDataError("invalid_response", "Bright Data returned no response id");
+    if (now() >= deadlineAt) {
+      throw new BrightDataError("timeout", "Bright Data provider run deadline exceeded", undefined, responseId);
+    }
 
     for (let attempt = 1; attempt <= maxPollAttempts; attempt += 1) {
-      if (attempt > 1) await sleep(pollIntervalMs);
+      if (attempt > 1) {
+        const remainingMs = deadlineAt - now();
+        if (remainingMs <= 0) {
+          throw new BrightDataError("timeout", "Bright Data provider run deadline exceeded", undefined, responseId);
+        }
+        await sleep(Math.min(pollIntervalMs, remainingMs));
+        if (now() >= deadlineAt) {
+          throw new BrightDataError("timeout", "Bright Data provider run deadline exceeded", undefined, responseId);
+        }
+      }
       let polled: { response: Response; payload: unknown };
       try {
-        polled = await request(`/dca/dataset?id=${encodeURIComponent(responseId)}`, { method: "GET" });
+        polled = await request(`/dca/dataset?id=${encodeURIComponent(responseId)}`, { method: "GET" }, deadlineAt, responseId);
       } catch (error) {
         if (error instanceof BrightDataError) {
           throw new BrightDataError(error.code, error.message, error.status, responseId);

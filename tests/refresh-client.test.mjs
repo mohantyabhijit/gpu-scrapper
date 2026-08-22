@@ -1,6 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createBrightDataClient, BrightDataError, MAX_RESPONSE_ID_LENGTH } from "../lib/brightdata/client.ts";
+import {
+  createBrightDataClient,
+  BrightDataError,
+  DEFAULT_POLL_INTERVAL_MS,
+  MAX_POLL_ATTEMPTS,
+  MAX_POLL_INTERVAL_MS,
+  MAX_PROVIDER_RUN_MS,
+  MAX_RESPONSE_ID_LENGTH,
+} from "../lib/brightdata/client.ts";
 
 test("Bright Data client triggers and polls without exposing provider bodies", async () => {
   const calls = [];
@@ -82,7 +90,104 @@ test("polling limits are bounded even when callers pass excessive values", async
     }),
     (error) => error instanceof BrightDataError && error.code === "timeout",
   );
-  assert.equal(calls, 11);
+  assert.equal(calls, MAX_POLL_ATTEMPTS + 1);
+});
+
+test("polling uses a five-second cadence and completes before the overall deadline", async () => {
+  let clock = 0;
+  const sleeps = [];
+  const responses = [
+    new Response(JSON.stringify({ collection_id: "response-complete" }), { status: 200 }),
+    new Response(JSON.stringify({ status: "pending" }), { status: 202 }),
+    new Response(JSON.stringify({ status: "pending" }), { status: 202 }),
+    new Response(JSON.stringify([{ title: "RTX 5080" }]), { status: 200 }),
+  ];
+  const client = createBrightDataClient({
+    apiKey: "test-api-key",
+    overallTimeoutMs: 20_000,
+    fetchImpl: async () => responses.shift(),
+    sleep: async (milliseconds) => {
+      sleeps.push(milliseconds);
+      clock += milliseconds;
+    },
+    now: () => clock,
+  });
+
+  const result = await client.triggerAndPoll({
+    sourceSlug: "central-computer",
+    collectorId: "c_demo",
+    inputUrl: "https://www.centralcomputer.com/gpus",
+  });
+  assert.equal(result.attempts, 3);
+  assert.deepEqual(sleeps, [DEFAULT_POLL_INTERVAL_MS, DEFAULT_POLL_INTERVAL_MS]);
+});
+
+test("overall deadline stops pending polling while retaining response identity", async () => {
+  let clock = 0;
+  let calls = 0;
+  const client = createBrightDataClient({
+    apiKey: "test-api-key",
+    overallTimeoutMs: 10_000,
+    fetchImpl: async () => {
+      calls += 1;
+      return calls === 1
+        ? new Response(JSON.stringify({ collection_id: "response-deadline" }), { status: 200 })
+        : new Response(JSON.stringify({ status: "pending" }), { status: 202 });
+    },
+    sleep: async (milliseconds) => {
+      clock += milliseconds;
+    },
+    now: () => clock,
+  });
+
+  await assert.rejects(
+    client.triggerAndPoll({
+      sourceSlug: "central-computer",
+      collectorId: "c_demo",
+      inputUrl: "https://www.centralcomputer.com/gpus",
+    }),
+    (error) => error instanceof BrightDataError
+      && error.code === "timeout"
+      && error.responseId === "response-deadline",
+  );
+  assert.equal(calls, 3);
+  assert.equal(clock, 10_000);
+});
+
+test("excessive caller bounds are capped by attempts, cadence, and overall deadline", async () => {
+  let clock = 0;
+  let calls = 0;
+  const sleeps = [];
+  const client = createBrightDataClient({
+    apiKey: "test-api-key",
+    timeoutMs: 999_999,
+    pollIntervalMs: 999_999,
+    maxPollAttempts: 999_999,
+    overallTimeoutMs: 999_999,
+    fetchImpl: async () => {
+      calls += 1;
+      return calls === 1
+        ? new Response(JSON.stringify({ collection_id: "response-bounded" }), { status: 200 })
+        : new Response(JSON.stringify({ status: "pending" }), { status: 202 });
+    },
+    sleep: async (milliseconds) => {
+      sleeps.push(milliseconds);
+      clock += milliseconds;
+    },
+    now: () => clock,
+  });
+
+  await assert.rejects(
+    client.triggerAndPoll({
+      sourceSlug: "central-computer",
+      collectorId: "c_demo",
+      inputUrl: "https://www.centralcomputer.com/gpus",
+    }),
+    (error) => error instanceof BrightDataError && error.code === "timeout",
+  );
+  assert.ok(calls <= MAX_POLL_ATTEMPTS + 1);
+  assert.ok(sleeps.every((milliseconds) => milliseconds <= MAX_POLL_INTERVAL_MS));
+  assert.ok(clock <= MAX_PROVIDER_RUN_MS);
 });
 
 test("polling failures retain the bounded trigger response identity", async () => {
