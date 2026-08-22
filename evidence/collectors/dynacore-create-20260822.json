@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "evidence_type": "create",
+  "source_file": "create.json",
+  "generated_at_utc": "2026-08-22T02:23:32.968Z",
+  "collector_ids": [
+    "c_mt3qzv5p215cci1r2e"
+  ],
+  "status": "done",
+  "counts": {},
+  "sample_rows": [],
+  "redactions": {
+    "sensitive_fields_removed": 0,
+    "sensitive_values_removed": 0,
+    "provider_payloads_omitted": true,
+    "sample_rows_seen": 0,
+    "sample_rows_included": 0,
+    "sample_rows_limit": 5
+  }
+}

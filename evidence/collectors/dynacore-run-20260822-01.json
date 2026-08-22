@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "evidence_type": "run",
+  "source_file": "dynacore-run-evidence.json",
+  "generated_at_utc": "2026-08-22T02:23:33.009Z",
+  "collector_ids": [
+    "c_mt3qzv5p215cci1r2e"
+  ],
+  "status": "completed",
+  "counts": {
+    "rows": 3,
+    "valid_rows": 2,
+    "quarantined_rows": 1
+  },
+  "sample_rows": [
+    {
+      "source_slug": "dynacore",
+      "market": "SG",
+      "title": "Gigabyte GeForce RTX5070Ti WINDFORCE OC SFF 16G GDDR7 Graphics Card GV-N507TWF3OC-16GD - 4719331355579",
+      "product_url": "https://dynacoretech.com/products/gigabyte-geforce-rtx%e2%84%a2-5070-ti-windforce-oc-sff-16g-gddr7-graphics-card-gv-n507twf3oc-16gd-4719331355579",
+      "price": 1959,
+      "currency": "SGD",
+      "availability": "unknown",
+      "sku": "4719331355579",
+      "mpn": "4719331355579",
+      "board_partner": "GIGABYTE"
+    },
+    {
+      "source_slug": "dynacore",
+      "market": "SG",
+      "title": "GIGABYTE GEFORCE RTX5070 AORUS MASTER 12GB TRIPLE FAN GDDR7 - 4719331355753",
+      "product_url": "https://dynacoretech.com/products/gigabyte-geforce-rtx-5070-aorus-master-12gb-gddr7-graphics-card-rtx5070-4719331355753",
+      "price": 1569,
+      "currency": "SGD",
+      "availability": "unknown",
+      "sku": "4719331355753",
+      "mpn": "4719331355753",
+      "board_partner": "GIGABYTE"
+    }
+  ],
+  "redactions": {
+    "sensitive_fields_removed": 0,
+    "sensitive_values_removed": 0,
+    "provider_payloads_omitted": true,
+    "sample_rows_seen": 2,
+    "sample_rows_included": 2,
+    "sample_rows_limit": 5
+  }
+}

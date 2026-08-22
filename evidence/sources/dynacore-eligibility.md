@@ -46,21 +46,24 @@ required_fields_observed:
   product_url: pass
   price: pass on sampled PDPs
   currency: pass (SGD shown as $)
-  availability: pass_with_caveat (Few Left / Out of stock / In Stock Unavailable labels observed)
-  observed_at: pending (collector timestamp required)
+  availability: pass_with_caveat (collector returns unknown when the public card omits a stock label)
+  observed_at: pass (ISO UTC scraped_at emitted on every accepted row)
   source_sku_or_mpn: pass_or_partial (EAN/MPN-style values in sampled URLs and PDP details)
   board_partner_and_gpu: pass on sampled PDPs
-  image_url: pending (collector field confirmation)
+  image_url: pass (HTTPS image_url emitted on accepted rows)
 price_semantics: current listing amount; sale/original-price pairs and delivery/warranty qualifiers may appear; do not treat as MSRP
-bounded_probe: pass_one_public_catalog_read_plus_one_public_robots_and_terms_read; repeat-read pending
+bounded_probe: pass_one_public_catalog_read_plus_one_public_robots_and_terms_read; repeat-read pass_two_reads_same_collector_id_two_valid_gpu_rows_each_one_accessory_rejected
 collector_roles:
-  combined: pending
+  combined: pass
 collector_ids:
-  combined: null
+  combined: c_mt3qzv5p215cci1r2e
   discovery: null
   pdp: null
-decision: candidate_primary_pending_all_live_gates
-notes: The signed-out collection returned two GPU products and one graphics-card holder accessory; the accessory is excluded and is not an offer. The public page showed SGD pricing and canonical product links without requiring sign-in. Robots allows the public catalog and PDP paths while excluding account, cart, checkout, orders, admin, and policy paths. Terms state the site is for Singapore and that prices are quoted on the site, but no permission for automated extraction was established. Bright Data's authenticated library search found no pre-built scraper and offered Scraper Studio custom creation. Keep the source disabled and collector IDs empty until Task 2 completes.
+decision: eligible_primary_live_collector_proven
+collector_created_evidence: evidence/collectors/dynacore-create-20260822.json
+collector_run_evidence: evidence/collectors/dynacore-run-20260822-01.json
+collector_repeat_evidence: evidence/collectors/dynacore-run-20260822-02.json
+notes: The signed-out collection returned two GPU products and one graphics-card holder accessory; the accessory was rejected by the source-specific adapter and is not an offer. The public page showed SGD pricing and canonical product links without requiring sign-in. Robots allows the public catalog and PDP paths while excluding account, cart, checkout, orders, admin, and policy paths. Terms state the site is for Singapore and that prices are quoted on the site, but no permission for automated extraction was established. Bright Data's authenticated library search found no pre-built scraper and offered Scraper Studio custom creation. The custom collector created as c_mt3qzv5p215cci1r2e returned three cards on each of two reads; the adapter retained two GPU rows, mapped provider price objects, defaulted missing availability to unknown, and both normalized outputs passed the shared contract validator. The source is enabled only for the registered combined role.
 ```
 
 Evidence links: [GPU catalog](https://dynacoretech.com/collections/gpu),
@@ -71,7 +74,6 @@ Evidence links: [GPU catalog](https://dynacoretech.com/collections/gpu),
 [sample RTX 5070 Ti PDP](https://dynacoretech.com/products/gigabyte-geforce-rtx%E2%84%A2-5070-ti-windforce-oc-sff-16g-gddr7-graphics-card-gv-n507twf3oc-16gd-4719331355579),
 [excluded graphics-card holder](https://dynacoretech.com/products/asus-rog-herculx-graphics-card-holder).
 
-The public page review does not prove Bright Data coverage, collector
-creation, successful live extraction, two-read stability, or permission to
-automate. Keep all account, cart, checkout, and policy paths out of scope and
-re-check the terms before creating any collector.
+The public-page review and live proof do not establish permission to access
+account, cart, checkout, policy, contact, review, or personal-data paths. Keep
+those paths out of scope and re-check the terms before changing the collector.

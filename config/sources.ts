@@ -121,8 +121,8 @@ export const sourceRegistry = {
     baseUrl: "https://dynacoretech.com",
     allowedHosts: ["dynacoretech.com", "www.dynacoretech.com"],
     catalogUrl: "https://dynacoretech.com/collections/gpu",
-    enabled: false,
-    collectorIds: {},
+    enabled: true,
+    collectorIds: { combined: "c_mt3qzv5p215cci1r2e" },
     collectorRoles: ["combined"],
   },
   "tech-deals": {

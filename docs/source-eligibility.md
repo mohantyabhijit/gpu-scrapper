@@ -1,9 +1,10 @@
 # Source eligibility register
 
 This is the go/no-go record for Raster’s public GPU sources. Four display
-markets remain fixed: US/USD, UK/GBP, IN/INR, and SG/SGD. Every source remains
+markets remain fixed: US/USD, UK/GBP, IN/INR, and SG/SGD. A source remains
 disabled until the full public-access, terms/robots, authenticated Bright Data,
-contract, overlap, and repeat-read gates pass.
+contract, overlap, and repeat-read gates pass; Dynacore is the first source with
+those live gates recorded below.
 
 ## Active candidates
 
@@ -15,14 +16,13 @@ contract, overlap, and repeat-read gates pass.
 | UK / GBP | CCL Computers | <https://www.cclonline.com/pc-components/graphics-cards/> | `ccl` | secondary | pending |
 | IN / INR | MDComputers | <https://mdcomputers.in/catalog/graphics-card/nvidia> | `md-computers` | primary | pending |
 | IN / INR | SCL Gaming | <https://sclgaming.in/product-category/graphics-card/> | `scl-gaming` | secondary | pending |
-| SG / SGD | Dynacore Technologies | <https://dynacoretech.com/collections/gpu> | `dynacore` | primary | public page and library exclusion recorded; pending custom collector |
+| SG / SGD | Dynacore Technologies | <https://dynacoretech.com/collections/gpu> | `dynacore` | primary | live custom collector proven; enabled |
 | SG / SGD | TechDeals | <https://www.techdeals.com.sg/collections/graphics-card-1> | `tech-deals` | secondary | pending live gates |
 | SG / SGD | PC Themes | <https://www.pcthemes.com.sg/video-card-graphics-card> | `pc-themes` | backup | pending conditional review |
 
 The Singapore P0 comparison pair is Dynacore plus TechDeals. PC Themes is the
-backup candidate. These are research leads, not enabled collectors; the static
-registry intentionally has no Collector IDs and no source is runnable before
-authenticated creation and valid live evidence.
+backup candidate. TechDeals and PC Themes remain research leads; Dynacore is
+runnable only through its registered combined role and proven Collector ID.
 
 ## Required gates
 
@@ -44,12 +44,13 @@ create, successful run, sanitization, and contract validation.
 
 ## Source evidence
 
-See the dated public-page records for [Dynacore](../evidence/sources/dynacore-eligibility.md),
+See the dated records for [Dynacore](../evidence/sources/dynacore-eligibility.md),
 [TechDeals](../evidence/sources/tech-deals-eligibility.md), and
-[PC Themes](../evidence/sources/pc-themes-eligibility.md). Their pending fields
-remain pending; no live provider state is implied.
+[PC Themes](../evidence/sources/pc-themes-eligibility.md). TechDeals and PC
+Themes remain pending; Dynacore's live provider state is limited to the
+sanitized create/run/repeat-read artifacts recorded in its eligibility file.
 
-### Dynacore update — 2026-08-22
+### Dynacore live proof — 2026-08-22
 
 The current public catalog is <https://dynacoretech.com/collections/gpu>.
 The signed-out page exposed two GPU products with SGD prices and canonical
@@ -59,9 +60,15 @@ Library search for `dynacoretech.com` returned exactly:
 `This domain isn't in our library yet - but getting data from it is easy:` and
 offered `Build a scraper for any website with Scraper Studio`.
 
-This is an eligibility record only. Dynacore remains disabled with no Collector
-ID until the custom collector creation, run, validation, and repeat-read gates
-are complete.
+The custom collector `c_mt3qzv5p215cci1r2e` was created from the registered
+manifest and run twice against the exact catalog URL. Each provider read
+returned three cards: two GPU rows and the graphics-card holder accessory. The
+source-specific adapter rejected the accessory, mapped the provider price
+objects, defaulted missing stock labels to `unknown`, and produced two rows
+that passed the shared source, market, currency, URL, required-field, timestamp,
+and personal-data rejection checks on both reads. Sanitized evidence is indexed
+in `evidence/collectors/` and the source is enabled only under the combined
+role with that same Collector ID.
 
 ## Data handling
 

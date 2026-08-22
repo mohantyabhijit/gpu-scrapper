@@ -1,5 +1,6 @@
 import { normalizeOffer, type NormalizedOffer, type NormalizedProduct } from "./normalize/index.ts";
 import { validateRawOffer, type RawOffer, type ValidationCode } from "../scrapers/contracts.ts";
+import { adaptDynacoreOutput } from "../scrapers/adapters/dynacore.ts";
 import type { SourceDefinition } from "../config/sources.ts";
 
 export type IngestionContext = {
@@ -46,7 +47,10 @@ export function ingestRows(rows: readonly RawOffer[], context: IngestionContext)
   const seenOffers = new Set<string>();
   const seenObservations = new Set<string>();
 
-  rows.forEach((row, rowIndex) => {
+  const sourceRows = context.source?.slug === "dynacore"
+    ? adaptDynacoreOutput(rows).payload.rows as RawOffer[]
+    : rows;
+  sourceRows.forEach((row, rowIndex) => {
     const fingerprint = fingerprintRow(row);
     const validation = validateRawOffer(row, context.expectedSource, context.source);
     if (!validation.ok) {
@@ -88,7 +92,7 @@ export function ingestRows(rows: readonly RawOffer[], context: IngestionContext)
     summary: {
       accepted: offers.length,
       rejected: quarantined.length,
-      duplicate: rows.length - offers.length - quarantined.length,
+      duplicate: sourceRows.length - offers.length - quarantined.length,
     },
   };
 }

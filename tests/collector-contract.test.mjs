@@ -6,22 +6,24 @@ import { sourceHostIsAllowed, sourceRegistry } from "../config/sources.ts";
 
 const p0ManifestSlugs = ["dynacore", "tech-deals", "pc-themes"];
 
-test("source registry is role keyed and contains no live collector IDs", () => {
+test("source registry is role keyed and only registers the proven Dynacore collector", () => {
   assert.equal(sourceRegistry["central-computer"].role, "primary");
   assert.equal(sourceRegistry["central-computer"].currency, "USD");
   assert.equal("tradezone" in sourceRegistry, false);
-  assert.equal(Object.values(sourceRegistry).some((source) => Object.keys(source.collectorIds).length > 0), false);
+  assert.deepEqual(sourceRegistry.dynacore.collectorIds, { combined: "c_mt3qzv5p215cci1r2e" });
+  assert.equal(sourceRegistry.dynacore.enabled, true);
+  assert.equal(Object.values(sourceRegistry).filter((source) => Object.keys(source.collectorIds).length > 0).length, 1);
 });
 
-test("Dynacore uses the current public GPU collection and stays disabled pending creation", () => {
+test("Dynacore uses the current public GPU collection and is enabled after live proof", () => {
   const source = sourceRegistry.dynacore;
   assert.equal(source.catalogUrl, "https://dynacoretech.com/collections/gpu");
   assert.equal(sourceHostIsAllowed("dynacore", source.catalogUrl), true);
-  assert.equal(source.enabled, false);
-  assert.deepEqual(source.collectorIds, {});
+  assert.equal(source.enabled, true);
+  assert.deepEqual(source.collectorIds, { combined: "c_mt3qzv5p215cci1r2e" });
 });
 
-test("Dynacore catalog URL and pending state stay consistent across source artifacts", async () => {
+test("Dynacore catalog URL and live-proof state stay consistent across source artifacts", async () => {
   const expectedUrl = "https://dynacoretech.com/collections/gpu";
   const source = sourceRegistry.dynacore;
   const [manifestText, eligibilityText, evidenceText] = await Promise.all([
@@ -35,12 +37,12 @@ test("Dynacore catalog URL and pending state stay consistent across source artif
   assert.equal(manifest.target_url, expectedUrl);
   assert.ok(eligibilityText.includes(`<${expectedUrl}>`));
   assert.ok(evidenceText.includes(`catalog_url: ${expectedUrl}`));
-  assert.equal(source.enabled, false);
-  assert.deepEqual(source.collectorIds, {});
-  assert.match(eligibilityText, /Dynacore remains disabled with no Collector\s+ID/);
-  assert.match(eligibilityText, /static\s+registry intentionally has no Collector IDs/);
-  assert.match(evidenceText, /collector_ids:\s+combined: null\s+discovery: null\s+pdp: null/);
-  assert.match(evidenceText, /Keep the source disabled and collector IDs empty/);
+  assert.equal(source.enabled, true);
+  assert.deepEqual(source.collectorIds, { combined: "c_mt3qzv5p215cci1r2e" });
+  assert.match(eligibilityText, /Dynacore live proof/);
+  assert.match(eligibilityText, /c_mt3qzv5p215cci1r2e/);
+  assert.match(evidenceText, /combined: c_mt3qzv5p215cci1r2e/);
+  assert.match(evidenceText, /repeat-read pass/);
 });
 
 test("Singapore P0 manifests are bounded, registry-owned, and ready for real CLI creation", async () => {
@@ -54,12 +56,18 @@ test("Singapore P0 manifests are bounded, registry-owned, and ready for real CLI
     assert.equal(manifest.target_url, source.catalogUrl);
     assert.equal(manifest.market, source.region);
     assert.equal(manifest.currency, source.currency);
-    assert.equal(source.enabled, false);
-    assert.deepEqual(source.collectorIds, {});
+    if (slug === "dynacore") {
+      assert.equal(source.enabled, true);
+      assert.deepEqual(source.collectorIds, { combined: "c_mt3qzv5p215cci1r2e" });
+      assert.equal(manifest.evidence_state, "live-create-run-repeat-read");
+    } else {
+      assert.equal(source.enabled, false);
+      assert.deepEqual(source.collectorIds, {});
+      assert.equal(manifest.evidence_state, "pending-live-create-run");
+    }
     assert.ok(manifest.description.length > 80 && manifest.description.length <= 500);
     assert.match(manifest.description, /public GPU product/i);
     assert.match(manifest.description, /personal data/i);
-    assert.equal(manifest.evidence_state, "pending-live-create-run");
     assert.doesNotMatch(JSON.stringify(manifest), /api[_-]?key|authorization|bearer|password|secret/i);
   }
 });
@@ -204,7 +212,12 @@ test("collector validator accepts recognized Bright Data wrappers but never fake
   const wrapped = validateCollectorOutput({ data: [explicitRow()] }, "dynacore");
   assert.equal(wrapped.ok, true);
   for (const source of Object.values(sourceRegistry)) {
-    assert.deepEqual(source.collectorIds, {});
-    assert.equal(source.enabled, false);
+    if (source.slug === "dynacore") {
+      assert.deepEqual(source.collectorIds, { combined: "c_mt3qzv5p215cci1r2e" });
+      assert.equal(source.enabled, true);
+    } else {
+      assert.deepEqual(source.collectorIds, {});
+      assert.equal(source.enabled, false);
+    }
   }
 });

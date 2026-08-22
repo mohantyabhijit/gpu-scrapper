@@ -15,6 +15,8 @@ test("collection CLI accepts only a registered source and role", () => {
 test("collection target resolution refuses disabled or malformed IDs and binds the registry URL", () => {
   const source = sourceRegistry.dynacore;
   const original = { enabled: source.enabled, collectorIds: source.collectorIds };
+  source.enabled = false;
+  source.collectorIds = {};
   assert.equal(resolveCollectionTarget("dynacore", "combined"), undefined);
   source.enabled = true;
   source.collectorIds = { combined: "not-a-collector-id" };

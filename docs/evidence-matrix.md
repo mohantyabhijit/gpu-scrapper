@@ -5,8 +5,8 @@ artifact, commit, Action run, or public URL as each gate is completed.
 
 | Organizer expectation | Proof required | Planned artifact/surface | Status |
 | --- | --- | --- | --- |
-| Bright Data at the core | Real create and run flow with stable `c_*` ID | `evidence/collectors/`, terminal transcript, source registry | pending |
-| Long-tail target | Pre-built-library exclusion and source eligibility | `docs/source-eligibility.md` plus dated evidence | pending |
+| Bright Data at the core | Real create and run flow with stable `c_*` ID | `evidence/collectors/`, source registry | Dynacore create/run/repeat-read proven; downstream live route pending |
+| Long-tail target | Pre-built-library exclusion and source eligibility | `docs/source-eligibility.md` plus dated evidence | Dynacore eligibility and exclusion proven |
 | Public data only | Signed-out URLs and data-boundary review | `docs/security.md`, source register | baseline |
 | Collector as production API | Trigger/schedule feeding hosted PostgreSQL via private Hyperdrive and storefront | GitHub Action summary, run record, public catalog | pending |
 | Terminal is the UI | Reproducible CLI commands and concise outputs | `docs/demo-script.md`, sanitized transcript | commands implemented; live transcript pending |

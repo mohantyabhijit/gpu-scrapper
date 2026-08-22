@@ -2,8 +2,8 @@
 
 This directory contains sanitized evidence only. It does not contain API keys,
 cookies, authorization headers, raw provider bodies, or guessed Collector IDs.
-All three Singapore candidates remain disabled until the authenticated gates and
-the explicit row contract pass.
+Dynacore's combined collector is live-proven below; TechDeals and PC Themes
+remain disabled until their authenticated gates and explicit row contracts pass.
 
 ## CLI-first sequence
 
@@ -75,8 +75,9 @@ reported as a status and per-code count only.
 
 ## Pending fields
 
-Every candidate still has `bright_data_prebuilt_exclusion`, real collector IDs,
-successful live output, repeat-read stability, and final enablement pending.
-Do not mark those fields complete from a public-page review or a CLI help
-example. Keep source URLs and dates in the relevant eligibility record, with
-all public-data and terms caveats intact.
+TechDeals and PC Themes still have `bright_data_prebuilt_exclusion`, real
+collector IDs, successful live output, repeat-read stability, and final
+enablement pending. Dynacore's dated proof is indexed as
+`dynacore-create-20260822.json`, `dynacore-run-20260822-01.json`, and
+`dynacore-run-20260822-02.json`. Keep source URLs and dates in the relevant
+eligibility record, with all public-data and terms caveats intact.

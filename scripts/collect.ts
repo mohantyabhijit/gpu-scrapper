@@ -10,6 +10,7 @@ import {
   type SourceDefinition,
 } from "../config/sources.ts";
 import { validateCollectorOutput } from "../scrapers/contracts.ts";
+import { adaptDynacoreOutput } from "../scrapers/adapters/dynacore.ts";
 
 type Arguments = { source: string; role: CollectorRole };
 type CollectionTarget = {
@@ -79,7 +80,10 @@ export async function collectSource(args: Arguments): Promise<Record<string, unk
     const code = error instanceof BrightDataError ? error.code : "provider_error";
     return summary(args.source, args.role, code);
   }
-  const validation = validateCollectorOutput(run.rows, target.source.slug);
+  const rows = target.source.slug === "dynacore"
+    ? adaptDynacoreOutput(run.rows, { collectorId: target.collectorId }).payload
+    : run.rows;
+  const validation = validateCollectorOutput(rows, target.source.slug);
   return {
     status: validation.ok ? "completed" : "invalid_output",
     source_slug: args.source,
