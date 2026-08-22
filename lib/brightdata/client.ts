@@ -180,6 +180,9 @@ export function createBrightDataClient(options: BrightDataClientOptions = {}) {
         }
         throw new BrightDataError("provider_error", "Bright Data dataset could not be completed", undefined, responseId);
       }
+      if (now() >= deadlineAt) {
+        throw new BrightDataError("timeout", "Bright Data provider run deadline exceeded", undefined, responseId);
+      }
       const rows = rowsFrom(polled.payload);
       if (rows) return { sourceSlug: trigger.sourceSlug, collectorId: trigger.collectorId, responseId, rows, attempts: attempt };
       if (!isPending(polled.payload, polled.response)) {

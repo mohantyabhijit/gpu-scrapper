@@ -154,6 +154,35 @@ test("overall deadline stops pending polling while retaining response identity",
   assert.equal(clock, 10_000);
 });
 
+test("late dataset rows are rejected after a request crosses the overall deadline", async () => {
+  let clock = 0;
+  let calls = 0;
+  const client = createBrightDataClient({
+    apiKey: "test-api-key",
+    pollIntervalMs: 0,
+    overallTimeoutMs: 10_000,
+    fetchImpl: async () => {
+      calls += 1;
+      if (calls === 1) return new Response(JSON.stringify({ collection_id: "response-late" }), { status: 200 });
+      clock = 10_001;
+      return new Response(JSON.stringify([{ title: "late RTX 5080" }]), { status: 200 });
+    },
+    now: () => clock,
+  });
+
+  await assert.rejects(
+    client.triggerAndPoll({
+      sourceSlug: "central-computer",
+      collectorId: "c_demo",
+      inputUrl: "https://www.centralcomputer.com/gpus",
+    }),
+    (error) => error instanceof BrightDataError
+      && error.code === "timeout"
+      && error.responseId === "response-late",
+  );
+  assert.equal(calls, 2);
+});
+
 test("excessive caller bounds are capped by attempts, cadence, and overall deadline", async () => {
   let clock = 0;
   let calls = 0;
