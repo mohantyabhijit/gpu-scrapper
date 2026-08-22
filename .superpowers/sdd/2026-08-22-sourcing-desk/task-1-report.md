@@ -34,3 +34,10 @@ Selections remain market-local. Adding another market pauses with an explicit ac
 
 - The browser desk is intentionally a local snapshot; it does not refresh or reconcile selected offers against a provider. Retailer verification remains required, especially for fixture rows.
 - The add controls are rendered as a compact offer-action strip immediately before the offer grid so the server catalog stays unchanged; the expanded desk remains the authoritative selected-offer view.
+
+## Follow-up fix round 1
+
+- Hydration now canonicalizes stored IDs against the complete current safe market catalog (encoded for the client boundary), so changing filters cannot drop a valid selection. Stored field tampering cannot override the canonical title, market, price, currency, health, freshness, or retailer URL; malformed/unknown/corrupted storage fails closed.
+- Introduced a desk context and `SourceDeskAddButton`; every offer card now owns its keyboard-accessible pressed-state Add/Remove control while the provider retains shared selection state and explicit cross-market replacement acknowledgement.
+- Replaced source-regex-only assertions with an executable child-process test of canonicalization, brief construction, field integrity, dated reminder, and corrupted-storage empty behavior.
+- Focused `npm run test:render` passed (9 tests); lint/build passed. The full repository gate was run in the prior round and will be rerun before the follow-up commit.

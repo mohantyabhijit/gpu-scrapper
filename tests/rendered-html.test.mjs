@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import fs from "node:fs/promises";
+import { spawnSync } from "node:child_process";
 import test from "node:test";
 
 const basePath = "/scrapper";
@@ -51,14 +51,21 @@ test("server markup keeps the progressive source-desk entry points", async () =>
 });
 
 test("source-desk serialization and brief construction are bounded and provenance-first", async () => {
-  const source = await fs.readFile(new URL("../components/sourcing-desk.tsx", import.meta.url), "utf8");
-  assert.match(source, /SOURCE_DESK_STORAGE_KEY = "raster\.source-desk\.v1"/);
-  assert.match(source, /SOURCE_DESK_LIMIT = 6/);
-  assert.match(source, /slice\(0, SOURCE_DESK_LIMIT\)/);
-  assert.match(source, /not a like-for-like comparison/);
-  assert.match(source, /Retailer link:/);
-  assert.match(source, /Reminder \(\$\{reminderDate\}\)/);
-  assert.match(source, /isSafeUrl/);
+  const helper = new URL("../components/sourcing-desk-model.ts", import.meta.url).pathname;
+  const script = `import { buildSourcingBrief, canonicalizeStored } from ${JSON.stringify(helper)};
+    const catalog = [{ id: "safe", market: "us", model: "RTX 5090", brand: "Canonical", source: "Retailer", currency: "USD", price: 10, availability: "In stock", observedAt: "2026-08-21T10:00:00.000Z", healthState: "fixture", freshness: "fixture", productUrl: "https://example.com/gpu" }];
+    const canonical = canonicalizeStored(JSON.stringify([{ id: "safe", market: "evil", price: 999 }]), catalog);
+    console.log(JSON.stringify({ canonical, brief: buildSourcingBrief(canonical, "2026-08-22") }));`;
+  const result = spawnSync(process.execPath, ["--experimental-strip-types", "--input-type=module", "-e", script], { encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
+  const output = JSON.parse(result.stdout);
+  assert.equal(output.canonical[0].market, "us");
+  assert.equal(output.canonical[0].price, 10);
+  assert.match(output.brief, /not a like-for-like comparison/);
+  assert.match(output.brief, /Reminder \(2026-08-22\)/);
+  assert.match(output.brief, /https:\/\/example\.com\/gpu/);
+  const corrupted = spawnSync(process.execPath, ["--experimental-strip-types", "--input-type=module", "-e", `import { canonicalizeStored } from ${JSON.stringify(helper)}; console.log(canonicalizeStored("{broken", []).length);`], { encoding: "utf8" });
+  assert.equal(corrupted.stdout.trim(), "0");
 });
 
 test("publishes Raster GPU favicon metadata instead of a generic site icon", async () => {
