@@ -35,8 +35,9 @@ remain disabled until their authenticated gates and explicit row contracts pass.
    ```
 
 5. Sanitize the temporary body before any review or sharing. Use the existing
-   sanitizer and inspect the sanitized copy for contacts, account data, and
-   provider metadata. Delete the raw temporary body after review; never commit
+   Dynacore adapter and validator before sanitizing; inspect the sanitized copy
+   for contacts, account data, provider metadata, binding, counts, and
+   processing results. Delete the raw temporary body after review; never commit
    it:
 
    ```bash
@@ -48,11 +49,12 @@ remain disabled until their authenticated gates and explicit row contracts pass.
      --source dynacore
    ```
 
-   The sanitizer output is the reviewable evidence summary; the validator
-   reads the secure temporary provider file and prints only bounded counts and
-   validation codes. An empty, malformed, off-domain, wrong-currency,
-   missing-field, PII-bearing, or timestamp-invalid result fails closed. Delete
-   the raw temporary body after validation.
+   For Dynacore, the validator applies `scrapers/adapters/dynacore.ts` before
+   the shared explicit-row validator. Its output reports adapter rejection and
+   bounded validation counts; it never prints provider rows. An empty,
+   malformed, off-domain, wrong-currency, missing-field, PII-bearing, or
+   timestamp-invalid result fails closed. Delete the raw temporary body after
+   validation.
 6. After the authenticated pre-built exclusion, custom create, successful run,
    sanitized review, and repeat-read gates all pass, record the real ID under
    its role and enable the source in a separately reviewed change. Until then,
@@ -68,10 +70,10 @@ node --experimental-strip-types scripts/collect.ts \
   --source dynacore --role combined
 ```
 
-The current repository intentionally has no configured runnable source, so this
-command safely returns a `not_configured` summary until authenticated evidence
-is complete. A provider timeout, bounded provider error, or invalid row set is
-reported as a status and per-code count only.
+Dynacore is configured for the registered combined role after its live evidence
+gate. The command applies the Dynacore adapter, rejects non-GPU accessories,
+requires provider `scraped_at`, and reports only bounded status and validation
+counts. TechDeals and PC Themes remain unconfigured until their own gates pass.
 
 ## Pending fields
 

@@ -1,16 +1,18 @@
 {
   "schema_version": 1,
   "evidence_type": "run",
-  "source_file": "dynacore-repeat-evidence.json",
-  "generated_at_utc": "2026-08-22T02:23:33.050Z",
+  "source_file": "evidence-02.json",
+  "generated_at_utc": "2026-08-22T02:40:07.571Z",
   "collector_ids": [
     "c_mt3qzv5p215cci1r2e"
   ],
   "status": "completed",
   "counts": {
-    "rows": 3,
-    "valid_rows": 2,
-    "quarantined_rows": 1
+    "source_cards": 3,
+    "adapted_rows": 2,
+    "accepted_rows": 2,
+    "quarantined_rows": 1,
+    "rejected_accessories": 1
   },
   "sample_rows": [
     {
@@ -23,7 +25,11 @@
       "availability": "unknown",
       "sku": "4719331355579",
       "mpn": "4719331355579",
-      "board_partner": "GIGABYTE"
+      "board_partner": "GIGABYTE",
+      "scraped_at": "2026-08-22T02:39:24.597Z",
+      "manufacturer": null,
+      "raw_model": null,
+      "image_url": null
     },
     {
       "source_slug": "dynacore",
@@ -35,7 +41,11 @@
       "availability": "unknown",
       "sku": "4719331355753",
       "mpn": "4719331355753",
-      "board_partner": "GIGABYTE"
+      "board_partner": "GIGABYTE",
+      "scraped_at": "2026-08-22T02:39:24.814Z",
+      "manufacturer": null,
+      "raw_model": null,
+      "image_url": null
     }
   ],
   "redactions": {
@@ -45,5 +55,20 @@
     "sample_rows_seen": 2,
     "sample_rows_included": 2,
     "sample_rows_limit": 5
+  },
+  "target_url": "https://dynacoretech.com/collections/gpu",
+  "catalog_url": "https://dynacoretech.com/collections/gpu",
+  "source_binding": {
+    "source_slug": "dynacore",
+    "market": "SG",
+    "currency": "SGD",
+    "manifest_name": "scrapers/manifests/dynacore.json",
+    "scraper_name": "raster-sg-dynacore-gpus",
+    "target_url": "https://dynacoretech.com/collections/gpu",
+    "catalog_url": "https://dynacoretech.com/collections/gpu"
+  },
+  "processing": {
+    "adapter_result": "passed",
+    "validator_result": "passed"
   }
 }

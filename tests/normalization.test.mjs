@@ -12,6 +12,7 @@ const valid = (overrides = {}) => {
     price: "2,499.95",
     currency: "USD",
     availability: "in stock",
+    scraped_at: "2026-08-22T03:00:00.000Z",
     mpn: "GV-N5080GAMING OC-16GD",
     ...overrides,
   });

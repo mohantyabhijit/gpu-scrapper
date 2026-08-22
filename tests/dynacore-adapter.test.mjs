@@ -34,7 +34,10 @@ test("Dynacore adapter maps provider price objects, defaults missing availabilit
   assert.equal(capture.evidence.row_count, 3);
   assert.equal(capture.evidence.valid_rows, 2);
   assert.equal(capture.evidence.quarantined_rows, 1);
-  assert.deepEqual(capture.rejected, [{ rowIndex: 1, reason: "non_gpu_accessory" }]);
+  assert.equal(capture.rejected.length, 1);
+  assert.equal(capture.rejected[0].rowIndex, 1);
+  assert.equal(capture.rejected[0].reason, "non_gpu_accessory");
+  assert.match(capture.rejected[0].rowFingerprint, /^fnv1a-[0-9a-f]{8}$/);
   assert.equal(capture.payload.rows[0].price, 1569);
   assert.equal(capture.payload.rows[0].availability, "unknown");
   assert.equal(capture.payload.rows[1].availability, "in_stock");
@@ -49,4 +52,15 @@ test("Dynacore adapter preserves invalid required fields for the shared validato
   assert.equal(validation.ok, false);
   assert.equal(validation.errorCounts.url_not_allowed, 1);
   assert.equal(validation.errorCounts.price_invalid, 1);
+});
+
+test("Dynacore adapter preserves provider source, market, and timestamp provenance", () => {
+  const capture = adaptDynacoreOutput([providerRow({ source_slug: "tech-deals", market: "SG", scraped_at: undefined })]);
+  assert.equal(capture.payload.rows[0].source_slug, "tech-deals");
+  assert.equal(capture.payload.rows[0].market, "SG");
+  assert.equal(capture.payload.rows[0].scraped_at, null);
+  const validation = validateCollectorOutput(capture.payload, "dynacore");
+  assert.equal(validation.ok, false);
+  assert.equal(validation.errorCounts.unknown_source, 1);
+  assert.equal(validation.errorCounts.timestamp_invalid, 1);
 });

@@ -89,6 +89,7 @@ test("contract accepts a public allowlisted offer", () => {
     price: "24,999.00",
     currency: "USD",
     availability: "In Stock",
+    scraped_at: "2026-08-22T03:00:00.000Z",
   });
   assert.equal(result.ok, true);
   if (result.ok) assert.equal(result.value.currency, "USD");
@@ -102,6 +103,7 @@ test("contract quarantines unknown hosts and missing prices", () => {
     product_url: "https://evil.example/rtx-5080",
     currency: "USD",
     availability: "available",
+    scraped_at: "2026-08-22T03:00:00.000Z",
   });
   assert.equal(result.ok, false);
   if (!result.ok) assert.deepEqual(result.errors, ["url_not_allowed", "price_required"]);
@@ -124,6 +126,7 @@ test("contract rejects a currency that does not belong to the declared market", 
     price: "2,499.00",
     currency: "GBP",
     availability: "available",
+    scraped_at: "2026-08-22T03:00:00.000Z",
   });
   assert.equal(result.ok, false);
   if (!result.ok) {
@@ -189,6 +192,15 @@ test("collector validator rejects invalid timestamps, malformed members, and emp
   assert.equal(emptyResult.errorCounts.empty_results, 1);
   const malformedWrapper = validateCollectorOutput({ rows: [], metadata: {} }, "dynacore");
   assert.equal(malformedWrapper.errorCounts.malformed_wrapper, 1);
+});
+
+test("raw offer validation requires a provider scraped_at and never fabricates one", () => {
+  const missing = validateRawOffer(explicitRow({ scraped_at: undefined }));
+  assert.equal(missing.ok, false);
+  if (!missing.ok) assert.deepEqual(missing.errors, ["scraped_at_invalid"]);
+  const invalid = validateRawOffer(explicitRow({ scraped_at: "not-a-timestamp" }));
+  assert.equal(invalid.ok, false);
+  if (!invalid.ok) assert.deepEqual(invalid.errors, ["scraped_at_invalid"]);
 });
 
 test("validator rejects inherited source names without throwing", () => {

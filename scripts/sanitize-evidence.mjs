@@ -22,6 +22,7 @@ const PUBLIC_ROW_FIELDS = new Map([
   ["board_partner", "board_partner"],
   ["currency", "currency"],
   ["currencycode", "currency"],
+  ["scrapedat", "scraped_at"],
   ["fetchedat", "observed_at"],
   ["market", "market"],
   ["model", "model"],
@@ -52,7 +53,14 @@ const COUNT_FIELDS = new Map([
   ["total", "total"],
   ["totalrows", "rows"],
   ["validrows", "valid_rows"],
+  ["sourcecardcount", "source_cards"],
+  ["adaptedrowcount", "adapted_rows"],
+  ["acceptedrowcount", "accepted_rows"],
+  ["quarantinedrowcount", "quarantined_rows"],
+  ["rejectedaccessorycount", "rejected_accessories"],
 ]);
+
+const NULLABLE_CONTRACT_FIELDS = ["sku", "mpn", "manufacturer", "board_partner", "raw_model", "image_url"];
 
 function normalizedKey(key) {
   return String(key).replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
@@ -154,6 +162,9 @@ function sanitizeRow(row) {
     const scalar = safeScalar(value);
     if (scalar !== undefined) clean[publicKey] = scalar;
   }
+  for (const field of NULLABLE_CONTRACT_FIELDS) {
+    if (!(field in clean)) clean[field] = null;
+  }
   return Object.keys(clean).length > 0 ? clean : undefined;
 }
 
@@ -207,11 +218,46 @@ function readCounts(input, fallbackRows) {
     for (const [key, value] of Object.entries(input)) {
       const countKey = COUNT_FIELDS.get(normalizedKey(key));
       if (!countKey || typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) continue;
+      // Dynacore evidence carries explicit source/adapted/accepted/quarantined
+      // labels; generic rows/valid_rows would make those stages ambiguous.
+      if ((countKey === "rows" || countKey === "valid_rows") &&
+        ("source_cards" in counts || "adapted_rows" in counts || "accepted_rows" in counts || "quarantined_rows" in counts)) continue;
       if (!(countKey in counts)) counts[countKey] = value;
     }
   }
-  if (!("rows" in counts) && fallbackRows > 0) counts.rows = fallbackRows;
+  if (!("rows" in counts) && fallbackRows > 0 && !("source_cards" in counts) && !("adapted_rows" in counts)) counts.rows = fallbackRows;
   return counts;
+}
+
+function readBinding(input) {
+  if (!isObject(input)) return undefined;
+  const sourceSlug = safeString(input.source_slug ?? input.sourceSlug);
+  const market = safeString(input.market)?.toUpperCase();
+  const currency = safeString(input.currency)?.toUpperCase();
+  const manifestName = safeString(input.manifest_name ?? input.manifestName);
+  const scraperName = safeString(input.scraper_name ?? input.scraperName);
+  const binding = {};
+  if (sourceSlug && /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(sourceSlug)) binding.source_slug = sourceSlug;
+  if (market && /^[A-Z]{2}$/.test(market)) binding.market = market;
+  if (currency && /^[A-Z]{3}$/.test(currency)) binding.currency = currency;
+  if (manifestName && /^scrapers\/manifests\/[a-z0-9-]+\.json$/.test(manifestName)) binding.manifest_name = manifestName;
+  if (scraperName && /^[a-z0-9][a-z0-9_-]{0,80}$/.test(scraperName)) binding.scraper_name = scraperName;
+  const urls = readPublicUrls(input);
+  if (urls.target_url) binding.target_url = urls.target_url;
+  if (urls.catalog_url) binding.catalog_url = urls.catalog_url;
+  return Object.keys(binding).length ? binding : undefined;
+}
+
+function readProcessing(input) {
+  if (!isObject(input)) return undefined;
+  const processing = {};
+  for (const [inputKey, outputKey] of [["adapter_result", "adapter_result"], ["validator_result", "validator_result"]]) {
+    const value = input[inputKey];
+    const status = isObject(value) ? value.status ?? value.result : value;
+    const safe = safeString(status)?.toLowerCase();
+    if (safe && /^(?:passed|failed|pending|not_applied)$/.test(safe)) processing[outputKey] = safe;
+  }
+  return Object.keys(processing).length ? processing : undefined;
 }
 
 function normalizeKind(kind) {
@@ -248,7 +294,14 @@ export function sanitizeEvidence(input, { kind, sourceFile = "input.json", gener
       sample_rows_limit: MAX_SAMPLE_ROWS,
     },
   };
-  return { ...output, ...readPublicUrls(input) };
+  const binding = readBinding(input);
+  const processing = readProcessing(input);
+  return {
+    ...output,
+    ...readPublicUrls(input),
+    ...(binding ? { source_binding: binding } : {}),
+    ...(processing ? { processing } : {}),
+  };
 }
 
 function inferKind(inputPath) {

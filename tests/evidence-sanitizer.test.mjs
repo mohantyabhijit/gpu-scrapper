@@ -19,13 +19,14 @@ const secretShapedRunFixture = {
   },
   provider_error_body: "fake provider body must not be published",
   error: { body: "fake raw error body", stack: "fake stack" },
-  rows: Array.from({ length: 8 }, (_, index) => ({
+    rows: Array.from({ length: 8 }, (_, index) => ({
     title: `GPU ${index + 1}`,
     product_url: `https://retailer.example/gpu-${index + 1}?token=fake-row-token`,
     price: 1000 + index,
     currency: "usd",
     availability: "in stock",
-    observed_at: "2026-08-21T00:00:00Z",
+      observed_at: "2026-08-21T00:00:00Z",
+      scraped_at: "2026-08-21T00:00:00Z",
     raw_html: "fake raw provider markup",
     row_secret: "fake-row-secret",
   })),
@@ -46,9 +47,46 @@ test("run evidence removes secrets and caps public row samples", () => {
   assert.equal(summary.redactions.sample_rows_seen, 8);
   assert.equal(summary.redactions.provider_payloads_omitted, true);
   assert.equal(summary.sample_rows[0].currency, "USD");
+  assert.equal(summary.sample_rows[0].scraped_at, "2026-08-21T00:00:00Z");
+  assert.equal(summary.sample_rows[0].sku, null);
+  assert.equal(summary.sample_rows[0].image_url, null);
   assert.equal("raw_html" in summary.sample_rows[0], false);
   assert.equal("row_secret" in summary.sample_rows[0], false);
   assert.doesNotMatch(serialized, /fake-provider-token|fake-api-key|fake provider body|fake raw error body|fake-row-secret|fake-row-token/);
+});
+
+test("run evidence retains safe source binding, labelled counts, and processing results", () => {
+  const summary = sanitizeEvidence({
+    collector_id: "c_dynacore123",
+    target_url: "https://dynacoretech.com/collections/gpu",
+    catalog_url: "https://dynacoretech.com/collections/gpu",
+    source_slug: "dynacore",
+    market: "SG",
+    currency: "SGD",
+    manifest_name: "scrapers/manifests/dynacore.json",
+    scraper_name: "raster-sg-dynacore-gpus",
+    adapter_result: "passed",
+    validator_result: "passed",
+    source_card_count: 3,
+    adapted_row_count: 2,
+    accepted_row_count: 2,
+    quarantined_row_count: 1,
+    rows: [{ title: "GPU", scraped_at: "2026-08-21T00:00:00Z" }],
+  }, { kind: "run", generatedAt: "2026-08-21T01:02:03Z" });
+
+  assert.deepEqual(summary.source_binding, {
+    source_slug: "dynacore",
+    market: "SG",
+    currency: "SGD",
+    manifest_name: "scrapers/manifests/dynacore.json",
+    scraper_name: "raster-sg-dynacore-gpus",
+    target_url: "https://dynacoretech.com/collections/gpu",
+    catalog_url: "https://dynacoretech.com/collections/gpu",
+  });
+  assert.deepEqual(summary.processing, { adapter_result: "passed", validator_result: "passed" });
+  assert.deepEqual(summary.counts, { source_cards: 3, adapted_rows: 2, accepted_rows: 2, quarantined_rows: 1 });
+  assert.equal(summary.sample_rows[0].scraped_at, "2026-08-21T00:00:00Z");
+  assert.equal(summary.sample_rows[0].sku, null);
 });
 
 test("create and heal evidence retain only collector identity and safe status", () => {

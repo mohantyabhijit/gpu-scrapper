@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { validateCollectorOutput, type CollectorValidationSummary } from "../scrapers/contracts.ts";
+import { adaptDynacoreOutput } from "../scrapers/adapters/dynacore.ts";
 import { isKnownSource } from "../config/sources.ts";
 
 type Arguments = { input: string; source?: string };
@@ -23,7 +24,13 @@ export function parseValidatorArgs(argv: readonly string[]): Arguments {
   return values as Arguments;
 }
 
-function safeFailure(code: "invalid_json" | "read_failed"): CollectorValidationSummary & { errorCounts: Record<string, number> } {
+type ValidatorFileSummary = CollectorValidationSummary & {
+  errorCounts: Record<string, number>;
+  adapter_result?: "not_applied" | "passed" | "failed";
+  adapter_rejected_count?: number;
+};
+
+function safeFailure(code: "invalid_json" | "read_failed" | "adapter_invalid_output"): ValidatorFileSummary {
   return {
     ok: false,
     rowCount: 0,
@@ -33,7 +40,7 @@ function safeFailure(code: "invalid_json" | "read_failed"): CollectorValidationS
   };
 }
 
-export async function validateCollectorFile(inputPath: string, expectedSource?: string): Promise<CollectorValidationSummary & { errorCounts: Record<string, number> }> {
+export async function validateCollectorFile(inputPath: string, expectedSource?: string): Promise<ValidatorFileSummary> {
   let payload: unknown;
   try {
     payload = JSON.parse(await readFile(inputPath, "utf8")) as unknown;
@@ -41,7 +48,23 @@ export async function validateCollectorFile(inputPath: string, expectedSource?: 
     const code = error instanceof SyntaxError ? "invalid_json" : "read_failed";
     return safeFailure(code);
   }
-  return validateCollectorOutput(payload, expectedSource) as CollectorValidationSummary & { errorCounts: Record<string, number> };
+  if (expectedSource === "dynacore") {
+    try {
+      const capture = adaptDynacoreOutput(payload);
+      const validation = validateCollectorOutput(capture.payload, expectedSource);
+      return {
+        ...validation,
+        adapter_result: validation.ok ? "passed" : "failed",
+        adapter_rejected_count: capture.rejected.length,
+      } as ValidatorFileSummary;
+    } catch {
+      return safeFailure("adapter_invalid_output");
+    }
+  }
+  return {
+    ...validateCollectorOutput(payload, expectedSource),
+    adapter_result: "not_applied",
+  } as ValidatorFileSummary;
 }
 
 export async function main(argv = process.argv.slice(2)): Promise<void> {

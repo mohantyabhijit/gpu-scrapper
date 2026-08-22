@@ -23,6 +23,7 @@ const validRow = {
   price: "1,099.99",
   currency: "USD",
   availability: "in stock",
+  scraped_at: "2026-08-22T03:00:00.000Z",
   sku: "ASUS-5080-1",
   mpn: "TUF-RTX5080-O16G",
 };
@@ -34,6 +35,7 @@ const invalidRow = {
   product_url: "https://evil.example/hidden",
   currency: "USD",
   availability: "available",
+  scraped_at: "2026-08-22T03:00:00.000Z",
 };
 
 const context = {

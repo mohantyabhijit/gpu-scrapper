@@ -15,13 +15,32 @@ export type DynacoreCapture = {
   /** Safe evidence envelope; it is never sent to the ingestion validator. */
   evidence: {
     collector_id?: string;
+    target_url: string;
+    catalog_url: string;
+    source_slug: string;
+    market: string;
+    currency: string;
+    manifest_name: string;
+    scraper_name: string;
+    adapter_result: "passed";
+    validator_result: "pending" | "passed" | "failed";
+    source_card_count: number;
+    adapted_row_count: number;
+    accepted_row_count: number;
+    quarantined_row_count: number;
+    rejected_accessory_count: number;
     status: "completed";
     row_count: number;
     valid_rows: number;
     quarantined_rows: number;
     rows: Record<CollectorField, unknown>[];
   };
-  rejected: Array<{ rowIndex: number; reason: "non_gpu_accessory" | "malformed_row" }>;
+  rejected: Array<{
+    rowIndex: number;
+    reason: "non_gpu_accessory" | "malformed_row";
+    sourceSlug?: string;
+    rowFingerprint: string;
+  }>;
 };
 
 const ACCESSORY_TITLE_PATTERN = /\b(?:holder|bracket|support|stand|anti[- ]?sag)\b/i;
@@ -50,11 +69,24 @@ function providerPrice(value: unknown): unknown {
   return (value as Record<string, unknown>).value;
 }
 
+/** Stable, non-cryptographic fingerprint for quarantined provider rows. */
+export function fingerprintDynacoreRow(row: unknown): string {
+  const input = JSON.stringify(row, Object.keys((row && typeof row === "object" && !Array.isArray(row)) ? row : {}).sort()) ?? String(row);
+  let hash = 2166136261;
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= input.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return `fnv1a-${(hash >>> 0).toString(16).padStart(8, "0")}`;
+}
+
 function normalizeRow(row: DynacoreProviderRow): Record<CollectorField, unknown> {
   const price = providerPrice(row.price);
   return {
-    source_slug: "dynacore",
-    market: "SG",
+    // Preserve provider provenance. The shared validator must reject a row
+    // that claims another source or market instead of silently repairing it.
+    source_slug: text(row.source_slug),
+    market: text(row.market),
     title: text(row.title),
     product_url: text(row.product_url),
     price,
@@ -74,7 +106,7 @@ function normalizeRow(row: DynacoreProviderRow): Record<CollectorField, unknown>
 
 export function adaptDynacoreOutput(
   input: unknown,
-  options: { collectorId?: string } = {},
+  options: { collectorId?: string; validatorResult?: "pending" | "passed" | "failed" } = {},
 ): DynacoreCapture {
   const extracted = extractCollectorRows(input);
   if (!extracted.ok) {
@@ -84,13 +116,18 @@ export function adaptDynacoreOutput(
   const rows: Record<CollectorField, unknown>[] = [];
   extracted.rows.forEach((candidate, rowIndex) => {
     if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
-      rejected.push({ rowIndex, reason: "malformed_row" });
+      rejected.push({ rowIndex, reason: "malformed_row", rowFingerprint: fingerprintDynacoreRow(candidate) });
       return;
     }
     const row = candidate as DynacoreProviderRow;
     const title = text(row.title);
     if (title && ACCESSORY_TITLE_PATTERN.test(title)) {
-      rejected.push({ rowIndex, reason: "non_gpu_accessory" });
+      rejected.push({
+        rowIndex,
+        reason: "non_gpu_accessory",
+        ...(typeof row.source_slug === "string" ? { sourceSlug: row.source_slug } : {}),
+        rowFingerprint: fingerprintDynacoreRow(row),
+      });
       return;
     }
     rows.push(normalizeRow(row));
@@ -99,6 +136,20 @@ export function adaptDynacoreOutput(
     payload: { rows },
     evidence: {
       ...(options.collectorId ? { collector_id: options.collectorId } : {}),
+      target_url: "https://dynacoretech.com/collections/gpu",
+      catalog_url: "https://dynacoretech.com/collections/gpu",
+      source_slug: "dynacore",
+      market: "SG",
+      currency: "SGD",
+      manifest_name: "scrapers/manifests/dynacore.json",
+      scraper_name: "raster-sg-dynacore-gpus",
+      adapter_result: "passed",
+      validator_result: options.validatorResult ?? "pending",
+      source_card_count: extracted.rows.length,
+      adapted_row_count: rows.length,
+      accepted_row_count: rows.length,
+      quarantined_row_count: rejected.length,
+      rejected_accessory_count: rejected.filter((item) => item.reason === "non_gpu_accessory").length,
       status: "completed",
       row_count: extracted.rows.length,
       valid_rows: rows.length,

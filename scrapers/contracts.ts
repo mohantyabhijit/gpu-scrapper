@@ -194,7 +194,9 @@ export function validateRawOffer(input: unknown, expectedSource?: string, expect
   }
   const availability = canonicalAvailability(raw.availability ?? raw.stock);
   if (!availability) errors.push("availability_invalid");
-  if (raw.scraped_at !== undefined && raw.scraped_at !== null && !validTimestamp(raw.scraped_at)) errors.push("scraped_at_invalid");
+  // A runtime offer without its source observation timestamp is not
+  // publishable. Never substitute the ingestion time for provider evidence.
+  if (!validTimestamp(raw.scraped_at)) errors.push("scraped_at_invalid");
 
   if (errors.length || !sourceSlug || !title || !productUrl || !currency || !availability || !market || !expectedCurrency) {
     return { ok: false, errors };

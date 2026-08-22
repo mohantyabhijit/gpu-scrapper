@@ -38,6 +38,7 @@ function row(overrides = {}) {
     price: "1299.99",
     currency: "USD",
     availability: "In Stock",
+    scraped_at: "2026-08-22T03:00:00.000Z",
     ...overrides,
   };
 }

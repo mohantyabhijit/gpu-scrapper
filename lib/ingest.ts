@@ -1,6 +1,6 @@
 import { normalizeOffer, type NormalizedOffer, type NormalizedProduct } from "./normalize/index.ts";
 import { validateRawOffer, type RawOffer, type ValidationCode } from "../scrapers/contracts.ts";
-import { adaptDynacoreOutput } from "../scrapers/adapters/dynacore.ts";
+import { adaptDynacoreOutput, type DynacoreCapture } from "../scrapers/adapters/dynacore.ts";
 import type { SourceDefinition } from "../config/sources.ts";
 
 export type IngestionContext = {
@@ -14,7 +14,7 @@ export type QuarantinedRow = {
   runId: string;
   sourceSlug?: string;
   rowIndex: number;
-  reasonCodes: ValidationCode[] | ["normalization_error"];
+  reasonCodes: Array<ValidationCode | "normalization_error" | "adapter_non_gpu_accessory" | "adapter_malformed_row">;
   rowFingerprint: string;
 };
 
@@ -47,9 +47,22 @@ export function ingestRows(rows: readonly RawOffer[], context: IngestionContext)
   const seenOffers = new Set<string>();
   const seenObservations = new Set<string>();
 
-  const sourceRows = context.source?.slug === "dynacore"
-    ? adaptDynacoreOutput(rows).payload.rows as RawOffer[]
-    : rows;
+  let sourceRows: readonly RawOffer[] = rows;
+  let originalRowCount = rows.length;
+  if (context.source?.slug === "dynacore") {
+    const capture: DynacoreCapture = adaptDynacoreOutput(rows);
+    sourceRows = capture.payload.rows as RawOffer[];
+    originalRowCount = capture.evidence.source_card_count;
+    for (const rejected of capture.rejected) {
+      quarantined.push({
+        runId: context.runId,
+        sourceSlug: rejected.sourceSlug ?? context.expectedSource,
+        rowIndex: rejected.rowIndex,
+        reasonCodes: [rejected.reason === "non_gpu_accessory" ? "adapter_non_gpu_accessory" : "adapter_malformed_row"],
+        rowFingerprint: rejected.rowFingerprint,
+      });
+    }
+  }
   sourceRows.forEach((row, rowIndex) => {
     const fingerprint = fingerprintRow(row);
     const validation = validateRawOffer(row, context.expectedSource, context.source);
@@ -92,7 +105,7 @@ export function ingestRows(rows: readonly RawOffer[], context: IngestionContext)
     summary: {
       accepted: offers.length,
       rejected: quarantined.length,
-      duplicate: sourceRows.length - offers.length - quarantined.length,
+      duplicate: originalRowCount - offers.length - quarantined.length,
     },
   };
 }
