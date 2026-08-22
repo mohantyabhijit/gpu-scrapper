@@ -192,6 +192,13 @@ test("supports URL-owned filtering and market-local model detail routes", async 
   assert.match(detailHtml, /Source health:\s*(?:<!-- -->)?fixture/);
   assert.match(detailHtml, /dateTime="2026-08-21T10:20:00.000Z"/);
   assert.doesNotMatch(detailHtml, /USD|GBP|SGD/);
+
+  const unknownOnlyDetail = await render("/gpu/rtx-5080?market=uk");
+  assert.equal(unknownOnlyDetail.status, 200);
+  const unknownOnlyHtml = await unknownOnlyDetail.text();
+  assert.match(unknownOnlyHtml, /No currently purchasable offer/);
+  assert.doesNotMatch(unknownOnlyHtml, /Lowest available/);
+  assert.match(unknownOnlyHtml, />Unknown</);
 });
 
 test("supports multi-select GPU and retailer filters, sorting, and removable chips", async () => {
