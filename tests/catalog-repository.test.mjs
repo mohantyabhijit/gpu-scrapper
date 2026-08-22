@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isProcurementReadyOffer } from "../app/catalog.ts";
+import { isRankableCatalogOffer } from "../app/catalog.ts";
 import { classifyFreshness, loadCatalog, mapPostgresOffer } from "../lib/postgres/catalog.ts";
 
 const validRow = {
@@ -64,13 +64,13 @@ test("availability and source health remain separate signals", () => {
   assert.match(degraded.note, /last-known-good/);
 });
 
-test("procurement-ready summaries exclude unknown, stale, and degraded observations", () => {
+test("catalog ranking excludes unknown, stale, and degraded observations", () => {
   const fresh = mapPostgresOffer(validRow, undefined, new Date("2026-08-21T12:00:00.000Z"));
-  assert.equal(isProcurementReadyOffer(fresh), true);
-  assert.equal(isProcurementReadyOffer({ ...fresh, availability: "Unknown" }), false);
-  assert.equal(isProcurementReadyOffer({ ...fresh, freshnessState: "stale" }), false);
-  assert.equal(isProcurementReadyOffer({ ...fresh, healthState: "degraded" }), false);
-  assert.equal(isProcurementReadyOffer({ ...fresh, healthState: "fixture", freshnessState: "fixture" }), true);
+  assert.equal(isRankableCatalogOffer(fresh), true);
+  assert.equal(isRankableCatalogOffer({ ...fresh, availability: "Unknown" }), false);
+  assert.equal(isRankableCatalogOffer({ ...fresh, freshnessState: "stale" }), false);
+  assert.equal(isRankableCatalogOffer({ ...fresh, healthState: "degraded" }), false);
+  assert.equal(isRankableCatalogOffer({ ...fresh, healthState: "fixture", freshnessState: "fixture" }), true);
 });
 
 test("rejects cross-market currency and untrusted retailer rows", () => {

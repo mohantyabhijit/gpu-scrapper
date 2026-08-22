@@ -5,6 +5,10 @@ export type SourceDeskOffer = Pick<Offer, "id" | "market" | "model" | "brand" | 
 export type ReadinessKey = "ready-to-verify" | "availability-unverified" | "source-needs-review" | "do-not-shortlist" | "demo-sample";
 export type SourcingReadiness = { key: ReadinessKey; label: string; action: string };
 
+const AVAILABILITY_VALUES = ["In stock", "Low stock", "Unavailable", "Unknown"] as const satisfies readonly Offer["availability"][];
+const HEALTH_VALUES = ["healthy", "degraded", "unavailable", "fixture"] as const satisfies readonly Offer["healthState"][];
+const FRESHNESS_VALUES = ["fresh", "aging", "stale", "fixture"] as const satisfies readonly Offer["freshnessState"][];
+
 const READINESS: Record<ReadinessKey, SourcingReadiness> = {
   "ready-to-verify": { key: "ready-to-verify", label: "Ready to verify", action: "Confirm price and stock at retailer" },
   "availability-unverified": { key: "availability-unverified", label: "Availability unverified", action: "Verify stock at retailer" },
@@ -15,9 +19,7 @@ const READINESS: Record<ReadinessKey, SourcingReadiness> = {
 
 export function encodeSourceDeskCatalog(offers: SourceDeskOffer[]): string {
   const bytes = new TextEncoder().encode(JSON.stringify(offers));
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary);
+  return btoa(Array.from(bytes, (byte) => String.fromCharCode(byte)).join(""));
 }
 
 export function decodeSourceDeskCatalog(blob: string): SourceDeskOffer[] {
@@ -59,9 +61,9 @@ function validatedStoredOffer(value: unknown): SourceDeskOffer | undefined {
   if (stringFields.some((field) => typeof offer[field] !== "string" || !(offer[field] as string).trim() || (offer[field] as string).length > 500)) return undefined;
   if (!/^[a-z0-9][a-z0-9._:-]{0,199}$/i.test(offer.id as string)) return undefined;
   if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(offer.market as string) || !/^[A-Z]{3}$/.test(offer.currency as string)) return undefined;
-  if (!["In stock", "Low stock", "Unavailable", "Unknown"].includes(offer.availability as string)) return undefined;
-  if (!["healthy", "degraded", "unavailable", "fixture"].includes(offer.healthState as string)) return undefined;
-  if (!["fresh", "aging", "stale", "fixture"].includes(offer.freshnessState as string)) return undefined;
+  if (!AVAILABILITY_VALUES.includes(offer.availability as Offer["availability"])) return undefined;
+  if (!HEALTH_VALUES.includes(offer.healthState as Offer["healthState"])) return undefined;
+  if (!FRESHNESS_VALUES.includes(offer.freshnessState as Offer["freshnessState"])) return undefined;
   if (Number.isNaN(Date.parse(offer.observedAt as string)) || !isSafeUrl(offer.productUrl)) return undefined;
   if (typeof offer.price !== "number" || !Number.isFinite(offer.price) || offer.price <= 0) return undefined;
   return offer as SourceDeskOffer;
@@ -75,7 +77,13 @@ export function canonicalizeStored(value: string | null, catalog: SourceDeskOffe
     const byId = new Map(catalog.map((offer) => [offer.id, offer]));
     const restored = parsed.map((item) => {
       const id = item && typeof item === "object" && typeof (item as Record<string, unknown>).id === "string" ? (item as Record<string, unknown>).id as string : "";
-      return byId.get(id) ?? validatedStoredOffer(item);
+      const savedSnapshot = validatedStoredOffer(item);
+      return byId.get(id) ?? (savedSnapshot ? {
+        ...savedSnapshot,
+        healthState: "degraded" as const,
+        freshness: "saved snapshot · no longer present in the current catalog",
+        freshnessState: "stale" as const,
+      } : undefined);
     });
     if (restored.some((offer) => !offer)) return [];
     const canonical = Array.from(new Map((restored as SourceDeskOffer[]).map((offer) => [offer.id, offer])).values()).slice(0, SOURCE_DESK_LIMIT);

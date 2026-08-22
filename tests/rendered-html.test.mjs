@@ -123,6 +123,9 @@ test("source-desk serialization retains saved offers outside the visible filter 
   assert.equal(output.retainedAcrossFilter.length, 1);
   assert.equal(output.retainedAcrossFilter[0].id, "safe");
   assert.equal(output.retainedAcrossMarketPage[0].id, "safe");
+  assert.equal(output.retainedAcrossMarketPage[0].healthState, "degraded");
+  assert.equal(output.retainedAcrossMarketPage[0].freshnessState, "stale");
+  assert.match(output.retainedAcrossMarketPage[0].freshness, /saved snapshot/);
   assert.equal(output.outsideCurrentFilters, "1 saved offer outside current filters");
   assert.equal(output.corrupted.length, 0);
   assert.equal(output.mixedMarket.length, 0);
