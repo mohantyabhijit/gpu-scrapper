@@ -166,6 +166,24 @@ export function mapPostgresOffer(row: PostgresCatalogRow, definitions: readonly 
   };
 }
 
+/** Collapse historical offer identities that point to the same retailer page. */
+export function dedupeCatalogOffers(offers: readonly Offer[]): Offer[] {
+  const preferred = new Map<string, Offer>();
+  for (const offer of offers) {
+    const key = `${offer.market}\u0000${offer.source}\u0000${offer.productUrl}`;
+    const current = preferred.get(key);
+    const offerRank = offer.healthState === "healthy" ? 0 : 1;
+    const currentRank = current?.healthState === "healthy" ? 0 : 1;
+    if (!current
+      || offerRank < currentRank
+      || (offerRank === currentRank && Date.parse(offer.observedAt) > Date.parse(current.observedAt))
+      || (offerRank === currentRank && offer.observedAt === current.observedAt && offer.id < current.id)) {
+      preferred.set(key, offer);
+    }
+  }
+  return [...preferred.values()];
+}
+
 async function queryPostgresRows(db: CatalogDatabase, market?: MarketDefinition, modelSlug?: string): Promise<readonly PostgresCatalogRow[]> {
   const selection = db.select({
     offerKey: schema.offers.offerKey,
@@ -315,7 +333,7 @@ export async function loadCatalog(options: {
     }
     const selectedMarket = markets.find((market) => market.slug === options.market) ?? marketRegistry.us;
     const rows = await query(selectedMarket, options.modelSlug);
-    const mapped = rows.map((row) => mapPostgresOffer(row, markets)).filter((offer): offer is Offer => Boolean(offer));
+    const mapped = dedupeCatalogOffers(rows.map((row) => mapPostgresOffer(row, markets)).filter((offer): offer is Offer => Boolean(offer)));
     if (mapped.length === 0) {
       return fixtureSnapshot(rows.length > 0 ? "database-no-valid-rows" : "database-empty", markets, marketPacks, selectedMarket);
     }

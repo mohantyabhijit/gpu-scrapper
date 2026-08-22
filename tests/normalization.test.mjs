@@ -49,6 +49,7 @@ test("GPU identity ignores retailer trademark decoration", () => {
   assert.equal(rtx.product.gpuFamily, "RTX");
   assert.equal(rx.product.model, "RX 9070 XT");
   assert.equal(rx.product.gpuFamily, "RX");
+  assert.equal(normalizeOffer(valid({ title: "ASUS GeForce GT 730 2GB", mpn: null })).product.model, "GT 730");
 });
 
 test("comparisons are isolated by market and fixed currency", () => {

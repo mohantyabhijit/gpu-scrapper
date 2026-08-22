@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { isRankableCatalogOffer } from "../app/catalog.ts";
-import { classifyFreshness, loadCatalog, mapPostgresOffer } from "../lib/postgres/catalog.ts";
+import { classifyFreshness, dedupeCatalogOffers, loadCatalog, mapPostgresOffer } from "../lib/postgres/catalog.ts";
 
 const validRow = {
   offerKey: "central-computer:rtx-5080-1",
@@ -62,6 +62,13 @@ test("availability and source health remain separate signals", () => {
   assert.equal(degraded.healthState, "degraded");
   assert.equal(degraded.freshnessState, "stale");
   assert.match(degraded.note, /last-known-good/);
+});
+
+test("catalog collapses stale identities for the same retailer product page", () => {
+  const now = new Date("2026-08-21T12:00:00.000Z");
+  const degraded = mapPostgresOffer({ ...validRow, offerKey: "old-key", productModel: "Unknown GPU", health: "degraded" }, undefined, now);
+  const healthy = mapPostgresOffer({ ...validRow, offerKey: "new-key", productModel: "RTX 5080", health: "healthy" }, undefined, now);
+  assert.deepEqual(dedupeCatalogOffers([degraded, healthy]).map((offer) => offer.id), ["new-key"]);
 });
 
 test("catalog ranking excludes unknown, stale, and degraded observations", () => {
