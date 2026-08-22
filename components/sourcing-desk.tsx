@@ -45,7 +45,7 @@ export default function SourcingDesk({ catalogBlob, visibleOfferIds, marketLabel
   function add(offer: SourceDeskOffer) {
     const canonical = byId.get(offer.id); if (!canonical) return;
     const result = selectSourceDeskOffer(selected, canonical);
-    if (result.pending) { setPending(result.pending); setStatus(`This replaces the ${selected[0].market} desk. Acknowledgement is required.`); return; }
+    if (result.pending) { setPending(result.pending); setOpen(true); setStatus(`This replaces the ${selected[0].market} desk. Acknowledgement is required.`); return; }
     if (result.selected.length === selected.length && selected.length >= SOURCE_DESK_LIMIT) { setStatus(`Source desk limit reached (${SOURCE_DESK_LIMIT} offers). Remove one before adding another.`); return; }
     persist(result.selected);
   }
