@@ -15,12 +15,14 @@ export const HEALING_REQUIRED_FIELDS = [
 ] as const;
 
 export type HealingRequiredField = (typeof HEALING_REQUIRED_FIELDS)[number];
+export type HealingFailureMode = "required_field" | "empty_output";
 
 export type HealingManifest = {
   sourceSlug: string;
   collectorId: string;
   inputUrl: string;
   requiredField: HealingRequiredField;
+  failureMode?: HealingFailureMode;
 };
 
 export type ArtifactHash = {
@@ -40,6 +42,7 @@ export type HealingBaseline = {
   collector_id: string;
   input_url: string;
   required_field: HealingRequiredField;
+  failure_mode: HealingFailureMode;
   before_artifact: ArtifactHash;
   downstream_files: readonly ArtifactHash[];
 };
@@ -62,6 +65,7 @@ export type HealingProof = {
   collector_id: string;
   input_url: string;
   required_field: HealingRequiredField;
+  failure_mode: HealingFailureMode;
   before: ArtifactHash & { rows: number; contract: "failed" };
   preview: ArtifactHash & { status: "previewed" };
   after: ArtifactHash & { rows: number; valid_rows: number; contract: "passed" };
@@ -288,6 +292,10 @@ function rowsIn(value: Record<string, unknown>): Record<string, unknown>[] {
 
 function assertBrokenBefore(value: Record<string, unknown>, manifest: HealingManifest, source: SourceDefinition): number {
   const rows = rowsIn(value);
+  if (manifest.failureMode === "empty_output") {
+    if (rows.length !== 0) fail("before artifact must contain zero rows for an empty-output failure");
+    return 0;
+  }
   if (rows.length === 0) fail("provider artifact contains no object rows");
   const results = rows.map((row) => validateRawOffer(row as RawOffer, manifest.sourceSlug, source));
   if (results.some((result) => result.ok)) fail("before artifact unexpectedly contains a valid contract row");
@@ -320,6 +328,7 @@ function manifestFromBaseline(baseline: HealingBaseline): HealingManifest {
     collectorId: baseline.collector_id,
     inputUrl: baseline.input_url,
     requiredField: baseline.required_field,
+    failureMode: baseline.failure_mode ?? "required_field",
   };
 }
 
@@ -354,6 +363,7 @@ export async function createHealingBaseline(options: HealingManifest & { repoRoo
     collectorId: options.collectorId,
     inputUrl: options.inputUrl,
     requiredField: options.requiredField,
+    failureMode: options.failureMode ?? "required_field",
   };
   const source = manifestSource(manifest);
   const before = await readJsonArtifact(options.repoRoot, options.beforePath);
@@ -369,6 +379,7 @@ export async function createHealingBaseline(options: HealingManifest & { repoRoo
     collector_id: manifest.collectorId,
     input_url: manifest.inputUrl,
     required_field: manifest.requiredField,
+    failure_mode: manifest.failureMode ?? "required_field",
     before_artifact: before.hash,
     downstream_files: downstream,
   };
@@ -402,6 +413,7 @@ export async function createHealingProof(options: { repoRoot: string; baseline: 
     collector_id: manifest.collectorId,
     input_url: manifest.inputUrl,
     required_field: manifest.requiredField,
+    failure_mode: manifest.failureMode ?? "required_field",
     before: { ...before.hash, rows: beforeRows, contract: "failed" },
     preview: { ...preview.hash, status: "previewed" },
     after: { ...after.hash, rows: afterRows.rows, valid_rows: afterRows.validRows, contract: "passed" },

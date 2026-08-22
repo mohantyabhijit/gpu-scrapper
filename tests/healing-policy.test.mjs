@@ -124,6 +124,41 @@ test("same-ID envelope proves recovery and every downstream consumer stays uncha
   assert.ok(proof.downstream.files.every((file) => file.beforeSha256 === file.afterSha256));
 });
 
+test("same-ID proof accepts a real empty-output failure and requires recovered rows", async () => {
+  const root = await fixtureRoot();
+  const beforePath = await writeArtifact(root, "before-empty.json", beforeArtifact({ rows: [] }));
+  const baseline = await createHealingBaseline({
+    ...manifest,
+    failureMode: "empty_output",
+    repoRoot: root,
+    beforePath,
+    downstreamPaths: REQUIRED_DOWNSTREAM_PATHS,
+  });
+  const preview = await writeArtifact(root, "preview-empty.json", previewArtifact());
+  const after = await writeArtifact(root, "after-empty.json", afterArtifact());
+  const proof = await createHealingProof({ repoRoot: root, baseline, previewPath: preview, afterPath: after });
+
+  assert.equal(baseline.failure_mode, "empty_output");
+  assert.equal(proof.failure_mode, "empty_output");
+  assert.equal(proof.before.rows, 0);
+  assert.equal(proof.after.valid_rows, 1);
+});
+
+test("source-health CLI accepts the explicit empty-output failure mode", async () => {
+  const sourceHealth = await import("../scripts/check-source-health.ts");
+  assert.equal(typeof sourceHealth.parseSourceHealthArgs, "function");
+  const args = sourceHealth.parseSourceHealthArgs([
+    "--source", manifest.sourceSlug,
+    "--collector", manifest.collectorId,
+    "--input-url", manifest.inputUrl,
+    "--required-field", manifest.requiredField,
+    "--failure-mode", "empty_output",
+    "--before", "evidence/raw/before.json",
+    "--consumer", REQUIRED_DOWNSTREAM_PATHS[0],
+  ]);
+  assert.equal(args.failureMode, "empty_output");
+});
+
 test("baseline fails when the selected field is not actually broken or availability is absent", async () => {
   const root = await fixtureRoot();
   await assert.rejects(baselineFor(root, beforeArtifact({ rows: [row()] })), /valid contract row|required field/);

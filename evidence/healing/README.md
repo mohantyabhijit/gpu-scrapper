@@ -32,7 +32,10 @@ also be present in the enabled source registry entry for the selected source.
 Run the health check after a controlled live break has produced a failing
 provider artifact. The source and URL are checked against the source registry,
 and the selected required field must be absent while the shared Raster
-contract rejects every row. The baseline hashes every relevant downstream
+contract rejects every row. For a genuine collector run that completes with
+zero rows, add `--failure-mode empty_output`; that mode requires the before
+artifact to contain exactly zero rows, while the default `required_field` mode
+still requires at least one invalid object row. The baseline hashes every relevant downstream
 consumer so the later proof can show that healing did not change the source
 registry, refresh/trigger, ingestion, PostgreSQL catalog repository, or
 storefront:
@@ -46,8 +49,7 @@ lib/postgres/repository.ts
 app/page.tsx
 ```
 
-All six paths are required; extra repository-relative consumer paths may also
-be supplied.
+Exactly these six paths are required.
 
 ```bash
 node --experimental-strip-types scripts/check-source-health.ts \
@@ -55,6 +57,7 @@ node --experimental-strip-types scripts/check-source-health.ts \
   --collector c_REPLACE_WITH_REAL_ID \
   --input-url https://www.centralcomputer.com/all-products/hardware/video-cards/video-cards.html \
   --required-field price \
+  --failure-mode required_field \
   --before evidence/raw/heal-before.json \
   --consumer config/sources.ts \
   --consumer lib/brightdata/refresh.ts \
@@ -64,6 +67,12 @@ node --experimental-strip-types scripts/check-source-health.ts \
   --consumer app/page.tsx \
   --output evidence/healing/baseline.json
 ```
+
+For a real empty discovery result, use the same command with
+`--failure-mode empty_output`. Keep `--required-field` as the field whose
+restored rows must contain after healing; the after capture must still contain
+at least one row and every recovered row must pass the complete shared offer
+contract.
 
 The command fails closed when an artifact is missing, malformed, outside the
 allowlisted host, contains credential-shaped material, has another or
