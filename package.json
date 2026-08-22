@@ -11,7 +11,7 @@
     "start": "WRANGLER_LOG_PATH=.wrangler/wrangler.log vinext start",
     "test": "npm run test:unit && npm run test:postgres && npm run test:render",
     "test:u2": "node --experimental-strip-types --test tests/collector-contract.test.mjs tests/collector-cli.test.mjs",
-    "test:unit": "node --experimental-strip-types --test tests/collector-contract.test.mjs tests/collector-cli.test.mjs tests/dynacore-adapter.test.mjs tests/normalization.test.mjs tests/ingestion.test.mjs tests/refresh-client.test.mjs tests/refresh-route.test.mjs tests/replay.test.mjs tests/workflow-sign-refresh.test.mjs tests/persistence.test.mjs tests/evidence-sanitizer.test.mjs tests/catalog-repository.test.mjs tests/market-registry.test.mjs tests/market-pack.test.mjs tests/healing-evidence.test.mjs tests/healing-policy.test.mjs tests/postgres-boundary.test.mjs tests/storage-health-route.test.mjs",
+    "test:unit": "node --experimental-strip-types --test tests/collector-contract.test.mjs tests/collector-cli.test.mjs tests/dynacore-adapter.test.mjs tests/infinity-adapter.test.mjs tests/normalization.test.mjs tests/ingestion.test.mjs tests/refresh-client.test.mjs tests/refresh-route.test.mjs tests/replay.test.mjs tests/workflow-sign-refresh.test.mjs tests/persistence.test.mjs tests/evidence-sanitizer.test.mjs tests/catalog-repository.test.mjs tests/market-registry.test.mjs tests/market-pack.test.mjs tests/healing-evidence.test.mjs tests/healing-policy.test.mjs tests/postgres-boundary.test.mjs tests/storage-health-route.test.mjs",
     "test:render": "npm run build && node --test tests/rendered-html.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "validate:collector": "node --experimental-strip-types scripts/validate-collector-output.ts",

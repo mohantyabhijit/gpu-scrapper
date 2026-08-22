@@ -7,9 +7,9 @@ This ledger maps the organizer rules supplied on 2026-08-21 to release evidence.
 | --- | --- | --- | --- |
 | Eligible participation | Participant location/registration must be confirmed by the participant. | registration confirmation | participant gate |
 | One team, 1–4 people | Team membership must be confirmed before the form is filled. | official form | participant gate |
-| Required technology | Create and run at least one custom Bright Data Scraper Studio scraper. | stable `c_*` create/run/repeat-read evidence | Dynacore proven; downstream route pending |
+| Required technology | Create and run at least one custom Bright Data Scraper Studio scraper. | stable `c_*` create/run/repeat-read evidence | Dynacore proven; Infinity invalid-output attempt also recorded; downstream route pending |
 | Open-ended useful project | Raster is a four-market GPU comparison and reliability pipeline. | public app and README | pass |
-| No library-only entry | Enabled sources must use custom Scraper Studio collectors; pre-built coverage is an exclusion gate. | source register and collector evidence | Dynacore custom collector and exclusion proven |
+| No library-only entry | Enabled sources must use custom Scraper Studio collectors; pre-built coverage is an exclusion gate. | source register and collector evidence | Dynacore proven; Infinity custom ID and exclusion recorded but source disabled |
 | Public data only | No private, login-protected, paywalled, personal, or restricted data. | source eligibility and security review | pending |
 | No government sites | Registry contains only public retailer candidates. | `config/sources.ts` | pass |
 | Work began during event | Public history begins during the event; participant must be able to explain any earlier notes/templates. | git history and issue #1 | pending |
@@ -32,6 +32,7 @@ This ledger maps the organizer rules supplied on 2026-08-21 to release evidence.
 - [x] Safe example structured output exists at
       `examples/structured-output.json`.
 - [x] Custom Scraper Studio create/run evidence exists for Dynacore.
+- [x] Infinity Computer custom create/run/repeat-read failure evidence is sanitized and retained.
 - [x] Deployed public application is verified signed out.
 - [ ] Demo video (maximum 3 minutes) is public/unlisted and verified.
 - [ ] Scraper Studio explanation reflects verified live behavior.

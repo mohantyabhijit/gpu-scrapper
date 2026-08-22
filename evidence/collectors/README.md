@@ -2,8 +2,11 @@
 
 This directory contains sanitized evidence only. It does not contain API keys,
 cookies, authorization headers, raw provider bodies, or guessed Collector IDs.
-Dynacore's combined collector is live-proven below; TechDeals and PC Themes
-remain disabled until their authenticated gates and explicit row contracts pass.
+Dynacore's combined collector is live-proven below. Infinity Computer's
+same-ID reads are recorded separately but remain disabled because all 59 exact
+GPU cards were call-for-price and therefore yielded zero valid numeric offers;
+TechDeals and PC Themes remain disabled until their authenticated gates and
+explicit row contracts pass.
 
 ## CLI-first sequence
 
@@ -73,13 +76,20 @@ node --experimental-strip-types scripts/collect.ts \
 Dynacore is configured for the registered combined role after its live evidence
 gate. The command applies the Dynacore adapter, rejects non-GPU accessories,
 requires provider `scraped_at`, and reports only bounded status and validation
-counts. TechDeals and PC Themes remain unconfigured until their own gates pass.
+counts. Infinity Computer remains disabled: its adapter keeps only exact `GPU`
+cards and quarantines missing numeric prices as `price_required`, without
+fabricating a price. TechDeals and PC Themes remain unconfigured until their
+own gates pass.
 
 ## Pending fields
 
-TechDeals and PC Themes still have `bright_data_prebuilt_exclusion`, real
-collector IDs, successful live output, repeat-read stability, and final
-enablement pending. Dynacore's dated proof is indexed as
+Infinity Computer has a real custom Collector ID and two successful provider
+reads, but its validated accepted count is zero; the dated invalid-output proof
+is indexed as `infinity-computer-create-20260822.json`,
+`infinity-computer-run-20260822-01.json`, and
+`infinity-computer-run-20260822-02.json`. TechDeals is rejected by its terms;
+PC Themes still has its authenticated exclusion, real Collector ID, successful
+live output, repeat-read stability, and final enablement pending. Dynacore's dated proof is indexed as
 `dynacore-create-20260822.json`, `dynacore-run-20260822-01.json`, and
 `dynacore-run-20260822-02.json`. Keep source URLs and dates in the relevant
 eligibility record, with all public-data and terms caveats intact.

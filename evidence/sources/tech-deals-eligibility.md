@@ -8,7 +8,7 @@ catalog_url: https://www.techdeals.com.sg/collections/graphics-card-1
 checked_at_utc: 2026-08-21
 review_method: Exa public-page fetch plus one low-rate direct HTTP probe per public endpoint
 public_signed_out_access: pass_for_public_catalog_and_sample_pdp
-terms_and_robots_review: pass_with_caveat
+terms_and_robots_review: fail_terms_prohibit_automation
 bright_data_prebuilt_exclusion: pending
 same_market_overlap:
   - model_family: RTX 5070
@@ -41,8 +41,8 @@ collector_ids:
   combined: null
   discovery: null
   pdp: null
-decision: eligible_backup_candidate_pending_all_live_gates
-notes: robots allows public catalog/product paths while excluding account/cart/checkout/admin/transactional paths. Terms were reviewed for price volatility and general site use; no authenticated access or collector permission was established.
+decision: rejected_terms_prohibit_automation
+notes: The public catalog is crawlable, but the Terms of Service prohibit spidering, crawling, scraping, automated extraction, and data-mining. Keep the source disabled with no Collector ID despite its apparent same-market overlap.
 ```
 
 Evidence links: [GPU collection](https://www.techdeals.com.sg/collections/graphics-card-1),

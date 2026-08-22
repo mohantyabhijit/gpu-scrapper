@@ -68,3 +68,28 @@ test("documented validator applies Dynacore adaptation before shared validation"
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("documented validator quarantines Infinity call-for-price rows before shared validation", async () => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), "raster-infinity-validator-"));
+  const inputPath = path.join(directory, "provider-run.json");
+  try {
+    writeFileSync(inputPath, JSON.stringify([{
+      category: "GPU",
+      market: "SG",
+      title: "ASUS DUAL RTX 5060",
+      canonical_product_url: "https://infinitycomputer.com.sg/product/rtx-5060",
+      price_sgd: { value: null, currency: "SGD" },
+      availability: "In Stock",
+      sku: "SKU-5060",
+      mpn: "MPN-5060",
+      scraped_at: "2026-08-22T03:00:00.000Z",
+    }]));
+    const summary = await validateCollectorFile(inputPath, "infinity-computer");
+    assert.equal(summary.ok, false);
+    assert.equal(summary.adapter_result, "failed");
+    assert.equal(summary.adapter_rejected_count, 1);
+    assert.equal(summary.acceptedCount, 0);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

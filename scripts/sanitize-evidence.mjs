@@ -54,10 +54,16 @@ const COUNT_FIELDS = new Map([
   ["totalrows", "rows"],
   ["validrows", "valid_rows"],
   ["sourcecardcount", "source_cards"],
+  ["gpucardcount", "gpu_cards"],
   ["adaptedrowcount", "adapted_rows"],
   ["acceptedrowcount", "accepted_rows"],
   ["quarantinedrowcount", "quarantined_rows"],
   ["rejectedaccessorycount", "rejected_accessories"],
+  ["excludedcategorycount", "excluded_categories"],
+  ["pricerequiredcount", "price_required"],
+  ["validatedoffercount", "validated_offers"],
+  ["canonicalmodelcount", "canonical_models"],
+  ["crossretailermatchcount", "cross_retailer_matches"],
 ]);
 
 const NULLABLE_CONTRACT_FIELDS = ["sku", "mpn", "manufacturer", "board_partner", "raw_model", "image_url"];

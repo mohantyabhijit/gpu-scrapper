@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import { marketCurrency, validateCollectorOutput, validateRawOffer } from "../scrapers/contracts.ts";
 import { sourceHostIsAllowed, sourceRegistry } from "../config/sources.ts";
 
-const p0ManifestSlugs = ["dynacore", "tech-deals", "pc-themes"];
+const p0ManifestSlugs = ["dynacore", "infinity-computer", "tech-deals", "pc-themes"];
 
 test("source registry is role keyed and only registers the proven Dynacore collector", () => {
   assert.equal(sourceRegistry["central-computer"].role, "primary");
@@ -45,6 +45,39 @@ test("Dynacore catalog URL and live-proof state stay consistent across source ar
   assert.match(evidenceText, /repeat-read pass/);
 });
 
+test("Infinity Computer is source-bound and remains disabled after invalid live reads", async () => {
+  const expectedUrl = "https://infinitycomputer.com.sg/prices";
+  const source = sourceRegistry["infinity-computer"];
+  const manifest = JSON.parse(await readFile(new URL("../scrapers/manifests/infinity-computer.json", import.meta.url), "utf8"));
+  assert.equal(source.catalogUrl, expectedUrl);
+  assert.equal(sourceHostIsAllowed("infinity-computer", expectedUrl), true);
+  assert.equal(manifest.target_url, expectedUrl);
+  assert.equal(manifest.source_slug, "infinity-computer");
+  assert.equal(source.enabled, false);
+  assert.deepEqual(source.collectorIds, {});
+  assert.equal(manifest.evidence_state, "live-create-run-repeat-read-invalid-output");
+});
+
+test("Infinity invalid-output evidence keeps the exact ID, URL, and honest counts", async () => {
+  const [eligibility, runOne, runTwo] = await Promise.all([
+    readFile(new URL("../evidence/sources/infinity-computer-eligibility.md", import.meta.url), "utf8"),
+    readFile(new URL("../evidence/collectors/infinity-computer-run-20260822-01.json", import.meta.url), "utf8"),
+    readFile(new URL("../evidence/collectors/infinity-computer-run-20260822-02.json", import.meta.url), "utf8"),
+  ]);
+  for (const evidence of [eligibility, runOne, runTwo]) {
+    assert.match(evidence, /c_mt3snqaln8ckpnqxt/);
+    assert.match(evidence, /https:\/\/infinitycomputer\.com\.sg\/prices/);
+  }
+  for (const run of [JSON.parse(runOne), JSON.parse(runTwo)]) {
+    assert.equal(run.counts.source_cards, 678);
+    assert.equal(run.counts.gpu_cards, 59);
+    assert.equal(run.counts.accepted_rows, 0);
+    assert.equal(run.counts.price_required, 59);
+    assert.equal(run.processing.adapter_result, "passed");
+    assert.equal(run.processing.validator_result, "failed");
+  }
+});
+
 test("Singapore P0 manifests are bounded, registry-owned, and ready for real CLI creation", async () => {
   for (const slug of p0ManifestSlugs) {
     const manifestUrl = new URL(`../scrapers/manifests/${slug}.json`, import.meta.url);
@@ -60,6 +93,10 @@ test("Singapore P0 manifests are bounded, registry-owned, and ready for real CLI
       assert.equal(source.enabled, true);
       assert.deepEqual(source.collectorIds, { combined: "c_mt3qzv5p215cci1r2e" });
       assert.equal(manifest.evidence_state, "live-create-run-repeat-read");
+    } else if (slug === "infinity-computer") {
+      assert.equal(source.enabled, false);
+      assert.deepEqual(source.collectorIds, {});
+      assert.equal(manifest.evidence_state, "live-create-run-repeat-read-invalid-output");
     } else {
       assert.equal(source.enabled, false);
       assert.deepEqual(source.collectorIds, {});

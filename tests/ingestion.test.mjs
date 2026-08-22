@@ -173,3 +173,38 @@ test("Dynacore preserves original indexes when adapter and validator both quaran
     { index: 1, reason: "url_not_allowed" },
   ]);
 });
+
+test("Infinity adapter quarantines non-GPU and call-for-price rows with original indexes", () => {
+  const result = ingestRows([
+    {
+      category: "MONITOR",
+      title: "Display",
+      market: "SG",
+      scraped_at: "2026-08-22T03:00:00.000Z",
+    },
+    {
+      category: "GPU",
+      market: "SG",
+      title: "ASUS DUAL RTX 5060",
+      canonical_product_url: "https://infinitycomputer.com.sg/product/rtx-5060",
+      price_sgd: { value: null, currency: "SGD" },
+      availability: "In Stock",
+      sku: "SKU-5060",
+      mpn: "MPN-5060",
+      scraped_at: "2026-08-22T03:00:00.000Z",
+    },
+  ], {
+    runId: "run-infinity-quarantine",
+    observedAt: "2026-08-22T03:00:00.000Z",
+    expectedSource: "infinity-computer",
+    source: sourceRegistry["infinity-computer"],
+  });
+  assert.equal(result.summary.accepted, 0);
+  assert.equal(result.summary.rejected, 2);
+  assert.equal(result.summary.duplicate, 0);
+  assert.deepEqual(result.quarantined.map((row) => ({ index: row.rowIndex, reason: row.reasonCodes[0] })), [
+    { index: 0, reason: "adapter_non_gpu_category" },
+    { index: 1, reason: "adapter_price_required" },
+  ]);
+  assert.match(result.quarantined[1].rowFingerprint, /^fnv1a-[0-9a-f]{8}$/);
+});

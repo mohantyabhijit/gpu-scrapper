@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "source_slug": "infinity-computer",
+  "role": "combined",
+  "name": "raster-sg-infinity-computer-gpus",
+  "target_url": "https://infinitycomputer.com.sg/prices",
+  "market": "SG",
+  "currency": "SGD",
+  "description": "Extract every public GPU product card whose category is exactly GPU from /prices. Return source_slug='infinity-computer', market='SG', title, canonical product_url, numeric SGD price, availability, sku, mpn, manufacturer, board_partner, raw_model, image_url, and scraped_at ISO UTC. Keep rows with an explicit Call for Price value for quarantine, not accepted offers. Exclude every other category and all contacts, reviews, accounts, cart, checkout, or personal data.",
+  "evidence_state": "live-create-run-repeat-read-invalid-output"
+}

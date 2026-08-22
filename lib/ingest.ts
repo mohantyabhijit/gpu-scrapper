@@ -1,6 +1,7 @@
 import { normalizeOffer, type NormalizedOffer, type NormalizedProduct } from "./normalize/index.ts";
 import { validateRawOffer, type RawOffer, type ValidationCode } from "../scrapers/contracts.ts";
 import { adaptDynacoreOutput, type DynacoreCapture } from "../scrapers/adapters/dynacore.ts";
+import { adaptInfinityOutput, type InfinityCapture } from "../scrapers/adapters/infinity-computer.ts";
 import type { SourceDefinition } from "../config/sources.ts";
 
 export type IngestionContext = {
@@ -14,7 +15,7 @@ export type QuarantinedRow = {
   runId: string;
   sourceSlug?: string;
   rowIndex: number;
-  reasonCodes: Array<ValidationCode | "normalization_error" | "adapter_non_gpu_accessory" | "adapter_malformed_row">;
+  reasonCodes: Array<ValidationCode | "normalization_error" | "adapter_non_gpu_accessory" | "adapter_non_gpu_category" | "adapter_price_required" | "adapter_malformed_row">;
   rowFingerprint: string;
 };
 
@@ -50,17 +51,26 @@ export function ingestRows(rows: readonly RawOffer[], context: IngestionContext)
   let sourceRows: readonly RawOffer[] = rows;
   let sourceRowIndexes: readonly number[] = rows.map((_, index) => index);
   let originalRowCount = rows.length;
-  if (context.source?.slug === "dynacore") {
-    const capture: DynacoreCapture = adaptDynacoreOutput(rows);
+  if (context.source?.slug === "dynacore" || context.source?.slug === "infinity-computer") {
+    const capture: DynacoreCapture | InfinityCapture = context.source.slug === "dynacore"
+      ? adaptDynacoreOutput(rows)
+      : adaptInfinityOutput(rows);
     sourceRows = capture.payload.rows as RawOffer[];
     sourceRowIndexes = capture.rowIndexes;
     originalRowCount = capture.evidence.source_card_count;
     for (const rejected of capture.rejected) {
+      const reason = rejected.reason === "non_gpu_accessory"
+        ? "adapter_non_gpu_accessory"
+        : rejected.reason === "non_gpu_category"
+          ? "adapter_non_gpu_category"
+          : rejected.reason === "price_required"
+            ? "adapter_price_required"
+            : "adapter_malformed_row";
       quarantined.push({
         runId: context.runId,
         sourceSlug: rejected.sourceSlug ?? context.expectedSource,
         rowIndex: rejected.rowIndex,
-        reasonCodes: [rejected.reason === "non_gpu_accessory" ? "adapter_non_gpu_accessory" : "adapter_malformed_row"],
+        reasonCodes: [reason],
         rowFingerprint: rejected.rowFingerprint,
       });
     }

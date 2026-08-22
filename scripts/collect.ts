@@ -11,6 +11,7 @@ import {
 } from "../config/sources.ts";
 import { validateCollectorOutput } from "../scrapers/contracts.ts";
 import { adaptDynacoreOutput } from "../scrapers/adapters/dynacore.ts";
+import { adaptInfinityOutput } from "../scrapers/adapters/infinity-computer.ts";
 
 type Arguments = { source: string; role: CollectorRole };
 type CollectionTarget = {
@@ -82,7 +83,9 @@ export async function collectSource(args: Arguments): Promise<Record<string, unk
   }
   const rows = target.source.slug === "dynacore"
     ? adaptDynacoreOutput(run.rows, { collectorId: target.collectorId }).payload
-    : run.rows;
+    : target.source.slug === "infinity-computer"
+      ? adaptInfinityOutput(run.rows, { collectorId: target.collectorId }).payload
+      : run.rows;
   const validation = validateCollectorOutput(rows, target.source.slug);
   return {
     status: validation.ok ? "completed" : "invalid_output",
