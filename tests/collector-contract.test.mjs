@@ -21,6 +21,24 @@ test("Dynacore uses the current public GPU collection and stays disabled pending
   assert.deepEqual(source.collectorIds, {});
 });
 
+test("Dynacore catalog URL and pending state stay consistent across source artifacts", async () => {
+  const expectedUrl = "https://dynacoretech.com/collections/gpu";
+  const source = sourceRegistry.dynacore;
+  const [manifestText, eligibilityText, evidenceText] = await Promise.all([
+    readFile(new URL("../scrapers/manifests/dynacore.json", import.meta.url), "utf8"),
+    readFile(new URL("../docs/source-eligibility.md", import.meta.url), "utf8"),
+    readFile(new URL("../evidence/sources/dynacore-eligibility.md", import.meta.url), "utf8"),
+  ]);
+  const manifest = JSON.parse(manifestText);
+
+  assert.equal(source.catalogUrl, expectedUrl);
+  assert.equal(manifest.target_url, expectedUrl);
+  assert.ok(eligibilityText.includes(`<${expectedUrl}>`));
+  assert.ok(evidenceText.includes(`catalog_url: ${expectedUrl}`));
+  assert.equal(source.enabled, false);
+  assert.deepEqual(source.collectorIds, {});
+});
+
 test("Singapore P0 manifests are bounded, registry-owned, and ready for real CLI creation", async () => {
   for (const slug of p0ManifestSlugs) {
     const manifestUrl = new URL(`../scrapers/manifests/${slug}.json`, import.meta.url);

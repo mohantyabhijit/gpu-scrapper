@@ -68,7 +68,6 @@ Evidence links: [GPU catalog](https://dynacoretech.com/collections/gpu),
 [terms of use](https://dynacoretech.com/pages/terms-of-use),
 [sample RTX 5070 PDP](https://dynacoretech.com/products/gigabyte-geforce-rtx-5070-aorus-master-12gb-gddr7-graphics-card-rtx5070-4719331355753),
 [sample RTX 5080 PDP](https://dynacoretech.com/products/gigabyte-geforce-rtx-5080-aorus-master-16gb-gddr7-graphics-card-rtx5080-4719331355586),
-[sample RTX 5070 PDP](https://dynacoretech.com/products/gigabyte-geforce-rtx-5070-aorus-master-12gb-gddr7-graphics-card-rtx5070-4719331355753),
 [sample RTX 5070 Ti PDP](https://dynacoretech.com/products/gigabyte-geforce-rtx%E2%84%A2-5070-ti-windforce-oc-sff-16g-gddr7-graphics-card-gv-n507twf3oc-16gd-4719331355579),
 [excluded graphics-card holder](https://dynacoretech.com/products/asus-rog-herculx-graphics-card-holder).
 
