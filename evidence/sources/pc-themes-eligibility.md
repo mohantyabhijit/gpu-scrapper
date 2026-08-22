@@ -6,10 +6,10 @@ market: SG
 currency: SGD
 catalog_url: https://www.pcthemes.com.sg/video-card-graphics-card
 checked_at_utc: 2026-08-22
-review_method: dated signed-out official catalog, policy, and robots review; live collector work intentionally not performed
+review_method: dated signed-out official catalog, policy, and robots review plus authenticated Bright Data Dataset List API query; live collector creation in progress
 public_signed_out_access: pass_for_catalog_scope
 terms_and_robots_review: pass_for_catalog_scope
-bright_data_prebuilt_exclusion: pending_authenticated_check
+bright_data_prebuilt_exclusion: pass_authenticated_dataset_list_api_no_domain_or_name_match_among_1743_entries
 same_market_overlap:
   - model_family: RTX 5070
     source_evidence: public PC Themes catalog titles; exact MPN match pending collector output
@@ -37,14 +37,16 @@ collector_ids:
   combined: null
   discovery: null
   pdp: null
-decision: preferred_secondary_candidate_pending_authenticated_library_gate
-notes: The signed-out official catalog exposes numeric GPU prices, product links, images, sold-out labels, and overlapping RTX 5070/5070 Ti families. The official policy page contains shipping, exchange, refund, warranty, and price-change terms but no automated-access restriction. robots.txt returned HTTP 200 with content-signal comments and no User-agent or Disallow rule. Authenticated Bright Data pre-built exclusion, explicit SGD semantics, exact MPN overlap, repeat-read stability, and custom collector create/run remain pending. The Bright Data dashboard session was logged out during this check, so no collector was created. Keep account, cart, checkout, contact, review, and personal data out of scope.
+decision: preferred_secondary_candidate_library_gate_passed_pending_live_collector_gates
+notes: The signed-out official catalog exposes numeric GPU prices, product links, images, sold-out labels, and overlapping RTX 5070/5070 Ti families. The official policy page contains shipping, exchange, refund, warranty, and price-change terms but no automated-access restriction. robots.txt returned HTTP 200 with content-signal comments and no User-agent or Disallow rule. On 2026-08-22, an authenticated GET to Bright Data's documented /datasets/list endpoint returned 1,743 available pre-built entries and no case-insensitive PC Themes, pcthemes, or Dynacore name match; only this aggregate and empty-match result was retained. Explicit SGD semantics, exact MPN overlap, repeat-read stability, and custom collector create/run remain pending. Keep account, cart, checkout, contact, review, and personal data out of scope.
 ```
 
-This record is a dated public-page audit, not evidence of a Bright Data
+This record is a dated qualification audit, not evidence of a Bright Data
 Collector ID or live extraction. Public references checked on 2026-08-22:
 <https://www.pcthemes.com.sg/video-card-graphics-card>,
 <https://www.pcthemes.com.sg/terms>, and
-<https://www.pcthemes.com.sg/robots.txt>. Replace each `pending` value only
+<https://www.pcthemes.com.sg/robots.txt>. The authenticated library check used
+Bright Data's documented `GET /datasets/list` endpoint and retained no dataset
+payload or credential. Replace each `pending` value only
 with a sanitized, reproducible observation from the approved CLI-first
 workflow.

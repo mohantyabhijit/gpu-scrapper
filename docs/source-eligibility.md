@@ -19,13 +19,14 @@ those live gates recorded below.
 | SG / SGD | Dynacore Technologies | <https://dynacoretech.com/collections/gpu> | `dynacore` | primary | live custom collector proven; enabled |
 | SG / SGD | Infinity Computer | <https://infinitycomputer.com.sg/prices> | `infinity-computer` | secondary | live reads complete; failed numeric-price/breadth gate; disabled |
 | SG / SGD | TechDeals | <https://www.techdeals.com.sg/collections/graphics-card-1> | `tech-deals` | secondary | rejected by terms; no collector |
-| SG / SGD | PC Themes | <https://www.pcthemes.com.sg/video-card-graphics-card> | `pc-themes` | backup | pending conditional review |
+| SG / SGD | PC Themes | <https://www.pcthemes.com.sg/video-card-graphics-card> | `pc-themes` | backup | authenticated pre-built exclusion passed; live collector gates pending |
 
 The Singapore P0 comparison pair remains Dynacore plus a source that clears
 the validated numeric-price and overlap gates. Infinity Computer was tested as
 the selected secondary candidate but its current catalog exposes only
 call-for-price GPU rows to the collector, so it remains disabled. TechDeals is
-rejected by its terms, and PC Themes remains the next conditional backup; no
+rejected by its terms, and PC Themes is now the preferred backup after an
+authenticated Bright Data dataset-list check found no pre-built match; no
 source is enabled from unvalidated or terms-prohibited data.
 
 ## Required gates
@@ -53,7 +54,8 @@ See the dated records for [Dynacore](../evidence/sources/dynacore-eligibility.md
 [TechDeals](../evidence/sources/tech-deals-eligibility.md), and
 [PC Themes](../evidence/sources/pc-themes-eligibility.md). Infinity's live
 provider state is limited to the sanitized invalid-output create/run/repeat-read
-artifacts; TechDeals and PC Themes remain pending or rejected as recorded.
+artifacts; TechDeals remains rejected, while PC Themes remains disabled until
+its custom collector output and repeat-read gates pass.
 
 ### Dynacore live proof — 2026-08-22
 
