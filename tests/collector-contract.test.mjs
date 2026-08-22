@@ -6,13 +6,15 @@ import { sourceHostIsAllowed, sourceRegistry } from "../config/sources.ts";
 
 const p0ManifestSlugs = ["dynacore", "infinity-computer", "tech-deals", "pc-themes"];
 
-test("source registry is role keyed and only registers the proven Dynacore collector", () => {
+test("source registry is role keyed and registers only live-proven collectors", () => {
   assert.equal(sourceRegistry["central-computer"].role, "primary");
   assert.equal(sourceRegistry["central-computer"].currency, "USD");
   assert.equal("tradezone" in sourceRegistry, false);
   assert.deepEqual(sourceRegistry.dynacore.collectorIds, { combined: "c_mt3qzv5p215cci1r2e" });
   assert.equal(sourceRegistry.dynacore.enabled, true);
-  assert.equal(Object.values(sourceRegistry).filter((source) => Object.keys(source.collectorIds).length > 0).length, 1);
+  assert.deepEqual(sourceRegistry["pc-themes"].collectorIds, { combined: "c_mt3zqdljej45v0g1r" });
+  assert.equal(sourceRegistry["pc-themes"].enabled, true);
+  assert.equal(Object.values(sourceRegistry).filter((source) => Object.keys(source.collectorIds).length > 0).length, 2);
 });
 
 test("Dynacore uses the current public GPU collection and is enabled after live proof", () => {
@@ -43,6 +45,74 @@ test("Dynacore catalog URL and live-proof state stay consistent across source ar
   assert.match(eligibilityText, /c_mt3qzv5p215cci1r2e/);
   assert.match(evidenceText, /combined: c_mt3qzv5p215cci1r2e/);
   assert.match(evidenceText, /repeat-read pass/);
+});
+
+test("PC Themes same-ID heal and repeat-read proof stay consistent across source artifacts", async () => {
+  const expectedUrl = "https://www.pcthemes.com.sg/video-card-graphics-card";
+  const source = sourceRegistry["pc-themes"];
+  const [manifestText, eligibilityText, runOneText, runTwoText, baselineText, proofText] = await Promise.all([
+    readFile(new URL("../scrapers/manifests/pc-themes.json", import.meta.url), "utf8"),
+    readFile(new URL("../evidence/sources/pc-themes-eligibility.md", import.meta.url), "utf8"),
+    readFile(new URL("../evidence/collectors/pc-themes-run-20260822-01.json", import.meta.url), "utf8"),
+    readFile(new URL("../evidence/collectors/pc-themes-run-20260822-02.json", import.meta.url), "utf8"),
+    readFile(new URL("../evidence/healing/pc-themes-baseline.json", import.meta.url), "utf8"),
+    readFile(new URL("../evidence/healing/pc-themes-proof.json", import.meta.url), "utf8"),
+  ]);
+  const manifest = JSON.parse(manifestText);
+  const runs = [JSON.parse(runOneText), JSON.parse(runTwoText)];
+  const baseline = JSON.parse(baselineText);
+  const proof = JSON.parse(proofText);
+  const expectedConsumers = [
+    "config/sources.ts",
+    "lib/brightdata/refresh.ts",
+    "app/api/refresh/route.ts",
+    "lib/ingest.ts",
+    "lib/postgres/repository.ts",
+    "app/page.tsx",
+  ];
+
+  assert.equal(source.catalogUrl, expectedUrl);
+  assert.equal(manifest.target_url, expectedUrl);
+  assert.equal(source.enabled, true);
+  assert.deepEqual(source.collectorIds, { combined: "c_mt3zqdljej45v0g1r" });
+  assert.equal(manifest.evidence_state, "live-create-heal-run-repeat-read");
+  assert.match(eligibilityText, /same-ID heal pass/i);
+  assert.match(eligibilityText, /c_mt3zqdljej45v0g1r/);
+  assert.deepEqual(runs.map((run) => run.counts.accepted_rows), [96, 95]);
+  for (const run of runs) {
+    assert.equal(run.status, "completed");
+    assert.deepEqual(run.collector_ids, [source.collectorIds.combined]);
+    assert.equal(run.target_url, expectedUrl);
+    assert.equal(run.catalog_url, expectedUrl);
+    assert.deepEqual(
+      { source_slug: run.source_binding.source_slug, market: run.source_binding.market, currency: run.source_binding.currency },
+      { source_slug: "pc-themes", market: "SG", currency: "SGD" },
+    );
+    assert.equal(run.counts.source_cards, run.counts.adapted_rows + run.counts.quarantined_rows);
+    assert.equal(run.counts.accepted_rows, run.counts.adapted_rows);
+    assert.equal(run.counts.availability_out_of_stock, run.counts.accepted_rows);
+    assert.equal(run.processing.adapter_result, "passed");
+    assert.equal(run.processing.validator_result, "passed");
+  }
+  assert.equal(runs[1].counts.excluded_non_gpu_products, runs[1].counts.quarantined_rows);
+
+  for (const artifact of [baseline, proof]) {
+    assert.equal(artifact.source_slug, "pc-themes");
+    assert.equal(artifact.collector_id, source.collectorIds.combined);
+    assert.equal(artifact.input_url, expectedUrl);
+    assert.equal(artifact.failure_mode, "empty_output");
+  }
+  assert.equal(proof.status, "passed");
+  assert.equal(proof.before.rows, 0);
+  assert.equal(proof.before.contract, "failed");
+  assert.equal(proof.preview.status, "previewed");
+  assert.equal(proof.after.rows, 96);
+  assert.equal(proof.after.valid_rows, proof.after.rows);
+  assert.equal(proof.after.contract, "passed");
+  assert.equal(proof.downstream.unchanged, true);
+  assert.deepEqual(proof.downstream.files.map(({ path }) => path), expectedConsumers);
+  assert.deepEqual(baseline.downstream_files.map(({ path }) => path), expectedConsumers);
+  assert.ok(proof.downstream.files.every(({ sha256, beforeSha256, afterSha256 }) => sha256 === beforeSha256 && sha256 === afterSha256));
 });
 
 test("Infinity Computer is source-bound and remains disabled after invalid live reads", async () => {
@@ -93,6 +163,10 @@ test("Singapore P0 manifests are bounded, registry-owned, and ready for real CLI
       assert.equal(source.enabled, true);
       assert.deepEqual(source.collectorIds, { combined: "c_mt3qzv5p215cci1r2e" });
       assert.equal(manifest.evidence_state, "live-create-run-repeat-read");
+    } else if (slug === "pc-themes") {
+      assert.equal(source.enabled, true);
+      assert.deepEqual(source.collectorIds, { combined: "c_mt3zqdljej45v0g1r" });
+      assert.equal(manifest.evidence_state, "live-create-heal-run-repeat-read");
     } else if (slug === "infinity-computer") {
       assert.equal(source.enabled, false);
       assert.deepEqual(source.collectorIds, {});
@@ -276,6 +350,9 @@ test("collector validator accepts recognized Bright Data wrappers but never fake
   for (const source of Object.values(sourceRegistry)) {
     if (source.slug === "dynacore") {
       assert.deepEqual(source.collectorIds, { combined: "c_mt3qzv5p215cci1r2e" });
+      assert.equal(source.enabled, true);
+    } else if (source.slug === "pc-themes") {
+      assert.deepEqual(source.collectorIds, { combined: "c_mt3zqdljej45v0g1r" });
       assert.equal(source.enabled, true);
     } else {
       assert.deepEqual(source.collectorIds, {});

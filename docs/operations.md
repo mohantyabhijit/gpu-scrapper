@@ -88,8 +88,9 @@ offline operator sequence.
 ## Workflow behavior
 
 `.github/workflows/collect.yml` runs on a daily schedule and supports
-`workflow_dispatch`. The schedule expands into four independently locked jobs;
-manual dispatch selects exactly one allowlisted slice:
+`workflow_dispatch`. The schedule expands into two independently locked live
+source jobs; manual dispatch selects exactly one of five allowlisted baseline
+slices:
 
 | Slice | Market | Source |
 | --- | --- | --- |
@@ -97,11 +98,13 @@ manual dispatch selects exactly one allowlisted slice:
 | `uk-overclockers-uk` | UK / GBP | Overclockers UK |
 | `in-md-computers` | IN / INR | MDComputers |
 | `sg-dynacore` | SG / SGD | Dynacore Technologies |
+| `sg-pc-themes` | SG / SGD | PC Themes |
 
-Every scheduled slice remains safely `not_configured` until its source passes
-eligibility and receives a real role-keyed Collector ID. Concurrency is
-serialized per source slice, each job has an eight-minute timeout, and
-permissions are read-only.
+Only enabled, live-proven sources enter the unattended schedule. Baseline
+sources that are not configured remain available for explicit manual diagnosis,
+where `not_configured` or an empty result fails the job instead of creating a
+green no-op. Concurrency is serialized per source slice, each job has a
+15-minute timeout, and permissions are read-only.
 
 ## Onboarding another country
 

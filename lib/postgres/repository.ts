@@ -69,30 +69,34 @@ function parseJson<T>(value: unknown, fallback: T): T {
   try { return JSON.parse(value) as T; } catch { return fallback; }
 }
 
-/** Resolve operator-owned PostgreSQL source metadata; static registry remains the fallback. */
+/** Resolve code-approved baseline bindings first, then admitted PostgreSQL runtime sources. */
 export function createPostgresSourceResolver(db: RasterDatabase) {
   return async (slug: string): Promise<SourceDefinition | undefined> => {
     const staticSource = isKnownSource(slug) ? getSource(slug) : undefined;
+    // Approved baseline bindings are deployed code. Resolve them before the
+    // database so a stale pre-admission row cannot override or block the exact
+    // collector, URL, and host allowlist that passed review.
+    if (staticSource) {
+      return staticSource.enabled && Object.values(staticSource.collectorIds).some((id) => /^c_[A-Za-z0-9_-]{2,127}$/.test(id))
+        ? staticSource
+        : undefined;
+    }
     const [row] = await db.select().from(schema.sources).where(eq(schema.sources.slug, slug)).limit(1);
-    if (!row) {
-      return staticSource && staticSource.enabled && Object.values(staticSource.collectorIds).some((id) => /^c_[A-Za-z0-9_-]{2,127}$/.test(id)) ? staticSource : undefined;
-    }
+    if (!row) return undefined;
     if (row.onboardingStatus !== "ready") return undefined;
-    if (!staticSource) {
-      const [pack] = await db.select({ status: schema.marketPacks.status }).from(schema.marketPacks).where(eq(schema.marketPacks.sourceSlug, slug)).limit(1);
-      if (!pack || pack.status !== "ready") return undefined;
-    }
-    const allowedHosts = parseJson<readonly string[]>(row.allowedHosts, staticSource?.allowedHosts ?? []);
-    const collectorIds = parseJson<Partial<Record<CollectorRole, CollectorId>>>(row.collectorIds, staticSource?.collectorIds ?? {});
+    const [pack] = await db.select({ status: schema.marketPacks.status }).from(schema.marketPacks).where(eq(schema.marketPacks.sourceSlug, slug)).limit(1);
+    if (!pack || pack.status !== "ready") return undefined;
+    const allowedHosts = parseJson<readonly string[]>(row.allowedHosts, []);
+    const collectorIds = parseJson<Partial<Record<CollectorRole, CollectorId>>>(row.collectorIds, {});
     const source: SourceDefinition = {
       slug,
-      displayName: row.displayName || staticSource?.displayName || slug,
-      role: (row.role || staticSource?.role || "secondary") as SourceRole,
-      region: (row.region || row.market || staticSource?.region || "") as SourceDefinition["region"],
-      currency: (row.currency || staticSource?.currency || "") as SourceDefinition["currency"],
-      baseUrl: row.baseUrl || staticSource?.baseUrl || "",
+      displayName: row.displayName || slug,
+      role: (row.role || "secondary") as SourceRole,
+      region: (row.region || row.market || "") as SourceDefinition["region"],
+      currency: (row.currency || "") as SourceDefinition["currency"],
+      baseUrl: row.baseUrl || "",
       allowedHosts,
-      catalogUrl: row.catalogUrl || staticSource?.catalogUrl || "",
+      catalogUrl: row.catalogUrl || "",
       enabled: row.enabled,
       collectorIds,
       collectorRoles: Object.keys(collectorIds) as CollectorRole[],
@@ -347,9 +351,10 @@ function buildPersistenceStatements(
 ): RasterStatement[] {
   const source = context.source ?? getSource(context.sourceSlug);
   const statements: RasterStatement[] = [sourceUpsert(db, source)];
-  if (status === "degraded") {
+  if (status !== "healthy") {
     // Degrade the previous snapshot first; accepted rows in this run are then
-    // restored to healthy by their upserts below.
+    // restored to healthy by their upserts below. An empty provider read has
+    // no upserts, so the prior snapshot remains visible but degraded.
     statements.push(degradedOfferUpdate(db, context.sourceSlug));
   }
   statements.push(...productUpserts(db, result, context.observedAt));

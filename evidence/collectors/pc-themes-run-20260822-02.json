@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "evidence_type": "run",
+  "source_file": "pc-themes-run-5-cli.json",
+  "generated_at_utc": "2026-08-22T06:55:03.000Z",
+  "collector_ids": ["c_mt3zqdljej45v0g1r"],
+  "status": "completed",
+  "counts": {
+    "source_cards": 96,
+    "adapted_rows": 95,
+    "accepted_rows": 95,
+    "quarantined_rows": 1,
+    "excluded_non_gpu_products": 1,
+    "availability_out_of_stock": 95
+  },
+  "sample_rows": [
+    {
+      "source_slug": "pc-themes",
+      "market": "SG",
+      "title": "GIGABYTE GeForce RTX™ 5050 WINDFORCE OC 8G Graphics Card",
+      "product_url": "https://www.pcthemes.com.sg/video-card-graphics-card/gigabyte-geforce-rtx-5050-windforce-oc-8g-graphics-card",
+      "price": 697.95,
+      "currency": "SGD",
+      "availability": "out_of_stock",
+      "sku": null,
+      "mpn": null,
+      "manufacturer": "GIGABYTE",
+      "board_partner": "GIGABYTE",
+      "raw_model": "GIGABYTE GeForce RTX™ 5050 WINDFORCE OC 8G Graphics Card",
+      "image_url": null,
+      "scraped_at": "2026-08-22T06:52:32.065Z"
+    },
+    {
+      "source_slug": "pc-themes",
+      "market": "SG",
+      "title": "GALAX GeForce RTX™ 5060 Ti 1-Click OC 8GB Graphics Card - [White]",
+      "product_url": "https://www.pcthemes.com.sg/video-card-graphics-card/galax-geforce-rtx-5060-ti-1-click-oc-8gb-graphics-card-white",
+      "price": 729,
+      "currency": "SGD",
+      "availability": "out_of_stock",
+      "sku": null,
+      "mpn": null,
+      "manufacturer": "GALAX",
+      "board_partner": "GALAX",
+      "raw_model": "GALAX GeForce RTX™ 5060 Ti 1-Click OC 8GB Graphics Card - [White]",
+      "image_url": null,
+      "scraped_at": "2026-08-22T06:52:32.571Z"
+    }
+  ],
+  "redactions": {
+    "sensitive_fields_removed": 0,
+    "sensitive_values_removed": 0,
+    "provider_payloads_omitted": true,
+    "sample_rows_seen": 95,
+    "sample_rows_included": 2,
+    "sample_rows_limit": 5
+  },
+  "target_url": "https://www.pcthemes.com.sg/video-card-graphics-card",
+  "catalog_url": "https://www.pcthemes.com.sg/video-card-graphics-card",
+  "source_binding": {
+    "source_slug": "pc-themes",
+    "market": "SG",
+    "currency": "SGD",
+    "manifest_name": "scrapers/manifests/pc-themes.json",
+    "scraper_name": "raster-sg-pc-themes-gpus",
+    "target_url": "https://www.pcthemes.com.sg/video-card-graphics-card",
+    "catalog_url": "https://www.pcthemes.com.sg/video-card-graphics-card"
+  },
+  "processing": {
+    "adapter_result": "passed",
+    "validator_result": "passed"
+  }
+}

@@ -145,7 +145,7 @@ test("route uses an injected runner and returns no provider body", async () => {
     replayGuard: async () => true,
     runner: async () => ({
       requested: ["central-computer"],
-      completed: [{ sourceSlug: "central-computer", collectorId: "c_demo", responseId: "r_demo", rowCount: 1, attempts: 1 }],
+      completed: [{ sourceSlug: "central-computer", collectorId: "c_demo", responseId: "r_demo", rowCount: 1, validRowCount: 1, attempts: 1 }],
       notConfigured: [],
       failed: [],
     }),
@@ -197,6 +197,7 @@ test("runner resolves a custom runtime source without accepting collector or URL
         source: input.source,
       });
       assert.equal(result.offers.length, 1);
+      return { validRowCount: result.summary.accepted, status: "healthy" };
     },
   });
   const result = await run({ sourceSlugs: ["custom-retailer"], role: "combined" });
@@ -227,6 +228,7 @@ test("completed live-like rows reach the injected ingestion boundary with safe r
           expectedSource: input.sourceSlug,
         });
         completed.push({ input, result });
+        return { validRowCount: result.summary.accepted, status: "healthy" };
       },
     });
     const result = await run({ sourceSlugs: ["central-computer"], role: "combined" });
@@ -405,6 +407,7 @@ test("completed rows quarantine invalid output before persistence", async () => 
           observedAt: input.observedAt,
           expectedSource: input.sourceSlug,
         });
+        return { validRowCount: persisted.summary.accepted, status: "degraded" };
       },
     });
     const result = await run({ sourceSlugs: ["central-computer"], role: "combined" });
@@ -505,7 +508,7 @@ test("route retains a claimed receipt after success", async () => {
     rateGuard: async () => ({ acquired: true, retryAfterSeconds: 0, complete: async () => { rateCompletions += 1; } }),
     runner: async () => ({
       requested: ["central-computer"],
-      completed: [{ sourceSlug: "central-computer", collectorId: "c_demo", responseId: "r_demo", rowCount: 1, attempts: 1 }],
+      completed: [{ sourceSlug: "central-computer", collectorId: "c_demo", responseId: "r_demo", rowCount: 1, validRowCount: 1, attempts: 1 }],
       notConfigured: [],
       failed: [],
     }),
@@ -514,6 +517,32 @@ test("route retains a claimed receipt after success", async () => {
   assert.equal(releases, 0);
   assert.equal(completions, 1);
   assert.equal(rateCompletions, 1);
+});
+
+test("route rejects a completed provider response with zero validated rows", async () => {
+  const body = JSON.stringify({ sourceSlugs: ["central-computer"], role: "combined" });
+  const request = await signedRequest(body, "refresh-secret");
+  let releases = 0;
+  let completions = 0;
+  const response = await handleRefreshRequest(request, {
+    environment: { RASTER_INGEST_HMAC_SECRET: "refresh-secret", BRIGHTDATA_API_KEY: "provider-secret" },
+    nowSeconds: 1700000000,
+    replayGuard: async () => ({
+      acquired: true,
+      complete: async () => { completions += 1; },
+      release: async () => { releases += 1; },
+    }),
+    rateGuard: async () => ({ acquired: true, retryAfterSeconds: 0, complete: async () => {} }),
+    runner: async () => ({
+      requested: ["central-computer"],
+      completed: [{ sourceSlug: "central-computer", collectorId: "c_demo", responseId: "r_demo", rowCount: 3, validRowCount: 0, attempts: 1 }],
+      notConfigured: [],
+      failed: [],
+    }),
+  });
+  assert.equal(response.status, 502);
+  assert.equal(releases, 1);
+  assert.equal(completions, 0);
 });
 
 test("route releases a claimed receipt when every source reports a transient failure", async () => {
@@ -557,7 +586,7 @@ test("route sanitizes a rate-cooldown completion failure after provider success"
     rateGuard: async () => ({ acquired: true, retryAfterSeconds: 0, complete: async () => { throw new Error("database cooldown detail"); } }),
     runner: async () => ({
       requested: ["central-computer"],
-      completed: [{ sourceSlug: "central-computer", collectorId: "c_demo", responseId: "r_demo", rowCount: 1, attempts: 1 }],
+      completed: [{ sourceSlug: "central-computer", collectorId: "c_demo", responseId: "r_demo", rowCount: 1, validRowCount: 1, attempts: 1 }],
       notConfigured: [],
       failed: [],
     }),

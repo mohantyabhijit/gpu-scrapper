@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { ingestRows } from "../lib/ingest.ts";
-import { persistIngestion } from "../lib/postgres/repository.ts";
+import { createPostgresSourceResolver, persistIngestion } from "../lib/postgres/repository.ts";
 import { sourceRegistry } from "../config/sources.ts";
 import * as schema from "../db/schema.ts";
 
@@ -175,6 +175,13 @@ const context = {
   },
 };
 
+test("approved baseline bindings resolve before stale PostgreSQL metadata", async () => {
+  const db = { select: () => { throw new Error("static bindings must not query stale rows"); } };
+  const source = await createPostgresSourceResolver(db)("pc-themes");
+  assert.equal(source, sourceRegistry["pc-themes"]);
+  assert.equal(source.collectorIds.combined, "c_mt3zqdljej45v0g1r");
+});
+
 test("persistence upserts valid state and quarantines invalid rows", async () => {
   const db = new FakeDb();
   const result = await persistIngestion(db, batch("run-1"), context);
@@ -206,6 +213,23 @@ test("replaying the same batch is idempotent and keeps last-known-good offers", 
 
   await persistIngestion(db, batch("run-3", [validRow]), { ...context, runId: "run-3" });
   assert.equal(db.rows("offers")[0].health, "healthy");
+});
+
+test("an empty completed provider read degrades the last-known-good snapshot", async () => {
+  const db = new FakeDb();
+  await persistIngestion(db, batch("run-empty-seed", [validRow]), { ...context, runId: "run-empty-seed" });
+
+  const result = await persistIngestion(
+    db,
+    batch("run-empty-provider", []),
+    { ...context, runId: "run-empty-provider" },
+  );
+
+  assert.equal(result.status, "empty");
+  assert.equal(db.rows("offers").length, 1);
+  assert.equal(db.rows("offers")[0].priceMinor, 109999);
+  assert.equal(db.rows("offers")[0].health, "degraded");
+  assert.equal(db.rows("runs").find((run) => run.runId === "run-empty-provider").status, "empty");
 });
 
 test("transaction rollback does not leave partial catalog state", async () => {

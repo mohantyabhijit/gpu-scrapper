@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "evidence_type": "run",
+  "source_file": "pc-themes-run-4-cli.json",
+  "generated_at_utc": "2026-08-22T06:55:03.000Z",
+  "collector_ids": ["c_mt3zqdljej45v0g1r"],
+  "status": "completed",
+  "counts": {
+    "source_cards": 96,
+    "adapted_rows": 96,
+    "accepted_rows": 96,
+    "quarantined_rows": 0,
+    "availability_out_of_stock": 96
+  },
+  "sample_rows": [
+    {
+      "source_slug": "pc-themes",
+      "market": "SG",
+      "title": "ASUS TUF Gaming GeForce RTX™ 5070 12GB GDDR7 OC Edition Graphics card",
+      "product_url": "https://www.pcthemes.com.sg/video-card-graphics-card/asus-tuf-gaming-geforce-rtx-5070-12gb-gddr7-oc-edition-graphics-card",
+      "price": 1547.42,
+      "currency": "SGD",
+      "availability": "out_of_stock",
+      "sku": null,
+      "mpn": null,
+      "manufacturer": "ASUS",
+      "board_partner": "ASUS",
+      "raw_model": "ASUS TUF Gaming GeForce RTX™ 5070 12GB GDDR7 OC Edition Graphics card",
+      "image_url": null,
+      "scraped_at": "2026-08-22T06:49:22.829Z"
+    },
+    {
+      "source_slug": "pc-themes",
+      "market": "SG",
+      "title": "GIGABYTE AORUS GeForce RTX™ 5070 Ti MASTER 16G Graphics Card",
+      "product_url": "https://www.pcthemes.com.sg/video-card-graphics-card/gigabyte-aorus-geforce-rtx-5070-ti-master-16g-graphics-card",
+      "price": 2107.71,
+      "currency": "SGD",
+      "availability": "out_of_stock",
+      "sku": null,
+      "mpn": null,
+      "manufacturer": "GIGABYTE",
+      "board_partner": "GIGABYTE",
+      "raw_model": "GIGABYTE AORUS GeForce RTX™ 5070 Ti MASTER 16G Graphics Card",
+      "image_url": null,
+      "scraped_at": "2026-08-22T06:49:23.841Z"
+    }
+  ],
+  "redactions": {
+    "sensitive_fields_removed": 0,
+    "sensitive_values_removed": 0,
+    "provider_payloads_omitted": true,
+    "sample_rows_seen": 96,
+    "sample_rows_included": 2,
+    "sample_rows_limit": 5
+  },
+  "target_url": "https://www.pcthemes.com.sg/video-card-graphics-card",
+  "catalog_url": "https://www.pcthemes.com.sg/video-card-graphics-card",
+  "source_binding": {
+    "source_slug": "pc-themes",
+    "market": "SG",
+    "currency": "SGD",
+    "manifest_name": "scrapers/manifests/pc-themes.json",
+    "scraper_name": "raster-sg-pc-themes-gpus",
+    "target_url": "https://www.pcthemes.com.sg/video-card-graphics-card",
+    "catalog_url": "https://www.pcthemes.com.sg/video-card-graphics-card"
+  },
+  "processing": {
+    "adapter_result": "passed",
+    "validator_result": "passed"
+  }
+}

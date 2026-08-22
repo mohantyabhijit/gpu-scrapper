@@ -154,14 +154,14 @@ export const sourceRegistry = {
   "pc-themes": {
     slug: "pc-themes",
     displayName: "PC Themes",
-    role: "backup",
+    role: "secondary",
     region: "SG",
     currency: "SGD",
     baseUrl: "https://www.pcthemes.com.sg",
     allowedHosts: ["pcthemes.com.sg", "www.pcthemes.com.sg"],
     catalogUrl: "https://www.pcthemes.com.sg/video-card-graphics-card",
-    enabled: false,
-    collectorIds: {},
+    enabled: true,
+    collectorIds: { combined: "c_mt3zqdljej45v0g1r" },
     collectorRoles: ["combined"],
   },
 } satisfies Record<string, SourceDefinition>;
@@ -170,7 +170,7 @@ function hasOwnSource(slug: string): boolean {
   return Object.prototype.hasOwnProperty.call(sourceRegistry, slug);
 }
 
-/** Runtime source IDs are PostgreSQL-owned; the static registry is only the fallback. */
+/** Approved baseline bindings are code-owned; PostgreSQL owns promoted runtime sources. */
 export type SourceSlug = string;
 export const SOURCE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const MAX_SOURCE_SLUG_LENGTH = 64;

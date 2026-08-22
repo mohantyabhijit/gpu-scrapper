@@ -5,8 +5,8 @@ cookies, authorization headers, raw provider bodies, or guessed Collector IDs.
 Dynacore's combined collector is live-proven below. Infinity Computer's
 same-ID reads are recorded separately but remain disabled because all 59 exact
 GPU cards were call-for-price and therefore yielded zero valid numeric offers;
-TechDeals and PC Themes remain disabled until their authenticated gates and
-explicit row contracts pass.
+TechDeals remains disabled. PC Themes is enabled after authenticated exclusion,
+custom create, same-ID healing, two contract-valid reads, and sanitized review.
 
 ## CLI-first sequence
 
@@ -73,13 +73,14 @@ node --experimental-strip-types scripts/collect.ts \
   --source dynacore --role combined
 ```
 
-Dynacore is configured for the registered combined role after its live evidence
+Dynacore and PC Themes are configured for their registered combined roles after live evidence
 gate. The command applies the Dynacore adapter, rejects non-GPU accessories,
 requires provider `scraped_at`, and reports only bounded status and validation
-counts. Infinity Computer remains disabled: its adapter keeps only exact `GPU`
+counts. The PC Themes adapter retains numeric SGD PDP prices, rejects
+non-GPU/missing-price rows, and preserves current out-of-stock state. Infinity Computer remains disabled: its adapter keeps only exact `GPU`
 cards and quarantines missing numeric prices as `price_required`, without
-fabricating a price. TechDeals and PC Themes remain unconfigured until their
-own gates pass.
+fabricating a price. TechDeals remains unconfigured because its terms gate did
+not pass; PC Themes is configured only for its proven combined role.
 
 ## Pending fields
 
@@ -88,8 +89,9 @@ reads, but its validated accepted count is zero; the dated invalid-output proof
 is indexed as `infinity-computer-create-20260822.json`,
 `infinity-computer-run-20260822-01.json`, and
 `infinity-computer-run-20260822-02.json`. TechDeals is rejected by its terms;
-PC Themes still has its authenticated exclusion, real Collector ID, successful
-live output, repeat-read stability, and final enablement pending. Dynacore's dated proof is indexed as
+PC Themes dated proof is indexed as `pc-themes-create-20260822.json`,
+`pc-themes-run-20260822-01.json`, and `pc-themes-run-20260822-02.json`.
+Dynacore's dated proof is indexed as
 `dynacore-create-20260822.json`, `dynacore-run-20260822-01.json`, and
 `dynacore-run-20260822-02.json`. Keep source URLs and dates in the relevant
 eligibility record, with all public-data and terms caveats intact.

@@ -2,9 +2,10 @@
 
 This is the go/no-go record for Raster’s public GPU sources. Four display
 markets remain fixed: US/USD, UK/GBP, IN/INR, and SG/SGD. A source remains
-disabled until the full public-access, terms/robots, authenticated Bright Data,
-contract, overlap, and repeat-read gates pass; Dynacore is the first source with
-those live gates recorded below.
+disabled until its public-access, terms/robots, authenticated Bright Data,
+contract, and repeat-read gates pass. The separate P0 comparison-pair gate
+requires three canonical overlaps; enabling a research source does not imply
+that pair-level demo threshold has passed.
 
 ## Active candidates
 
@@ -19,15 +20,17 @@ those live gates recorded below.
 | SG / SGD | Dynacore Technologies | <https://dynacoretech.com/collections/gpu> | `dynacore` | primary | live custom collector proven; enabled |
 | SG / SGD | Infinity Computer | <https://infinitycomputer.com.sg/prices> | `infinity-computer` | secondary | live reads complete; failed numeric-price/breadth gate; disabled |
 | SG / SGD | TechDeals | <https://www.techdeals.com.sg/collections/graphics-card-1> | `tech-deals` | secondary | rejected by terms; no collector |
-| SG / SGD | PC Themes | <https://www.pcthemes.com.sg/video-card-graphics-card> | `pc-themes` | backup | authenticated pre-built exclusion passed; live collector gates pending |
+| SG / SGD | PC Themes | <https://www.pcthemes.com.sg/video-card-graphics-card> | `pc-themes` | secondary | live custom collector and same-ID heal proven; enabled |
 
 The Singapore P0 comparison pair remains Dynacore plus a source that clears
 the validated numeric-price and overlap gates. Infinity Computer was tested as
 the selected secondary candidate but its current catalog exposes only
 call-for-price GPU rows to the collector, so it remains disabled. TechDeals is
-rejected by its terms, and PC Themes is now the preferred backup after an
-authenticated Bright Data dataset-list check found no pre-built match; no
-source is enabled from unvalidated or terms-prohibited data.
+rejected by its terms. PC Themes passed the authenticated pre-built exclusion,
+same-ID healing, numeric-price, and repeat-read gates and is now the enabled
+secondary research source. It overlaps both GPU families currently exposed by
+Dynacore, so the separate three-model comparison-pair threshold remains at 2/3.
+No source is enabled from unvalidated or terms-prohibited data.
 
 ## Required gates
 
@@ -36,7 +39,7 @@ source is enabled from unvalidated or terms-prohibited data.
 | Public access | Signed-out public catalog/PDP; no login, paywall, personal data, or CAPTCHA bypass | pending per source |
 | Intended access permitted | Terms and robots reviewed; reasonable rate and public paths only | pending per source |
 | Bright Data coverage | Authenticated pre-built catalog checked and sanitized evidence retained | pending per source |
-| Same-market overlap | At least three canonical GPU models overlap with another admitted source | pending per source |
+| P0 comparison overlap | At least three canonical GPU models overlap across the live pair | 2/3 for Dynacore + PC Themes; demo threshold pending |
 | Required fields | Title, public URL, price, currency, availability, and timestamp extractable | pending per source |
 | Stable identity | MPN/SKU or defensible board-partner + GPU + VRAM identity | pending per source |
 | Price semantics | Cash/EFT/discount/tax labels understood and retained | pending per source |
@@ -54,8 +57,22 @@ See the dated records for [Dynacore](../evidence/sources/dynacore-eligibility.md
 [TechDeals](../evidence/sources/tech-deals-eligibility.md), and
 [PC Themes](../evidence/sources/pc-themes-eligibility.md). Infinity's live
 provider state is limited to the sanitized invalid-output create/run/repeat-read
-artifacts; TechDeals remains rejected, while PC Themes remains disabled until
-its custom collector output and repeat-read gates pass.
+artifacts; TechDeals remains rejected. PC Themes live proof is summarized
+below and in its dated eligibility record.
+
+### PC Themes live proof — 2026-08-22
+
+The custom collector `c_mt3zqdljej45v0g1r` initially returned zero rows from
+the exact registered catalog URL. Scraper Studio healed that same Collector ID
+to discover 96 public GPU PDPs, then a second same-ID refinement extracted the
+numeric SGD PDP price and visible availability state. The first complete read
+validated 96 of 96 rows. The repeat read validated 95 rows and quarantined one
+non-GPU/empty candidate without weakening the shared contract. Both current
+Dynacore GPU families (RTX 5070 and RTX 5070 Ti) overlap validated PC Themes
+rows. This is every family the current Dynacore catalog exposes, but only 2/3
+of the explicit P0 comparison threshold. Current PC Themes availability is out
+of stock, which Raster preserves; these rows add research coverage but are not
+presented as purchase-ready.
 
 ### Dynacore live proof — 2026-08-22
 

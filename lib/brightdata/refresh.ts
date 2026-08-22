@@ -33,6 +33,7 @@ export type RefreshSuccess = {
   runId: string;
   observedAt: string;
   rowCount: number;
+  validRowCount: number;
   attempts: number;
 };
 
@@ -55,7 +56,8 @@ export type RefreshCompletionInput = {
   source: SourceDefinition;
 };
 
-export type RefreshCompletion = (input: RefreshCompletionInput) => void | Promise<void>;
+export type RefreshCompletionResult = { validRowCount: number; status: "healthy" | "degraded" | "empty" };
+export type RefreshCompletion = (input: RefreshCompletionInput) => RefreshCompletionResult | Promise<RefreshCompletionResult>;
 
 export type RefreshFailureCode =
   | "not_configured"
@@ -223,7 +225,7 @@ export function createRefreshRunner(
         const observedAt = (runnerOptions.now ?? (() => new Date()))().toISOString();
         const runId = await safeRunId(source.sourceSlug, run.responseId);
         try {
-          await runnerOptions.onComplete?.({
+          const completion = await runnerOptions.onComplete?.({
             sourceSlug: source.sourceSlug,
             collectorId: run.collectorId,
             responseId: run.responseId,
@@ -232,19 +234,21 @@ export function createRefreshRunner(
             observedAt,
             source: source.source,
           });
+          const validRowCount = completion?.validRowCount ?? (runnerOptions.onComplete ? 0 : run.rows.length);
+          completed.push({
+            sourceSlug: source.sourceSlug,
+            collectorId: run.collectorId,
+            responseId: run.responseId,
+            runId,
+            observedAt,
+            rowCount: run.rows.length,
+            validRowCount,
+            attempts: run.attempts,
+          });
         } catch {
           failed.push({ sourceSlug: source.sourceSlug, code: "persistence_error" });
           continue;
         }
-        completed.push({
-          sourceSlug: source.sourceSlug,
-          collectorId: run.collectorId,
-          responseId: run.responseId,
-          runId,
-          observedAt,
-          rowCount: run.rows.length,
-          attempts: run.attempts,
-        });
       } catch (error) {
         const code: RefreshFailureCode = error instanceof BrightDataError ? error.code : "provider_error";
         let failureCode: RefreshFailureCode = code;

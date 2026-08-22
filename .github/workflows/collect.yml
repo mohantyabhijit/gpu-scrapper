@@ -15,6 +15,7 @@ on:
           - uk-overclockers-uk
           - in-md-computers
           - sg-dynacore
+          - sg-pc-themes
 
 permissions:
   contents: read
@@ -28,7 +29,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        slice: ${{ fromJSON(github.event_name == 'schedule' && '["us-central-computer","uk-overclockers-uk","in-md-computers","sg-dynacore"]' || format('["{0}"]', inputs.slice)) }}
+        slice: ${{ fromJSON(github.event_name == 'schedule' && '["sg-dynacore","sg-pc-themes"]' || format('["{0}"]', inputs.slice)) }}
     concurrency:
       group: raster-refresh-${{ matrix.slice }}
       cancel-in-progress: false
@@ -58,7 +59,7 @@ jobs:
           test -n "$RASTER_REFRESH_URL" || { echo "::error::RASTER_REFRESH_URL secret is missing"; exit 1; }
           test -n "$RASTER_INGEST_HMAC_SECRET" || { echo "::error::refresh signing secret is missing"; exit 1; }
           case "$RASTER_REFRESH_SLICE" in
-            us-central-computer|uk-overclockers-uk|in-md-computers|sg-dynacore) ;;
+            us-central-computer|uk-overclockers-uk|in-md-computers|sg-dynacore|sg-pc-themes) ;;
             *) echo "::error::unsupported refresh slice"; exit 1 ;;
           esac
           node --version

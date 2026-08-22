@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "evidence_type": "create",
+  "source_file": "pc-themes-create-cli.json",
+  "generated_at_utc": "2026-08-22T06:55:03.000Z",
+  "collector_ids": ["c_mt3zqdljej45v0g1r"],
+  "status": "done",
+  "counts": {
+    "source_cards": 0,
+    "adapted_rows": 0,
+    "accepted_rows": 0,
+    "quarantined_rows": 0
+  },
+  "sample_rows": [],
+  "redactions": {
+    "sensitive_fields_removed": 0,
+    "sensitive_values_removed": 0,
+    "provider_payloads_omitted": true,
+    "sample_rows_seen": 0,
+    "sample_rows_included": 0,
+    "sample_rows_limit": 5
+  },
+  "target_url": "https://www.pcthemes.com.sg/video-card-graphics-card",
+  "catalog_url": "https://www.pcthemes.com.sg/video-card-graphics-card",
+  "source_binding": {
+    "source_slug": "pc-themes",
+    "market": "SG",
+    "currency": "SGD",
+    "manifest_name": "scrapers/manifests/pc-themes.json",
+    "scraper_name": "raster-sg-pc-themes-gpus",
+    "target_url": "https://www.pcthemes.com.sg/video-card-graphics-card",
+    "catalog_url": "https://www.pcthemes.com.sg/video-card-graphics-card"
+  },
+  "processing": {
+    "adapter_result": "not_applied",
+    "validator_result": "not_applied"
+  }
+}

@@ -27,7 +27,7 @@ function json(payload: unknown, status = 200, headers: HeadersInit = {}) {
   return Response.json(payload, { status, headers: { "Cache-Control": "no-store", ...headers } });
 }
 
-async function persistCompletedRun(input: RefreshCompletionInput): Promise<void> {
+async function persistCompletedRun(input: RefreshCompletionInput) {
   // Keep the Cloudflare binding import server-only and lazy so injected runner
   // tests do not need a worker runtime. Every completed provider run crosses
   // the same validator, normalizer, and PostgreSQL boundary before the route reports it.
@@ -42,7 +42,7 @@ async function persistCompletedRun(input: RefreshCompletionInput): Promise<void>
     expectedSource: input.sourceSlug,
     source: input.source,
   });
-  await persistIngestion(getDb(), result, {
+  const persisted = await persistIngestion(getDb(), result, {
     runId: input.runId,
     sourceSlug: input.sourceSlug,
     collectorId: input.collectorId,
@@ -52,6 +52,7 @@ async function persistCompletedRun(input: RefreshCompletionInput): Promise<void>
     observedAt: input.observedAt,
     source: input.source,
   });
+  return { validRowCount: result.summary.accepted, status: persisted.status };
 }
 
 async function persistFailedRun(input: Parameters<RefreshFailure>[0]): Promise<void> {
@@ -130,7 +131,9 @@ export async function handleRefreshRequest(
       },
     );
     const result = await runner(parsed);
-    const accepted = result.failed.length === 0 && (result.completed.length > 0 || result.notConfigured.length > 0);
+    const accepted = result.failed.length === 0
+      && result.notConfigured.length === 0
+      && result.completed.some((source) => source.validRowCount > 0);
     if (!accepted) await releaseReplayClaim(replayClaim);
     else await completeReplayClaim(replayClaim);
     await rateClaim.complete();

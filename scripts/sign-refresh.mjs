@@ -5,6 +5,7 @@ export const REFRESH_SLICES = Object.freeze({
   "uk-overclockers-uk": Object.freeze({ market: "UK", sourceSlug: "overclockers-uk" }),
   "in-md-computers": Object.freeze({ market: "IN", sourceSlug: "md-computers" }),
   "sg-dynacore": Object.freeze({ market: "SG", sourceSlug: "dynacore" }),
+  "sg-pc-themes": Object.freeze({ market: "SG", sourceSlug: "pc-themes" }),
 });
 
 const SAFE_SOURCE_SLUGS = new Set(Object.values(REFRESH_SLICES).map(({ sourceSlug }) => sourceSlug));
@@ -33,6 +34,15 @@ export const MAX_SUMMARY_INTEGER = 1_000_000_000;
 
 export function summaryListLength(value) {
   return Array.isArray(value) ? Math.min(value.length, MAX_SUMMARY_INTEGER) : undefined;
+}
+
+export function refreshSummarySucceeded(summary) {
+  return summary?.ok === true
+    && summary.status === "completed"
+    && summary.completed === 1
+    && summary.failed === 0
+    && Number.isSafeInteger(summary.valid_rows)
+    && summary.valid_rows > 0;
 }
 
 export class RefreshResponseError extends Error {
@@ -102,6 +112,7 @@ function safeResponseSummary(text) {
     const safeCompleted = completed.slice(0, 1).map((item) => ({
       source_slug: safeSourceSlug(item?.sourceSlug),
       rows: safeNonNegativeInteger(item?.rowCount),
+      valid_rows: safeNonNegativeInteger(item?.validRowCount),
       observed_at: safeObservedAt(item?.observedAt),
       attempts: safeNonNegativeInteger(item?.attempts),
     }));
@@ -116,6 +127,7 @@ function safeResponseSummary(text) {
       not_configured: summaryListLength(parsed.notConfigured),
       failed: summaryListLength(parsed.failed),
       rows: safeCompleted.reduce((total, item) => total + (item.rows ?? 0), 0),
+      valid_rows: safeCompleted.reduce((total, item) => total + (item.valid_rows ?? 0), 0),
       completed_sources: safeCompleted,
       failures: safeFailures,
     };
@@ -180,6 +192,7 @@ function main() {
   const result = runRefresh({ url, secret, slice: args.slice ?? "us-central-computer", timeoutMs: args["timeout-ms"] });
   return result.then((summary) => {
     process.stdout.write(`${JSON.stringify(summary)}\n`);
+    if (!refreshSummarySucceeded(summary)) throw new Error("refresh did not complete with validated rows");
   });
 }
 

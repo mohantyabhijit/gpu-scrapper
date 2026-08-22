@@ -5,7 +5,7 @@ import { createHmac } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { load as parseYaml } from "js-yaml";
 import { fileURLToPath } from "node:url";
-import { createPayload, MAX_SUMMARY_INTEGER, MAX_TIMEOUT_MS, parseSlice, RefreshResponseError, runRefresh, signatureFor, summaryListLength } from "../scripts/sign-refresh.mjs";
+import { createPayload, MAX_SUMMARY_INTEGER, MAX_TIMEOUT_MS, parseSlice, refreshSummarySucceeded, RefreshResponseError, runRefresh, signatureFor, summaryListLength } from "../scripts/sign-refresh.mjs";
 import { MAX_PROVIDER_RUN_MS } from "../lib/brightdata/client.ts";
 import { parseRefreshRequest } from "../lib/brightdata/refresh.ts";
 
@@ -21,6 +21,8 @@ const APPROVED_STEP_ENV = Object.freeze({
 const normalizeWorkflowValue = (value) => typeof value === "string" ? value.trim() : value;
 const normalizeWorkflowExpression = (value) => normalizeWorkflowValue(value)?.replace(/\s+/g, " ");
 const EXPECTED_REFRESH_IF = "${{ github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}";
+const EXPECTED_REFRESH_SLICES = ["us-central-computer", "uk-overclockers-uk", "in-md-computers", "sg-dynacore", "sg-pc-themes"];
+const EXPECTED_SCHEDULED_SLICES = ["sg-dynacore", "sg-pc-themes"];
 const REPO_ROOT = fileURLToPath(new URL("../", import.meta.url));
 
 function assertWorkflowExecutionPolicy(document) {
@@ -96,6 +98,11 @@ test("refresh slices are allowlisted and role payloads stay deterministic", () =
     sourceSlugs: ["dynacore"],
     role: "combined",
   });
+  assert.deepEqual(parseSlice("sg-pc-themes"), {
+    market: "SG",
+    sourceSlug: "pc-themes",
+    slice: "sg-pc-themes",
+  });
   assert.throws(() => parseSlice("arbitrary-url"), /unsupported refresh slice/);
   assert.deepEqual(parseRefreshRequest(JSON.parse(createPayload(parseSlice("in-md-computers")))), {
     sourceSlugs: ["md-computers"],
@@ -111,11 +118,18 @@ test("signature matches the documented timestamp.body HMAC", () => {
   assert.equal(signatureFor({ secret, timestamp, body }), expected);
 });
 
-test("workflow schedules every baseline market as an independently locked slice", async () => {
+test("workflow schedules only live sources and keeps every baseline slice manually dispatchable", async () => {
   const workflow = await readFile(new URL("../.github/workflows/collect.yml", import.meta.url), "utf8");
-  for (const slice of ["us-central-computer", "uk-overclockers-uk", "in-md-computers", "sg-dynacore"]) {
-    assert.match(workflow, new RegExp(slice));
+  const document = parseYaml(workflow);
+  assert.deepEqual(document.on.workflow_dispatch.inputs.slice.options, EXPECTED_REFRESH_SLICES);
+  const matrixExpression = document.jobs.refresh.strategy.matrix.slice;
+  for (const slice of EXPECTED_SCHEDULED_SLICES) assert.match(matrixExpression, new RegExp(slice));
+  for (const slice of EXPECTED_REFRESH_SLICES.filter((slice) => !EXPECTED_SCHEDULED_SLICES.includes(slice))) {
+    assert.doesNotMatch(matrixExpression, new RegExp(slice));
   }
+  const validationStep = document.jobs.refresh.steps.find((step) => step.name === "Validate protected refresh inputs");
+  assert.ok(validationStep);
+  for (const slice of EXPECTED_REFRESH_SLICES) assert.match(validationStep.run, new RegExp(slice));
   assert.match(workflow, /group: raster-refresh-\$\{\{ matrix\.slice \}\}/);
   assert.ok(MAX_TIMEOUT_MS >= MAX_PROVIDER_RUN_MS + 60_000);
 });
@@ -220,7 +234,7 @@ test("refresh sends one signed request and returns only safe response fields", a
     now: () => 1_700_000_000_000,
     fetchImpl: async (url, options) => {
       request = { url: String(url), options };
-      return new Response(JSON.stringify({ requested: ["overclockers-uk"], completed: [{ rowCount: 4 }], notConfigured: [], failed: [], provider_key: "should-not-print" }), { status: 200 });
+      return new Response(JSON.stringify({ requested: ["overclockers-uk"], completed: [{ rowCount: 4, validRowCount: 3 }], notConfigured: [], failed: [], provider_key: "should-not-print" }), { status: 200 });
     },
   });
   assert.equal(request.url, "https://raster.example.test/api/refresh");
@@ -234,7 +248,19 @@ test("refresh sends one signed request and returns only safe response fields", a
   assert.equal("provider_key" in summary, false);
   assert.equal(summary.status, "completed");
   assert.equal(summary.rows, 4);
-  assert.deepEqual(summary.completed_sources, [{ source_slug: undefined, rows: 4, observed_at: undefined, attempts: undefined }]);
+  assert.equal(summary.valid_rows, 3);
+  assert.deepEqual(summary.completed_sources, [{ source_slug: undefined, rows: 4, valid_rows: 3, observed_at: undefined, attempts: undefined }]);
+  assert.equal(refreshSummarySucceeded(summary), true);
+});
+
+test("workflow success requires a completed non-empty source refresh", () => {
+  assert.equal(refreshSummarySucceeded({ ok: true, status: "completed", completed: 1, failed: 0, rows: 1, valid_rows: 1 }), true);
+  for (const summary of [
+    { ok: true, status: "completed", completed: 1, failed: 0, rows: 4, valid_rows: 0 },
+    { ok: true, status: "not_configured", completed: 0, failed: 0, rows: 0, valid_rows: 0 },
+    { ok: true, status: "empty", completed: 0, failed: 0, rows: 0, valid_rows: 0 },
+    { ok: false, status: "failed", completed: 0, failed: 1, rows: 0, valid_rows: 0 },
+  ]) assert.equal(refreshSummarySucceeded(summary), false);
 });
 
 test("refresh rejects non-HTTPS URLs and never exposes provider error bodies", async () => {
@@ -270,7 +296,7 @@ test("structured partial failures are bounded to safe slugs, codes, and counts",
       secret: "offline-test-secret-value",
       fetchImpl: async () => new Response(JSON.stringify({
         requested: ["overclockers-uk"],
-        completed: [{ sourceSlug: "overclockers-uk", rowCount: 4, observedAt: "secret-observed-at", attempts: 2 }],
+        completed: [{ sourceSlug: "overclockers-uk", rowCount: 4, validRowCount: 3, observedAt: "secret-observed-at", attempts: 2 }],
         notConfigured: [],
         failed: [{ sourceSlug: "overclockers-uk", code: "provider_secret_body", rawProviderBody: "Bearer super-secret-value" }],
         authorization: "Bearer super-secret-value",
