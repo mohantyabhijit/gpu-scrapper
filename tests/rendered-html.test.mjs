@@ -50,9 +50,9 @@ test("server markup keeps the progressive source-desk entry points", async () =>
   assert.match(html, /FIXTURE CATALOG/);
 });
 
-test("source-desk serialization and brief construction are bounded and provenance-first", async () => {
+test("source-desk serialization retains saved offers outside the visible filter and stays provenance-first", async () => {
   const helper = new URL("../components/sourcing-desk-model.ts", import.meta.url).pathname;
-  const script = `import { buildSourcingBrief, canonicalizeStored, selectSourceDeskOffer, serializeSourceDesk } from ${JSON.stringify(helper)};
+  const script = `import { buildSourcingBrief, canonicalizeStored, savedOffersOutsideVisibleNote, selectSourceDeskOffer, serializeSourceDesk } from ${JSON.stringify(helper)};
     const catalog = [{ id: "safe", market: "us", model: "RTX 5090", brand: "Canonical", source: "Retailer", currency: "USD", price: 10, availability: "In stock", observedAt: "2026-08-21T10:00:00.000Z", healthState: "fixture", freshness: "fixture", productUrl: "https://example.com/gpu" }];
     const other = { ...catalog[0], id: "uk", market: "uk", currency: "GBP" };
     const completeCatalog = [...catalog, other];
@@ -63,10 +63,12 @@ test("source-desk serialization and brief construction are bounded and provenanc
     const storageDuringPending = serializeSourceDesk(pending.selected);
     const storageAfterAcknowledgement = serializeSourceDesk(replaced.selected);
     const filteredVisibleCatalog = completeCatalog.filter((offer) => offer.id !== "safe");
-    const retainedAcrossFilter = canonicalizeStored(JSON.stringify(canonical), completeCatalog);
+    const persistedSelection = serializeSourceDesk(canonical);
+    const retainedAcrossFilter = canonicalizeStored(persistedSelection, completeCatalog);
+    const outsideCurrentFilters = savedOffersOutsideVisibleNote(retainedAcrossFilter, filteredVisibleCatalog.map((offer) => offer.id));
     const corrupted = canonicalizeStored(JSON.stringify([{ id: "missing" }]), completeCatalog);
     const mixedMarket = canonicalizeStored(JSON.stringify([{ id: "safe" }, { id: "uk" }]), completeCatalog);
-    console.log(JSON.stringify({ canonical, brief: buildSourcingBrief(canonical, "2026-08-22"), pending, replaced, storageBefore, storageDuringPending, storageAfterAcknowledgement, filteredVisibleCatalog, retainedAcrossFilter, corrupted, mixedMarket }));`;
+    console.log(JSON.stringify({ canonical, brief: buildSourcingBrief(canonical, "2026-08-22"), pending, replaced, storageBefore, storageDuringPending, storageAfterAcknowledgement, filteredVisibleCatalog, retainedAcrossFilter, outsideCurrentFilters, corrupted, mixedMarket }));`;
   const result = spawnSync(process.execPath, ["--experimental-strip-types", "--input-type=module", "-e", script], { encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr);
   const output = JSON.parse(result.stdout);
@@ -82,6 +84,8 @@ test("source-desk serialization and brief construction are bounded and provenanc
   assert.notEqual(output.storageAfterAcknowledgement, output.storageBefore);
   assert.equal(output.filteredVisibleCatalog.length, 1);
   assert.equal(output.retainedAcrossFilter.length, 1);
+  assert.equal(output.retainedAcrossFilter[0].id, "safe");
+  assert.equal(output.outsideCurrentFilters, "1 saved offer outside current filters");
   assert.equal(output.corrupted.length, 0);
   assert.equal(output.mixedMarket.length, 0);
   const corrupted = spawnSync(process.execPath, ["--experimental-strip-types", "--input-type=module", "-e", `import { canonicalizeStored } from ${JSON.stringify(helper)}; console.log(canonicalizeStored("{broken", []).length);`], { encoding: "utf8" });

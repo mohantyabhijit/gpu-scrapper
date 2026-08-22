@@ -23,6 +23,12 @@ export function canonicalizeStored(value: string | null, catalog: SourceDeskOffe
 
 export function serializeSourceDesk(offers: SourceDeskOffer[]): string { return JSON.stringify(offers.slice(0, SOURCE_DESK_LIMIT)); }
 
+export function savedOffersOutsideVisibleNote(selected: SourceDeskOffer[], visibleOfferIds: readonly string[]): string {
+  const visible = new Set(visibleOfferIds);
+  const outsideCount = selected.filter((offer) => !visible.has(offer.id)).length;
+  return outsideCount === 0 ? "" : `${outsideCount} saved offer${outsideCount === 1 ? "" : "s"} outside current filters`;
+}
+
 export function selectSourceDeskOffer(selected: SourceDeskOffer[], offer: SourceDeskOffer, acknowledgeReplacement = false): { selected: SourceDeskOffer[]; pending: SourceDeskOffer | null; replaced: boolean } {
   if (selected.some((item) => item.id === offer.id)) return { selected: selected.filter((item) => item.id !== offer.id), pending: null, replaced: false };
   if (selected.length > 0 && selected[0].market !== offer.market && !acknowledgeReplacement) return { selected, pending: offer, replaced: false };

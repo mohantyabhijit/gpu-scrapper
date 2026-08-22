@@ -54,3 +54,22 @@ Selections remain market-local. Adding another market pauses with an explicit ac
 - Mixed-market persisted IDs now fail closed during canonicalization, preserving the one-market invariant even when local storage is tampered with.
 - Executable focused coverage now models a complete catalog plus a filtered visible catalog, verifies the persisted selection remains retained by the complete catalog, and compares serialized storage before/while pending cross-market replacement and after explicit acknowledgement.
 - `npm run lint` passed; `npm run test:render` passed (9 tests); `npm test` passed (124 unit, 16 PostgreSQL, 9 rendered tests).
+
+## Follow-up fix round 4
+
+- The client desk now receives `visibleOfferIds` from the current filtered offer list separately from its complete safe catalog blob. It still canonicalizes persisted selections exclusively against the complete catalog.
+- A production `savedOffersOutsideVisibleNote` contract counts selected IDs that are absent from the current filtered view. The summary renders its readable, non-color `role="status"` note (for example, `1 saved offer outside current filters`) without removing that saved selection.
+- The executable rendered test first failed because the contract did not exist, then passed after implementation. It serializes a selected offer, removes that ID from the filtered-visible catalog, restores it through complete-catalog canonicalization, and asserts both the retained ID and the visible filter note.
+- The existing cross-market pending/replacement and canonicalization assertions remain unchanged and passing.
+
+### Test commands/results
+
+- `npm run test:render` — passed (9 rendered tests; red phase initially failed as expected on the missing model export).
+- `npm run lint` — passed.
+- `npm test` — passed (124 unit, 16 PostgreSQL, 9 rendered tests).
+- `git diff --check` — passed.
+
+### Scope/concerns
+
+- No README, deployment, provider, credential, collector, server-write, fixture-data, account, cart, or checkout change was made.
+- The browser still correctly reports only the selected offers omitted by the active filters; it does not mutate storage in response to filtering. Browser storage remains local and fail-closed for invalid or stale data.
