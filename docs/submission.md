@@ -7,9 +7,11 @@
 - [x] Real create/run flow and stable Dynacore Collector ID
       `c_mt3qzv5p215cci1r2e` are recorded.
 - [ ] Same-ID heal is proven with sanitized before/preview/after evidence.
-- [x] Scheduled/manual GitHub Action has completed and fed PostgreSQL/storefront
+- [x] Manually dispatched GitHub Action has completed and fed PostgreSQL/storefront
       (`32551530109`; hosted counts: sources 1, products 2, offers 2,
       observations 2, runs 2, quarantine 1).
+- [ ] A cron-triggered occurrence has been separately observed; the schedule is
+      configured, but the verified production run above was manual.
 - [x] Search, filters, currency grouping, freshness, source attribution, and
       outbound links pass manual keyboard/browser QA at desktop and 390px.
 - [x] Automated axe scan reports zero violations across four deployed routes.
@@ -21,7 +23,8 @@
 
 ## Safety gate
 
-- [ ] Exposed setup credential revoked/rotated.
+- [x] Exposed setup credential revoked/rotated; the replacement is held in
+      macOS Keychain and the Worker secret store, never in the repository.
 - [x] Secret scan passes working tree, history, build output, and evidence.
 - [x] No login-walled, paywalled, personal, checkout, or arbitrary URL data is
       present in the verified live/fixture slice.
@@ -69,15 +72,18 @@ Bright Data Scraper Studio is Raster's production data source, not an add-on.
 The verified Dynacore collector `c_mt3qzv5p215cci1r2e` is triggered by the
 protected refresh pipeline, validates and normalizes structured rows, quarantines
 the accessory row, writes current state and observations to hosted PostgreSQL
-via private Hyperdrive, and feeds the Singapore storefront on the GitHub Actions
-schedule. The current evidence includes multiple same-ID heal previews, but no
+via private Hyperdrive, and feeds the Singapore storefront through the GitHub
+Actions workflow. The manual production run is verified; cron is configured but
+a scheduled occurrence has not been separately observed. The current evidence
+includes multiple same-ID heal previews, but no
 successful self-heal is claimed: one approval is `done` while its rerun remains
 2 accepted / 1 accessory quarantined, and other approvals failed without changing
 the collector. Infinity Computer remains disabled with 59 `price_required`
 quarantines and zero validated offers.
 
-Do not paste these drafts into the form until the claimed live collectors,
-schedule, PostgreSQL writes, and same-ID heal are proven in the evidence matrix.
+The drafts deliberately describe the current evidence boundary. Do not turn the
+configured cron or heal attempts into claims of an observed scheduled run or a
+successful repair unless those gates later acquire dated proof.
 
 ## Why Raster combines the organizer project patterns
 
@@ -130,8 +136,9 @@ responses.
    freshness/health, and verify at the retailer.
 4. **1:30–2:15 — Bright Data proof:** real create/run output and the structured
    row that powers the UI.
-5. **2:15–2:45 — Reliability hero:** break, heal, approve, and rerun the same
-   Collector ID; show quarantine/last-known-good behavior.
+5. **2:15–2:45 — Reliability boundary:** show the same-ID heal previews,
+   approval attempts, unchanged rerun, and quarantine/last-known-good behavior;
+   state that a successful repair is not yet proven.
 6. **2:45–3:00 — Close:** one sentence each for impact, UI finish, clean code,
    and what was learned.
 

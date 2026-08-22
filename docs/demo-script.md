@@ -28,13 +28,15 @@ evidence that already has a dated link in the evidence matrix.
    [operations.md](operations.md#exact-country-pack-rehearsal). The terminal
    should show only the safe `{slug,status}` responses; the two payloads must
    keep the same verified country/source/collector boundary.
-4. **1:20–2:05 — Prompt-to-production and scheduled goal.** Show the structured
+4. **1:20–2:05 — Prompt-to-production and automation goal.** Show the structured
    Dynacore rows crossing validation/normalization into hosted PostgreSQL via
    private Hyperdrive and the storefront, including safe counts (sources 1,
    products 2, offers 2, observations 2, runs 2, quarantine 1). Then show
    green refresh run `32551530109` and quality runs `32552183005` and
-   `32552183008`. Explain that the unattended goal is a fresh, market-local
-   catalog, not a dashboard-only scraper.
+   `32552183008`. Identify `32551530109` as a manual dispatch, then show that
+   cron is configured without claiming a scheduled occurrence was observed.
+   Explain that the unattended goal is a fresh, market-local catalog, not a
+   dashboard-only scraper.
 5. **2:05–2:45 — Honest self-healing boundary.** Open the visible Data Health
    timeline, then show the sanitized failing contract and same-ID
    `bdata scraper heal` previews. State plainly that self-heal is unproved:
@@ -50,7 +52,7 @@ evidence that already has a dated link in the evidence matrix.
 ## Organizer-pattern explanation
 
 The demo intentionally combines four organizer project patterns into one
-vertical story: prompt-to-production collection, a goal that runs on schedule,
+vertical story: prompt-to-production collection, a goal wired for a schedule,
 self-healing scraper ownership, and scrapers in CI. The storefront is the
 useful downstream product; the terminal, Collector ID, Action summary, and
 before/after heal evidence are the proof surfaces.
