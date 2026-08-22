@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs/promises";
 import test from "node:test";
 
 const basePath = "/scrapper";
@@ -37,6 +38,27 @@ test("server-renders the Raster market-local fixture desk", async () => {
   assert.match(html, /href="\/scrapper\/how-it-works"/);
   assert.doesNotMatch(html, /collectors online|c_gpu_|verified feed/i);
   assert.doesNotMatch(html, /Your site is taking shape|Building your site|Starter Project/);
+});
+
+test("server markup keeps the progressive source-desk entry points", async () => {
+  const response = await render();
+  const html = await response.text();
+  assert.match(html, /SOURCE DESK/);
+  assert.match(html, /Stored only in this browser/);
+  assert.match(html, /Add to source desk/);
+  assert.match(html, /aria-pressed="false"/);
+  assert.match(html, /FIXTURE CATALOG/);
+});
+
+test("source-desk serialization and brief construction are bounded and provenance-first", async () => {
+  const source = await fs.readFile(new URL("../components/sourcing-desk.tsx", import.meta.url), "utf8");
+  assert.match(source, /SOURCE_DESK_STORAGE_KEY = "raster\.source-desk\.v1"/);
+  assert.match(source, /SOURCE_DESK_LIMIT = 6/);
+  assert.match(source, /slice\(0, SOURCE_DESK_LIMIT\)/);
+  assert.match(source, /not a like-for-like comparison/);
+  assert.match(source, /Retailer link:/);
+  assert.match(source, /Reminder \(\$\{reminderDate\}\)/);
+  assert.match(source, /isSafeUrl/);
 });
 
 test("publishes Raster GPU favicon metadata instead of a generic site icon", async () => {
