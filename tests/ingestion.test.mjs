@@ -208,3 +208,38 @@ test("Infinity adapter quarantines non-GPU and call-for-price rows with original
   ]);
   assert.match(result.quarantined[1].rowFingerprint, /^fnv1a-[0-9a-f]{8}$/);
 });
+
+test("PC Themes ingestion keeps adapter rejection reasons and original indexes", () => {
+  const result = ingestRows([
+    {
+      source_slug: "pc-themes",
+      market: "SG",
+      currency: "SGD",
+      title: "Cooler Master Graphics Card Holder",
+      product_url: "https://www.pcthemes.com.sg/graphics-card-holder",
+      price: 49,
+      scraped_at: "2026-08-22T06:30:00.000Z",
+    },
+    {
+      source_slug: "pc-themes",
+      market: "SG",
+      currency: "SGD",
+      title: "ASUS Prime GeForce RTX 5070 OC 12GB",
+      product_url: "https://www.pcthemes.com.sg/asus-prime-geforce-rtx-5070-oc",
+      price: "S$1,099.00",
+      availability: "In Stock",
+      scraped_at: "2026-08-22T06:30:00.000Z",
+    },
+  ], {
+    runId: "run-pc-themes-original-indexes",
+    observedAt: "2026-08-22T06:30:00.000Z",
+    expectedSource: "pc-themes",
+    source: sourceRegistry["pc-themes"],
+  });
+
+  assert.equal(result.summary.accepted, 1);
+  assert.equal(result.summary.rejected, 1);
+  assert.deepEqual(result.quarantined.map((row) => ({ index: row.rowIndex, reason: row.reasonCodes[0] })), [
+    { index: 0, reason: "adapter_non_gpu_accessory" },
+  ]);
+});

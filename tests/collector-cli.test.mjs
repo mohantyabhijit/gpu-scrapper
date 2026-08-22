@@ -93,3 +93,30 @@ test("documented validator quarantines Infinity call-for-price rows before share
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("documented validator applies PC Themes adaptation before shared validation", async () => {
+  const directory = mkdtempSync(path.join(os.tmpdir(), "raster-pc-themes-validator-"));
+  const inputPath = path.join(directory, "provider-run.json");
+  try {
+    writeFileSync(inputPath, JSON.stringify([{
+      source_slug: "pc-themes",
+      market: "SG",
+      currency: "SGD",
+      title: "ASUS Prime GeForce RTX 5070 OC 12GB",
+      product_url: "https://www.pcthemes.com.sg/asus-prime-geforce-rtx-5070-oc",
+      price: "S$1,099.00",
+      availability: "In Stock",
+      manufacturer: "ASUS",
+      board_partner: "ASUS",
+      raw_model: "RTX 5070",
+      scraped_at: "2026-08-22T06:30:00.000Z",
+    }]));
+    const summary = await validateCollectorFile(inputPath, "pc-themes");
+    assert.equal(summary.ok, true);
+    assert.equal(summary.adapter_result, "passed");
+    assert.equal(summary.adapter_rejected_count, 0);
+    assert.equal(summary.acceptedCount, 1);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});

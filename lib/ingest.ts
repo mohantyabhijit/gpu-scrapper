@@ -2,6 +2,7 @@ import { normalizeOffer, type NormalizedOffer, type NormalizedProduct } from "./
 import { validateRawOffer, type RawOffer, type ValidationCode } from "../scrapers/contracts.ts";
 import { adaptDynacoreOutput, type DynacoreCapture } from "../scrapers/adapters/dynacore.ts";
 import { adaptInfinityOutput, type InfinityCapture } from "../scrapers/adapters/infinity-computer.ts";
+import { adaptPcThemesOutput, type PcThemesCapture } from "../scrapers/adapters/pc-themes.ts";
 import type { SourceDefinition } from "../config/sources.ts";
 
 export type IngestionContext = {
@@ -51,17 +52,19 @@ export function ingestRows(rows: readonly RawOffer[], context: IngestionContext)
   let sourceRows: readonly RawOffer[] = rows;
   let sourceRowIndexes: readonly number[] = rows.map((_, index) => index);
   let originalRowCount = rows.length;
-  if (context.source?.slug === "dynacore" || context.source?.slug === "infinity-computer") {
-    const capture: DynacoreCapture | InfinityCapture = context.source.slug === "dynacore"
+  if (["dynacore", "infinity-computer", "pc-themes"].includes(context.source?.slug ?? "")) {
+    const capture: DynacoreCapture | InfinityCapture | PcThemesCapture = context.source?.slug === "dynacore"
       ? adaptDynacoreOutput(rows)
-      : adaptInfinityOutput(rows);
+      : context.source?.slug === "infinity-computer"
+        ? adaptInfinityOutput(rows)
+        : adaptPcThemesOutput(rows);
     sourceRows = capture.payload.rows as RawOffer[];
     sourceRowIndexes = capture.rowIndexes;
     originalRowCount = capture.evidence.source_card_count;
     for (const rejected of capture.rejected) {
       const reason = rejected.reason === "non_gpu_accessory"
         ? "adapter_non_gpu_accessory"
-        : rejected.reason === "non_gpu_category"
+        : rejected.reason === "non_gpu_category" || rejected.reason === "non_gpu_product"
           ? "adapter_non_gpu_category"
           : rejected.reason === "price_required"
             ? "adapter_price_required"

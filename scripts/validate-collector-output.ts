@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { validateCollectorOutput, type CollectorValidationSummary } from "../scrapers/contracts.ts";
 import { adaptDynacoreOutput } from "../scrapers/adapters/dynacore.ts";
 import { adaptInfinityOutput } from "../scrapers/adapters/infinity-computer.ts";
+import { adaptPcThemesOutput } from "../scrapers/adapters/pc-themes.ts";
 import { isKnownSource } from "../config/sources.ts";
 
 type Arguments = { input: string; source?: string };
@@ -49,9 +50,13 @@ export async function validateCollectorFile(inputPath: string, expectedSource?: 
     const code = error instanceof SyntaxError ? "invalid_json" : "read_failed";
     return safeFailure(code);
   }
-  if (expectedSource === "dynacore" || expectedSource === "infinity-computer") {
+  if (expectedSource === "dynacore" || expectedSource === "infinity-computer" || expectedSource === "pc-themes") {
     try {
-      const capture = expectedSource === "dynacore" ? adaptDynacoreOutput(payload) : adaptInfinityOutput(payload);
+      const capture = expectedSource === "dynacore"
+        ? adaptDynacoreOutput(payload)
+        : expectedSource === "infinity-computer"
+          ? adaptInfinityOutput(payload)
+          : adaptPcThemesOutput(payload);
       const validation = validateCollectorOutput(capture.payload, expectedSource);
       return {
         ...validation,
