@@ -167,9 +167,11 @@ export function validateRawOffer(input: unknown, expectedSource?: string, expect
     return { ok: false, errors: ["not_an_object"] };
   }
   const raw = input as RawOffer;
-  const sourceSlug = text(raw.source_slug) ?? expectedSource;
+  const providerSourceSlug = text(raw.source_slug);
+  const sourceSlug = providerSourceSlug ?? expectedSource;
   const knownSource = typeof sourceSlug === "string" && isSafeSourceSlug(sourceSlug) && (Boolean(expectedDefinition) || isKnownSource(sourceSlug));
   if (!knownSource) errors.push("unknown_source");
+  if (expectedSource && providerSourceSlug !== expectedSource) errors.push("unknown_source");
   const market = text(raw.market)?.toUpperCase() as string | undefined;
   const expectedCurrency = expectedDefinition?.currency ?? (market ? marketCurrency(market) : undefined);
   const validMarket = expectedDefinition ? market === expectedDefinition.region : Boolean(market && marketCurrency(market));

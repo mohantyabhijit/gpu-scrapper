@@ -48,10 +48,12 @@ export function ingestRows(rows: readonly RawOffer[], context: IngestionContext)
   const seenObservations = new Set<string>();
 
   let sourceRows: readonly RawOffer[] = rows;
+  let sourceRowIndexes: readonly number[] = rows.map((_, index) => index);
   let originalRowCount = rows.length;
   if (context.source?.slug === "dynacore") {
     const capture: DynacoreCapture = adaptDynacoreOutput(rows);
     sourceRows = capture.payload.rows as RawOffer[];
+    sourceRowIndexes = capture.rowIndexes;
     originalRowCount = capture.evidence.source_card_count;
     for (const rejected of capture.rejected) {
       quarantined.push({
@@ -63,7 +65,8 @@ export function ingestRows(rows: readonly RawOffer[], context: IngestionContext)
       });
     }
   }
-  sourceRows.forEach((row, rowIndex) => {
+  sourceRows.forEach((row, compactIndex) => {
+    const rowIndex = sourceRowIndexes[compactIndex] ?? compactIndex;
     const fingerprint = fingerprintRow(row);
     const validation = validateRawOffer(row, context.expectedSource, context.source);
     if (!validation.ok) {

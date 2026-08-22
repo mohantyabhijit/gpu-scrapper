@@ -138,3 +138,38 @@ test("Dynacore runtime rejects missing provider scraped_at", () => {
   assert.equal(result.summary.rejected, 1);
   assert.deepEqual(result.quarantined[0].reasonCodes, ["scraped_at_invalid"]);
 });
+
+test("Dynacore preserves original indexes when adapter and validator both quarantine rows", () => {
+  const result = ingestRows([
+    {
+      source_slug: "dynacore",
+      market: "SG",
+      title: "ASUS ROG Herculx Graphics Card Holder",
+      product_url: "https://dynacoretech.com/products/asus-rog-herculx-graphics-card-holder",
+      price: { value: 89, currency: "SGD" },
+      currency: "SGD",
+      scraped_at: "2026-08-22T03:00:00.000Z",
+    },
+    {
+      source_slug: "dynacore",
+      market: "SG",
+      title: "GIGABYTE RTX 5070 12GB",
+      product_url: "https://evil.example/products/rtx-5070",
+      price: { value: 1569, currency: "SGD" },
+      currency: "SGD",
+      availability: "unknown",
+      scraped_at: "2026-08-22T03:00:00.000Z",
+    },
+  ], {
+    runId: "run-dynacore-original-indexes",
+    observedAt: "2026-08-22T03:00:00.000Z",
+    expectedSource: "dynacore",
+    source: sourceRegistry.dynacore,
+  });
+  assert.equal(result.summary.accepted, 0);
+  assert.equal(result.summary.rejected, 2);
+  assert.deepEqual(result.quarantined.map((row) => ({ index: row.rowIndex, reason: row.reasonCodes[0] })), [
+    { index: 0, reason: "adapter_non_gpu_accessory" },
+    { index: 1, reason: "url_not_allowed" },
+  ]);
+});

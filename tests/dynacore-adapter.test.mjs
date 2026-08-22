@@ -43,6 +43,7 @@ test("Dynacore adapter maps provider price objects, defaults missing availabilit
   assert.equal(capture.payload.rows[1].availability, "in_stock");
   assert.equal("product_page_url" in capture.payload.rows[0], false);
   assert.equal("input" in capture.payload.rows[0], false);
+  assert.deepEqual(capture.rowIndexes, [0, 2]);
   assert.equal(validateCollectorOutput(capture.payload, "dynacore").ok, true);
 });
 
@@ -63,4 +64,14 @@ test("Dynacore adapter preserves provider source, market, and timestamp provenan
   assert.equal(validation.ok, false);
   assert.equal(validation.errorCounts.unknown_source, 1);
   assert.equal(validation.errorCounts.timestamp_invalid, 1);
+});
+
+test("Dynacore adapted-but-invalid rows are not counted as accepted before validation", () => {
+  const capture = adaptDynacoreOutput([providerRow({ price: { value: 0, currency: "SGD" } })]);
+  assert.equal(capture.evidence.adapted_row_count, 1);
+  assert.equal(capture.evidence.accepted_row_count, 0);
+  assert.equal(capture.evidence.validator_result, "pending");
+  const validation = validateCollectorOutput(capture.payload, "dynacore");
+  assert.equal(validation.ok, false);
+  assert.equal(validation.errorCounts.price_invalid, 1);
 });

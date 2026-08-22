@@ -203,6 +203,19 @@ test("raw offer validation requires a provider scraped_at and never fabricates o
   if (!invalid.ok) assert.deepEqual(invalid.errors, ["scraped_at_invalid"]);
 });
 
+test("raw offer validation enforces the exact expected source identity", () => {
+  const mismatch = validateRawOffer(explicitRow({
+    source_slug: "tech-deals",
+    product_url: "https://www.techdeals.com.sg/collections/graphics-card-1/rtx-5070",
+  }), "dynacore");
+  assert.equal(mismatch.ok, false);
+  if (!mismatch.ok) assert.deepEqual(mismatch.errors, ["unknown_source"]);
+
+  const missing = validateRawOffer(explicitRow({ source_slug: undefined }), "dynacore");
+  assert.equal(missing.ok, false);
+  if (!missing.ok) assert.deepEqual(missing.errors, ["unknown_source"]);
+});
+
 test("validator rejects inherited source names without throwing", () => {
   for (const sourceSlug of ["constructor", "toString"]) {
     assert.doesNotThrow(() => {

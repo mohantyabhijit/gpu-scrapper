@@ -35,6 +35,8 @@ export type DynacoreCapture = {
     quarantined_rows: number;
     rows: Record<CollectorField, unknown>[];
   };
+  /** Original provider index for each compacted adapted row. */
+  rowIndexes: number[];
   rejected: Array<{
     rowIndex: number;
     reason: "non_gpu_accessory" | "malformed_row";
@@ -106,7 +108,7 @@ function normalizeRow(row: DynacoreProviderRow): Record<CollectorField, unknown>
 
 export function adaptDynacoreOutput(
   input: unknown,
-  options: { collectorId?: string; validatorResult?: "pending" | "passed" | "failed" } = {},
+  options: { collectorId?: string; validatorResult?: "pending" | "passed" | "failed"; acceptedRowCount?: number } = {},
 ): DynacoreCapture {
   const extracted = extractCollectorRows(input);
   if (!extracted.ok) {
@@ -114,6 +116,7 @@ export function adaptDynacoreOutput(
   }
   const rejected: DynacoreCapture["rejected"] = [];
   const rows: Record<CollectorField, unknown>[] = [];
+  const rowIndexes: number[] = [];
   extracted.rows.forEach((candidate, rowIndex) => {
     if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
       rejected.push({ rowIndex, reason: "malformed_row", rowFingerprint: fingerprintDynacoreRow(candidate) });
@@ -131,6 +134,7 @@ export function adaptDynacoreOutput(
       return;
     }
     rows.push(normalizeRow(row));
+    rowIndexes.push(rowIndex);
   });
   return {
     payload: { rows },
@@ -147,7 +151,7 @@ export function adaptDynacoreOutput(
       validator_result: options.validatorResult ?? "pending",
       source_card_count: extracted.rows.length,
       adapted_row_count: rows.length,
-      accepted_row_count: rows.length,
+      accepted_row_count: options.acceptedRowCount ?? 0,
       quarantined_row_count: rejected.length,
       rejected_accessory_count: rejected.filter((item) => item.reason === "non_gpu_accessory").length,
       status: "completed",
@@ -157,5 +161,6 @@ export function adaptDynacoreOutput(
       rows,
     },
     rejected,
+    rowIndexes,
   };
 }
