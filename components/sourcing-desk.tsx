@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { buildSourcingBrief, canonicalizeStored, isSafeUrl, readinessForOffer, readinessSummary, savedOffersOutsideVisibleNote, selectSourceDeskOffer, serializeSourceDesk, SOURCE_DESK_LIMIT, type SourceDeskOffer } from "./sourcing-desk-model";
+import { buildSourcingBrief, canonicalizeStored, decodeSourceDeskCatalog, isSafeUrl, readinessForOffer, readinessSummary, savedOffersOutsideVisibleNote, selectSourceDeskOffer, serializeSourceDesk, SOURCE_DESK_LIMIT, type SourceDeskOffer } from "./sourcing-desk-model";
 
 export { buildSourcingBrief, canonicalizeStored, selectSourceDeskOffer, serializeSourceDesk, SOURCE_DESK_LIMIT } from "./sourcing-desk-model";
 export type { SourceDeskOffer } from "./sourcing-desk-model";
@@ -20,13 +20,13 @@ export function SourceDeskAddButton({ offer }: { offer: SourceDeskOffer }) {
 
 function displayPrice(offer: SourceDeskOffer) { try { return new Intl.NumberFormat(undefined, { style: "currency", currency: offer.currency }).format(offer.price); } catch { return `${offer.currency} ${offer.price}`; } }
 
-export default function SourcingDesk({ catalogJson, visibleOfferIds, marketLabel, children }: { catalogJson: string; visibleOfferIds: readonly string[]; marketLabel: string; children: ReactNode }) {
+export default function SourcingDesk({ catalogBlob, visibleOfferIds, marketLabel, children }: { catalogBlob: string; visibleOfferIds: readonly string[]; marketLabel: string; children: ReactNode }) {
   const [selected, setSelected] = useState<SourceDeskOffer[]>([]);
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState<SourceDeskOffer | null>(null);
   const [status, setStatus] = useState("");
   const selectedIds = useMemo(() => new Set(selected.map((offer) => offer.id)), [selected]);
-  const catalogOffers = useMemo<SourceDeskOffer[]>(() => { try { const parsed = JSON.parse(catalogJson); return Array.isArray(parsed) ? parsed : []; } catch { return []; } }, [catalogJson]);
+  const catalogOffers = useMemo<SourceDeskOffer[]>(() => decodeSourceDeskCatalog(catalogBlob), [catalogBlob]);
   const byId = useMemo(() => new Map(catalogOffers.map((offer) => [offer.id, offer])), [catalogOffers]);
   const outsideCurrentFiltersNote = useMemo(() => savedOffersOutsideVisibleNote(selected, visibleOfferIds), [selected, visibleOfferIds]);
   const readiness = useMemo(() => readinessSummary(selected), [selected]);

@@ -13,6 +13,22 @@ const READINESS: Record<ReadinessKey, SourcingReadiness> = {
   "demo-sample": { key: "demo-sample", label: "Demo sample", action: "Do not treat as current inventory" },
 };
 
+export function encodeSourceDeskCatalog(offers: SourceDeskOffer[]): string {
+  const bytes = new TextEncoder().encode(JSON.stringify(offers));
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+export function decodeSourceDeskCatalog(blob: string): SourceDeskOffer[] {
+  try {
+    const binary = atob(blob);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    const parsed: unknown = JSON.parse(new TextDecoder().decode(bytes));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+
 export function readinessForOffer(offer: SourceDeskOffer): SourcingReadiness {
   if (offer.healthState === "fixture" || offer.freshnessState === "fixture") return READINESS["demo-sample"];
   if (offer.availability === "Unavailable") return READINESS["do-not-shortlist"];

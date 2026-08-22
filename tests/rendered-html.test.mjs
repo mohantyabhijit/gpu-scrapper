@@ -69,7 +69,7 @@ test("server markup keeps the progressive source-desk entry points", async () =>
 
 test("source-desk serialization retains saved offers outside the visible filter and stays provenance-first", async () => {
   const helper = new URL("../components/sourcing-desk-model.ts", import.meta.url).pathname;
-  const script = `import { buildSourcingBrief, canonicalizeStored, readinessForOffer, readinessSummary, savedOffersOutsideVisibleNote, selectSourceDeskOffer, serializeSourceDesk } from ${JSON.stringify(helper)};
+  const script = `import { buildSourcingBrief, canonicalizeStored, decodeSourceDeskCatalog, encodeSourceDeskCatalog, readinessForOffer, readinessSummary, savedOffersOutsideVisibleNote, selectSourceDeskOffer, serializeSourceDesk } from ${JSON.stringify(helper)};
     const catalog = [{ id: "safe", market: "us", model: "RTX 5090", brand: "Canonical", source: "Retailer", currency: "USD", price: 10, availability: "In stock", observedAt: "2026-08-21T10:00:00.000Z", healthState: "fixture", freshness: "fixture", freshnessState: "fixture", productUrl: "https://example.com/gpu" }];
     const other = { ...catalog[0], id: "uk", market: "uk", currency: "GBP" };
     const completeCatalog = [...catalog, other];
@@ -90,6 +90,8 @@ test("source-desk serialization retains saved offers outside the visible filter 
     const currencyPending = selectSourceDeskOffer([{ ...catalog[0], healthState: "healthy", freshnessState: "fresh" }], sameMarketOtherCurrency);
     const fullDesk = Array.from({ length: 6 }, (_, index) => ({ ...catalog[0], id: 'us-' + index }));
     const fullDeskReplacement = selectSourceDeskOffer(fullDesk, other, true);
+    const unicodeCatalog = [{ ...catalog[0], id: "unicode", brand: "技嘉", source: "東京GPU" }];
+    const unicodeRoundTrip = decodeSourceDeskCatalog(encodeSourceDeskCatalog(unicodeCatalog));
     const liveBase = { ...catalog[0], market: "singapore", currency: "SGD", healthState: "healthy", freshness: "observed recently", freshnessState: "fresh" };
     const readiness = {
       fixture: readinessForOffer(catalog[0]),
@@ -100,7 +102,7 @@ test("source-desk serialization retains saved offers outside the visible filter 
       ready: readinessForOffer({ ...liveBase, availability: "Low stock" }),
     };
     const twoUnknown = [{ ...liveBase, id: "sg-one", model: "RTX 5070 Ti", availability: "Unknown" }, { ...liveBase, id: "sg-two", model: "RTX 5080", availability: "Unknown" }];
-    console.log(JSON.stringify({ canonical, brief: buildSourcingBrief(twoUnknown, "2026-08-22"), readiness, readinessSummary: readinessSummary(twoUnknown), pending, replaced, storageBefore, storageDuringPending, storageAfterAcknowledgement, filteredVisibleCatalog, retainedAcrossFilter, retainedAcrossMarketPage, outsideCurrentFilters, corrupted, mixedMarket, currencyPending, fullDeskReplacement }));`;
+    console.log(JSON.stringify({ canonical, brief: buildSourcingBrief(twoUnknown, "2026-08-22"), readiness, readinessSummary: readinessSummary(twoUnknown), pending, replaced, storageBefore, storageDuringPending, storageAfterAcknowledgement, filteredVisibleCatalog, retainedAcrossFilter, retainedAcrossMarketPage, outsideCurrentFilters, corrupted, mixedMarket, currencyPending, fullDeskReplacement, unicodeRoundTrip }));`;
   const result = spawnSync(process.execPath, ["--experimental-strip-types", "--input-type=module", "-e", script], { encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr);
   const output = JSON.parse(result.stdout);
@@ -135,6 +137,8 @@ test("source-desk serialization retains saved offers outside the visible filter 
   assert.equal(output.currencyPending.pending.id, "usd-gbp");
   assert.equal(output.fullDeskReplacement.selected.length, 1);
   assert.equal(output.fullDeskReplacement.selected[0].id, "uk");
+  assert.equal(output.unicodeRoundTrip[0].brand, "技嘉");
+  assert.equal(output.unicodeRoundTrip[0].source, "東京GPU");
   const corrupted = spawnSync(process.execPath, ["--experimental-strip-types", "--input-type=module", "-e", `import { canonicalizeStored } from ${JSON.stringify(helper)}; console.log(canonicalizeStored("{broken", []).length);`], { encoding: "utf8" });
   assert.equal(corrupted.stdout.trim(), "0");
 });
