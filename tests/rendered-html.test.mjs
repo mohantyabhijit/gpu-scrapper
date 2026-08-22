@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
-import { aggregateCatalogHealth } from "../app/data-health/health.ts";
+import { aggregateCatalogHealth, marketCatalogHealth, schedulerHealth } from "../app/data-health/health.ts";
 
 const basePath = "/scrapper";
 
@@ -227,4 +227,15 @@ test("data-health aggregation keeps a live Singapore read when the default US ma
   assert.deepEqual(state.liveMarketSlugs, ["singapore"]);
   assert.equal(state.liveOfferCountsByMarket.get("singapore"), 2);
   assert.equal(state.liveOfferCountsByMarket.has("us"), false);
+
+  const us = marketCatalogHealth(state, { slug: "us", ready: undefined });
+  const singapore = marketCatalogHealth(state, { slug: "singapore", ready: undefined });
+  assert.equal(us.hasLiveRows, false);
+  assert.equal(us.tone, "planned");
+  assert.match(us.note, /Fixture rows only/);
+  assert.equal(singapore.hasLiveRows, true);
+  assert.equal(singapore.tone, "ready");
+  assert.match(singapore.note, /PostgreSQL row/);
+  assert.deepEqual(schedulerHealth(false), { state: "Pending · not configured", tone: "pending" });
+  assert.deepEqual(schedulerHealth(true), { state: "Configured · signed workflow", tone: "ready" });
 });

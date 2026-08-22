@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { MarketDefinition } from "../../config/markets";
 import { loadCatalog, loadHealingEvidence } from "../../lib/postgres/catalog";
 import { HEALING_STAGES, type HealingStage } from "../../lib/postgres/healing-evidence";
-import { aggregateCatalogHealth } from "./health";
+import { aggregateCatalogHealth, marketCatalogHealth, schedulerHealth } from "./health";
 
 type HealthTone = "ready" | "pending" | "planned";
 type EvidenceKind = "fixture" | "provider" | "policy";
@@ -101,6 +101,7 @@ export default async function DataHealth() {
   })));
   const catalogHealth = aggregateCatalogHealth(catalogReads);
   const liveRead = catalogHealth.liveRead;
+  const schedulerState = schedulerHealth(false);
   const liveRowsLabel = liveRead
     ? `${catalogHealth.liveOfferCount} normalized PostgreSQL rows`
     : snapshot.fallbackReason === "database-empty"
@@ -131,18 +132,7 @@ export default async function DataHealth() {
         ],
       };
     }
-    if (check.key === "scheduler-trigger") {
-      return {
-        ...check,
-        state: "Configured · signed workflow",
-        tone: "ready",
-        detail: "The signed schedule/manual workflow is configured for the registered source slices; a database read does not claim a successful self-heal.",
-        evidence: [
-          { kind: "provider", label: "Signed workflow" },
-          { kind: "policy", label: "Trigger gate" },
-        ],
-      };
-    }
+    if (check.key === "scheduler-trigger") return { ...check, ...schedulerState };
     return check;
   }) : pipelineChecks;
   const displayedChecks: readonly HealthCheck[] = withCatalogState.map((check) => check.key === "self-heal" && healing
@@ -159,14 +149,10 @@ export default async function DataHealth() {
       ],
     }
     : check);
-  const marketHealth: readonly MarketHealth[] = snapshot.markets.map((market) => {
-    const hasLiveRows = catalogHealth.liveOfferCountsByMarket.has(market.slug);
-    return {
-      market,
-      tone: market.ready === false ? "pending" : "ready",
-      note: hasLiveRows ? "PostgreSQL row · observed timestamp shown per offer" : "Fixture rows only · no live normalized rows for this market",
-    };
-  });
+  const marketHealth: readonly (MarketHealth & { readonly hasLiveRows: boolean })[] = snapshot.markets.map((market) => ({
+    market,
+    ...marketCatalogHealth(catalogHealth, market),
+  }));
   return (
     <main className="site-shell health-page">
       <div className="demo-banner" role="note">
@@ -262,17 +248,17 @@ export default async function DataHealth() {
           <p className="section-note">No FX conversion<br />No cross-market ranking</p>
         </div>
         <div className="market-health-grid">
-          {marketHealth.map(({ market: info, tone, note }) => {
+          {marketHealth.map(({ market: info, hasLiveRows, tone, note }) => {
             return (
               <article className="market-health-card" key={info.slug} data-health-tone={tone}>
                 <div className="health-card-top">
                   <span className="health-icon" aria-hidden="true">{info.symbol}</span>
-                  <span className={`state-pill ${tone === "ready" ? "state-fixture" : "state-pending"}`}>{tone === "ready" ? (liveRead ? "postgres ready" : "fixture ready") : "onboarding pending"}</span>
+                  <span className={`state-pill ${tone === "pending" ? "state-pending" : "state-fixture"}`}>{tone === "pending" ? "onboarding pending" : hasLiveRows ? "postgres ready" : "fixture ready"}</span>
                 </div>
                 <h3>{info.label}</h3>
                 <p>Market-local offers only</p>
                 <strong>{info.currency}</strong>
-                <small>{liveRead ? "PostgreSQL row · observed timestamp shown per offer" : note}</small>
+                <small>{note}</small>
               </article>
             );
           })}

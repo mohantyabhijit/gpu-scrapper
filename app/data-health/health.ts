@@ -13,6 +13,17 @@ export type CatalogHealthState = {
   readonly liveOfferCountsByMarket: ReadonlyMap<string, number>;
 };
 
+export type MarketCatalogHealth = {
+  readonly hasLiveRows: boolean;
+  readonly tone: "ready" | "pending" | "planned";
+  readonly note: string;
+};
+
+export type SchedulerHealth = {
+  readonly state: "Pending · not configured" | "Configured · signed workflow";
+  readonly tone: "pending" | "ready";
+};
+
 /** Aggregate independent market reads without allowing an empty default market to hide live rows elsewhere. */
 export function aggregateCatalogHealth(reads: readonly CatalogMarketRead[]): CatalogHealthState {
   const liveOfferCountsByMarket = new Map<string, number>();
@@ -29,4 +40,19 @@ export function aggregateCatalogHealth(reads: readonly CatalogMarketRead[]): Cat
     liveMarketSlugs,
     liveOfferCountsByMarket,
   };
+}
+
+export function marketCatalogHealth(state: CatalogHealthState, market: MarketDefinition): MarketCatalogHealth {
+  const hasLiveRows = state.liveOfferCountsByMarket.has(market.slug);
+  return {
+    hasLiveRows,
+    tone: market.ready === false ? "pending" : hasLiveRows ? "ready" : "planned",
+    note: hasLiveRows ? "PostgreSQL row · observed timestamp shown per offer" : "Fixture rows only · no live normalized rows for this market",
+  };
+}
+
+export function schedulerHealth(workflowEvidenceVerified: boolean): SchedulerHealth {
+  return workflowEvidenceVerified
+    ? { state: "Configured · signed workflow", tone: "ready" }
+    : { state: "Pending · not configured", tone: "pending" };
 }
