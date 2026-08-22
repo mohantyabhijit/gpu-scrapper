@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "../../../components/app-link";
 import { formatPrice as formatCurrencyPrice, getMarket, isRankableCatalogOffer, markets, models, type Currency } from "../../catalog";
 import { loadCatalog } from "../../../lib/postgres/catalog";
 

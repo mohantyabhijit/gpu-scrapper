@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "../components/app-link";
 import { formatPrice, getMarket, isRankableCatalogOffer, markets, type Offer } from "./catalog";
 import { loadCatalog } from "../lib/postgres/catalog";
 import SourcingDesk, { SourceDeskAddButton, type SourceDeskOffer } from "../components/sourcing-desk";

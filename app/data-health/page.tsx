@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "../../components/app-link";
 import type { MarketDefinition } from "../../config/markets";
 import { loadCatalog, loadHealingEvidence } from "../../lib/postgres/catalog";
 import { HEALING_STAGES, type HealingStage } from "../../lib/postgres/healing-evidence";
