@@ -21,6 +21,13 @@ export function canonicalizeStored(value: string | null, catalog: SourceDeskOffe
 
 export function serializeSourceDesk(offers: SourceDeskOffer[]): string { return JSON.stringify(offers.slice(0, SOURCE_DESK_LIMIT)); }
 
+export function selectSourceDeskOffer(selected: SourceDeskOffer[], offer: SourceDeskOffer, acknowledgeReplacement = false): { selected: SourceDeskOffer[]; pending: SourceDeskOffer | null; replaced: boolean } {
+  if (selected.some((item) => item.id === offer.id)) return { selected: selected.filter((item) => item.id !== offer.id), pending: null, replaced: false };
+  if (selected.length > 0 && selected[0].market !== offer.market && !acknowledgeReplacement) return { selected, pending: offer, replaced: false };
+  if (selected.length >= SOURCE_DESK_LIMIT) return { selected, pending: null, replaced: false };
+  return { selected: selected[0] && selected[0].market !== offer.market ? [offer] : [...selected, offer], pending: null, replaced: Boolean(selected[0] && selected[0].market !== offer.market) };
+}
+
 export function buildSourcingBrief(offers: SourceDeskOffer[], reminderDate = new Date().toISOString().slice(0, 10)): string {
   const lines = ["Raster sourcing brief", `Market: ${offers[0]?.market ?? "unknown market"} · Currency: ${offers[0]?.currency ?? "unknown currency"}`, "Selected offers (not a like-for-like comparison):", ...offers.map((offer, index) => [`${index + 1}. ${offer.brand} · ${offer.model}`, `   Retailer: ${offer.source} · ${offer.currency} ${offer.price}`, `   Availability: ${offer.availability} · Observed: ${offer.observedAt}`, `   Source health: ${offer.healthState} · ${offer.freshness}`, `   Retailer link: ${offer.productUrl}`].join("\n")), `Reminder (${reminderDate}): verify current price, stock, and product details at each retailer before sourcing.`];
   return lines.join("\n");

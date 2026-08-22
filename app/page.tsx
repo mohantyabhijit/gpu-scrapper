@@ -49,6 +49,8 @@ export default async function Home({ searchParams }: { searchParams?: SearchPara
   const params = searchParams ? await searchParams : {};
   const requestedMarket = getMarket(valueOf(params.market));
   const snapshot = await loadCatalog({ market: requestedMarket });
+  const catalogSnapshots = await Promise.all(snapshot.markets.map((item) => loadCatalog({ market: item.slug })));
+  const safeCatalog = Array.from(new Map(catalogSnapshots.flatMap((item) => item.offers).map((offer) => [offer.id, offer])).values());
   const marketInfo = snapshot.selectedMarket ?? markets.us;
   const market = marketInfo.slug;
   const marketOffers = snapshot.offers.filter((offer) => offer.market === market && offer.currency === marketInfo.currency);
@@ -97,7 +99,7 @@ export default async function Home({ searchParams }: { searchParams?: SearchPara
     ...(availability !== "all" ? [{ key: "availability" as const, value: availability, label: availability.replaceAll("-", " ") }] : []),
     ...(sort !== "recommended" ? [{ key: "sort" as const, value: sort, label: `Sort: ${sort.replaceAll("-", " ")}` }] : []),
   ];
-  const sourceDeskOffers = marketOffers.map(({ id, market: offerMarket, model, brand, source, currency, price, availability, observedAt, healthState, freshness, productUrl }): SourceDeskOffer => ({ id, market: offerMarket, model, brand, source, currency, price, availability, observedAt, healthState, freshness, productUrl }));
+  const sourceDeskOffers = safeCatalog.map(({ id, market: offerMarket, model, brand, source, currency, price, availability, observedAt, healthState, freshness, productUrl }): SourceDeskOffer => ({ id, market: offerMarket, model, brand, source, currency, price, availability, observedAt, healthState, freshness, productUrl }));
   const sourceDeskCatalogBlob = btoa(JSON.stringify(sourceDeskOffers));
 
   return <main className="site-shell">

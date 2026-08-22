@@ -52,10 +52,15 @@ test("server markup keeps the progressive source-desk entry points", async () =>
 
 test("source-desk serialization and brief construction are bounded and provenance-first", async () => {
   const helper = new URL("../components/sourcing-desk-model.ts", import.meta.url).pathname;
-  const script = `import { buildSourcingBrief, canonicalizeStored } from ${JSON.stringify(helper)};
+  const script = `import { buildSourcingBrief, canonicalizeStored, selectSourceDeskOffer } from ${JSON.stringify(helper)};
     const catalog = [{ id: "safe", market: "us", model: "RTX 5090", brand: "Canonical", source: "Retailer", currency: "USD", price: 10, availability: "In stock", observedAt: "2026-08-21T10:00:00.000Z", healthState: "fixture", freshness: "fixture", productUrl: "https://example.com/gpu" }];
     const canonical = canonicalizeStored(JSON.stringify([{ id: "safe", market: "evil", price: 999 }]), catalog);
-    console.log(JSON.stringify({ canonical, brief: buildSourcingBrief(canonical, "2026-08-22") }));`;
+    const other = { ...catalog[0], id: "uk", market: "uk", currency: "GBP" };
+    const pending = selectSourceDeskOffer(canonical, other);
+    const replaced = selectSourceDeskOffer(pending.selected, other, true);
+    const retainedAcrossFilter = canonicalizeStored(JSON.stringify(canonical), catalog);
+    const corrupted = canonicalizeStored(JSON.stringify([{ id: "missing" }]), catalog);
+    console.log(JSON.stringify({ canonical, brief: buildSourcingBrief(canonical, "2026-08-22"), pending, replaced, retainedAcrossFilter, corrupted }));`;
   const result = spawnSync(process.execPath, ["--experimental-strip-types", "--input-type=module", "-e", script], { encoding: "utf8" });
   assert.equal(result.status, 0, result.stderr);
   const output = JSON.parse(result.stdout);
@@ -64,6 +69,11 @@ test("source-desk serialization and brief construction are bounded and provenanc
   assert.match(output.brief, /not a like-for-like comparison/);
   assert.match(output.brief, /Reminder \(2026-08-22\)/);
   assert.match(output.brief, /https:\/\/example\.com\/gpu/);
+  assert.equal(output.pending.selected[0].id, "safe");
+  assert.equal(output.pending.pending.id, "uk");
+  assert.equal(output.replaced.selected[0].id, "uk");
+  assert.equal(output.retainedAcrossFilter.length, 1);
+  assert.equal(output.corrupted.length, 0);
   const corrupted = spawnSync(process.execPath, ["--experimental-strip-types", "--input-type=module", "-e", `import { canonicalizeStored } from ${JSON.stringify(helper)}; console.log(canonicalizeStored("{broken", []).length);`], { encoding: "utf8" });
   assert.equal(corrupted.stdout.trim(), "0");
 });

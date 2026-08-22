@@ -41,3 +41,10 @@ Selections remain market-local. Adding another market pauses with an explicit ac
 - Introduced a desk context and `SourceDeskAddButton`; every offer card now owns its keyboard-accessible pressed-state Add/Remove control while the provider retains shared selection state and explicit cross-market replacement acknowledgement.
 - Replaced source-regex-only assertions with an executable child-process test of canonicalization, brief construction, field integrity, dated reminder, and corrupted-storage empty behavior.
 - Focused `npm run test:render` passed (9 tests); lint/build passed. The full repository gate was run in the prior round and will be rerun before the follow-up commit.
+
+## Follow-up fix round 2
+
+- The client boundary now receives the complete current safe catalog across all supported markets, separately from the visible filtered card list. Stored IDs are canonicalized from that full catalog, so URL filters and market navigation cannot implicitly discard a valid selection.
+- Cross-market add behavior is modeled as an explicit state transition: the existing desk remains selected and persisted while a pending offer waits for acknowledgement; only the acknowledgement replaces it.
+- Added executable transition assertions covering retention across a filter view, pending cross-market replacement, acknowledged replacement, canonical field integrity, and corrupted/unknown storage failure.
+- `npm run lint` passed; `npm run test:render` passed (9 tests); `npm test` passed (124 unit, 16 PostgreSQL, 9 rendered tests).
