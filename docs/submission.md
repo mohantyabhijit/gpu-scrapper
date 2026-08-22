@@ -4,9 +4,12 @@
 
 - [x] Public deployment loads signed out on desktop and mobile widths.
 - [ ] Two same-market sources have healthy live output and overlapping models.
-- [ ] At least one real create/run flow and stable Collector ID are recorded.
+- [x] Real create/run flow and stable Dynacore Collector ID
+      `c_mt3qzv5p215cci1r2e` are recorded.
 - [ ] Same-ID heal is proven with sanitized before/preview/after evidence.
-- [ ] Scheduled/manual GitHub Action has completed and fed PostgreSQL/storefront.
+- [x] Scheduled/manual GitHub Action has completed and fed PostgreSQL/storefront
+      (`32551530109`; hosted counts: sources 1, products 2, offers 2,
+      observations 2, runs 2, quarantine 1).
 - [x] Search, filters, currency grouping, freshness, source attribution, and
       outbound links pass manual keyboard/browser QA at desktop and 390px.
 - [x] Automated axe scan reports zero violations across four deployed routes.
@@ -14,14 +17,14 @@
       `evidence/screenshots/production-home-mobile-390x844.png`.
 - [ ] Last-known-good behavior is visible for a failed/stale source.
 - [x] README, architecture, evidence matrix, and demo script are current for
-      the explicitly fixture-backed baseline.
+      the one-source Singapore live slice with fixture fallback.
 
 ## Safety gate
 
 - [ ] Exposed setup credential revoked/rotated.
 - [x] Secret scan passes working tree, history, build output, and evidence.
 - [x] No login-walled, paywalled, personal, checkout, or arbitrary URL data is
-      present in the fixture-backed baseline; repeat the review for live sources.
+      present in the verified live/fixture slice.
 - [x] No claims of checkout, reservation, guaranteed price, or compatibility
       advice.
 
@@ -29,7 +32,8 @@
 
 Include the public repository, deployed URL, short demo, sanitized evidence
 links, source eligibility decision, and a concise explanation of how Bright Data
-Scraper Studio powers the live downstream product.
+Scraper Studio powers the live Dynacore downstream slice. Singapore is the only
+live source in this release state; US, UK, and India remain fixture-backed.
 
 ## Official Google Form fields
 
@@ -62,13 +66,15 @@ Raster is not a merchant; it makes fragmented regional availability legible.
 ### Draft: how Raster uses Scraper Studio
 
 Bright Data Scraper Studio is Raster's production data source, not an add-on.
-Each eligible long-tail retailer gets an owned, source-specific collector with a
-stable `c_*` ID. The protected refresh pipeline triggers those IDs, validates
-and normalizes structured rows, quarantines bad output, preserves last-known-good
-offers, writes current state and observations to hosted PostgreSQL via private Hyperdrive, and feeds the storefront on
-a GitHub Actions schedule. The demo shows a real create/run flow and repairs a
-broken extractor with `bdata scraper heal`, approval, and a successful rerun
-under the same Collector ID—without changing downstream code.
+The verified Dynacore collector `c_mt3qzv5p215cci1r2e` is triggered by the
+protected refresh pipeline, validates and normalizes structured rows, quarantines
+the accessory row, writes current state and observations to hosted PostgreSQL
+via private Hyperdrive, and feeds the Singapore storefront on the GitHub Actions
+schedule. The current evidence includes multiple same-ID heal previews, but no
+successful self-heal is claimed: one approval is `done` while its rerun remains
+2 accepted / 1 accessory quarantined, and other approvals failed without changing
+the collector. Infinity Computer remains disabled with 59 `price_required`
+quarantines and zero validated offers.
 
 Do not paste these drafts into the form until the claimed live collectors,
 schedule, PostgreSQL writes, and same-ID heal are proven in the evidence matrix.
@@ -85,9 +91,10 @@ strongest patterns:
 2. **Set a goal and walk away:** the goal is a fresh, market-local catalog; a
    scheduled GitHub Action signs one bounded refresh slice and publishes a
    health summary without dashboard work.
-3. **Self-healing scraper (hero):** a controlled contract break is repaired with
-   `bdata scraper heal`, approved, and rerun under the exact same `c_*` ID while
-   downstream code stays unchanged.
+3. **Self-healing scraper (hero, pending proof):** a controlled contract break
+   is previewed with `bdata scraper heal` under the exact same `c_*` ID while
+   downstream code stays unchanged; the current approval/rerun evidence is not
+   yet a successful heal.
 4. **Scrapers in CI:** the same signed path runs on schedule or manual dispatch,
    validates output, fails safely, and preserves last-known-good data when a
    source is degraded.
@@ -99,7 +106,8 @@ evidence matrix have moved from `pending` to a dated proof link.
 ## Three-track winning proof
 
 - **Web-Slinger / Best Use of Bright Data:** show terminal-driven create, run,
-  protected trigger, PostgreSQL output, schedule, and same-ID heal end to end.
+  protected trigger, PostgreSQL output, schedule, and the honest same-ID heal
+  boundary without calling the current previews a successful repair.
 - **Suit-Up / Best UI:** show the polished four-market journey, accessible
   filters, market-local currency boundary, model detail, and health surface.
 - **Spider-Sense / Best Clean Code:** show typed contracts, allowlists, HMAC

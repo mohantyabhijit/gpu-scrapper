@@ -12,31 +12,36 @@ evidence that already has a dated link in the evidence matrix.
    Raster makes public specialist listings comparable while sending the final
    purchase decision back to the retailer.”
 2. **0:20–0:45 — Why this is a scraper product.** In the terminal, show the
-   redacted custom Scraper Studio create/run command, one stable `c_*` ID, the
-   valid-row count, currency, and timestamp. Name the long-tail source and
-   point to its eligibility record; never show credentials or raw headers.
-3. **0:45–1:20 — Dynamic country and UI proof.** Submit one signed Country Pack,
-   show it pending in the health ledger, attach its dated eligibility/create/run
-   proof, then show the same country enter the selector without a deploy. Filter
-   that market, open a model detail page, and follow an attributed
-   retailer link. Call out same-currency ranking, freshness/health labels, and
-   “verify at retailer.” The visible catalog must say `live` only when backed by
-   a verified live row; otherwise keep the fixture label.
+   redacted Dynacore Scraper Studio create/run command, stable Collector ID
+   `c_mt3qzv5p215cci1r2e`, two accepted rows, one accessory quarantine, SGD,
+   and observed timestamps. Name the source and point to its eligibility
+   record; never show credentials or raw headers.
+3. **0:45–1:20 — Market-local UI proof.** Show Singapore's two live Dynacore
+   offers in the health/catalog surface, then switch through the US, UK, and
+   India fixture views. Filter Singapore, open a model detail page, and follow
+   an attributed retailer link. Call out same-currency ranking,
+   freshness/health labels, and “verify at retailer.” The visible catalog must
+   say `live` only when backed by a verified live row; keep fixture labels for
+   the other markets.
 
    Rehearse this beat with the exact pending and ready payload sequence in
    [operations.md](operations.md#exact-country-pack-rehearsal). The terminal
    should show only the safe `{slug,status}` responses; the two payloads must
    keep the same verified country/source/collector boundary.
 4. **1:20–2:05 — Prompt-to-production and scheduled goal.** Show the structured
-   collector row crossing validation/normalization into hosted PostgreSQL via private Hyperdrive and the storefront,
-   then show the GitHub Action summary for one scheduled/manual market-source
-   slice. Explain that the unattended goal is a fresh, market-local catalog,
-   not a dashboard-only scraper.
-5. **2:05–2:45 — Self-healing hero.** Open the visible Data Health timeline,
-   then show the sanitized failing contract,
-   `bdata scraper heal` preview, approval, and rerun. Highlight the exact same
-   Collector ID before and after, with no downstream code change. Show that
-   invalid output quarantines and last-known-good data survives.
+   Dynacore rows crossing validation/normalization into hosted PostgreSQL via
+   private Hyperdrive and the storefront, including safe counts (sources 1,
+   products 2, offers 2, observations 2, runs 2, quarantine 1). Then show
+   green refresh run `32551530109` and quality runs `32552183005` and
+   `32552183008`. Explain that the unattended goal is a fresh, market-local
+   catalog, not a dashboard-only scraper.
+5. **2:05–2:45 — Honest self-healing boundary.** Open the visible Data Health
+   timeline, then show the sanitized failing contract and same-ID
+   `bdata scraper heal` previews. State plainly that self-heal is unproved:
+   one approval is `done` but its rerun remains 2 accepted / 1 accessory
+   quarantined, while other approvals failed without changing the collector.
+   Show quarantine/last-known-good behavior without narrating a successful
+   repair.
 6. **2:45–3:00 — Close against the rubric.** Give one sentence each for
    impact, creativity, technical excellence, Scraper Studio use, reliability,
    and presentation. End with: “Raster never takes payment or guarantees
@@ -56,5 +61,6 @@ before/after heal evidence are the proof surfaces.
   account pages, dashboard identity, or unredacted provider output.
 - Do not claim a live collector, PostgreSQL write, schedule, or heal until its evidence
   row is dated and linked.
-- If a required live gate is still pending, stop the recording and fix the gate;
-  do not substitute a fixture while narrating it as production behavior.
+- If a required live gate is still pending, say so in the recording; do not
+  substitute a fixture while narrating it as production behavior, and do not
+  claim two-source breadth, 12 offers, or a successful self-heal.

@@ -7,14 +7,14 @@ This ledger maps the organizer rules supplied on 2026-08-21 to release evidence.
 | --- | --- | --- | --- |
 | Eligible participation | Participant location/registration must be confirmed by the participant. | registration confirmation | participant gate |
 | One team, 1–4 people | Team membership must be confirmed before the form is filled. | official form | participant gate |
-| Required technology | Create and run at least one custom Bright Data Scraper Studio scraper. | stable `c_*` create/run/repeat-read evidence | Dynacore proven; Infinity invalid-output attempt also recorded; downstream route pending |
+| Required technology | Create and run at least one custom Bright Data Scraper Studio scraper. | stable `c_*` create/run/repeat-read evidence | Dynacore `c_mt3qzv5p215cci1r2e` proven; Infinity invalid-output attempt also recorded; Dynacore feeds the deployed Singapore slice |
 | Open-ended useful project | Raster is a four-market GPU comparison and reliability pipeline. | public app and README | pass |
-| No library-only entry | Enabled sources must use custom Scraper Studio collectors; pre-built coverage is an exclusion gate. | source register and collector evidence | Dynacore proven; Infinity custom ID and exclusion recorded but source disabled |
+| No library-only entry | Enabled sources must use custom Scraper Studio collectors; pre-built coverage is an exclusion gate. | source register and collector evidence | Dynacore proven; Infinity custom ID and exclusion recorded but source disabled after 59 `price_required` rows |
 | Public data only | No private, login-protected, paywalled, personal, or restricted data. | source eligibility and security review | pending |
 | No government sites | Registry contains only public retailer candidates. | `config/sources.ts` | pass |
 | Work began during event | Public history begins during the event; participant must be able to explain any earlier notes/templates. | git history and issue #1 | pending |
 | Third-party tools allowed | Dependencies/assets are identified and original hackathon work is visible in history. | lockfile, LICENSE, git log | in progress |
-| Required package | Public repo, clear README, structured output example, working demo video, and Scraper Studio explanation. | release checklist below | pending |
+| Required package | Public repo, clear README, structured output example, working demo video, and Scraper Studio explanation. | release checklist below | public repo, deployed Singapore slice, and sanitized production evidence ready; demo video remains pending |
 | AI disclosure | README and submission identify Codex and Luna subagents and describe participant verification. | README and demo | README pass; video pending |
 | Participant understanding | Demo and docs explain scraper, contracts, architecture, and technical decisions. | architecture, demo script, Q&A rehearsal | pending |
 | Meaningful contribution | Participant directs scope, market choices, tradeoffs, QA, and final approvals; AI output is reviewed and tested. | issue/comments, commits, QA evidence | in progress |
@@ -34,8 +34,14 @@ This ledger maps the organizer rules supplied on 2026-08-21 to release evidence.
 - [x] Custom Scraper Studio create/run evidence exists for Dynacore.
 - [x] Infinity Computer custom create/run/repeat-read failure evidence is sanitized and retained.
 - [x] Deployed public application is verified signed out.
+- [x] Green refresh run `32551530109` and quality runs `32552183005` and
+      `32552183008` are recorded; hosted PostgreSQL is reached through private
+      Hyperdrive.
+- [x] Hosted PostgreSQL production counts are recorded: sources 1, products 2,
+      offers 2, observations 2, runs 2, quarantine 1.
 - [ ] Demo video (maximum 3 minutes) is public/unlisted and verified.
-- [ ] Scraper Studio explanation reflects verified live behavior.
+- [x] Scraper Studio explanation reflects the verified one-source Dynacore
+      live behavior and does not claim a second source or successful self-heal.
 - [x] AI-assistant disclosure is included in the README and submission plan.
 - [ ] AI-assistant disclosure is included in the final form and video.
 - [ ] Participant can explain the code and architecture without relying on an
