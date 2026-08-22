@@ -37,6 +37,10 @@ test("Dynacore catalog URL and pending state stay consistent across source artif
   assert.ok(evidenceText.includes(`catalog_url: ${expectedUrl}`));
   assert.equal(source.enabled, false);
   assert.deepEqual(source.collectorIds, {});
+  assert.match(eligibilityText, /Dynacore remains disabled with no Collector\s+ID/);
+  assert.match(eligibilityText, /static\s+registry intentionally has no Collector IDs/);
+  assert.match(evidenceText, /collector_ids:\s+combined: null\s+discovery: null\s+pdp: null/);
+  assert.match(evidenceText, /Keep the source disabled and collector IDs empty/);
 });
 
 test("Singapore P0 manifests are bounded, registry-owned, and ready for real CLI creation", async () => {
