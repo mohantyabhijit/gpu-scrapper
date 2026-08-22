@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { MarketDefinition } from "../../config/markets";
 import { loadCatalog, loadHealingEvidence } from "../../lib/postgres/catalog";
 import { HEALING_STAGES, type HealingStage } from "../../lib/postgres/healing-evidence";
+import { aggregateCatalogHealth } from "./health";
 
 type HealthTone = "ready" | "pending" | "planned";
 type EvidenceKind = "fixture" | "provider" | "policy";
@@ -94,26 +95,56 @@ const healingTime = new Intl.DateTimeFormat("en-GB", {
 
 export default async function DataHealth() {
   const [snapshot, healing] = await Promise.all([loadCatalog(), loadHealingEvidence()]);
-  const liveRead = snapshot.source === "postgres";
+  const catalogReads = await Promise.all(snapshot.markets.map(async (market) => ({
+    market,
+    snapshot: market.slug === snapshot.selectedMarket.slug ? snapshot : await loadCatalog({ market: market.slug }),
+  })));
+  const catalogHealth = aggregateCatalogHealth(catalogReads);
+  const liveRead = catalogHealth.liveRead;
   const liveRowsLabel = liveRead
-    ? `${snapshot.liveOfferCount ?? snapshot.offers.length} normalized PostgreSQL rows`
+    ? `${catalogHealth.liveOfferCount} normalized PostgreSQL rows`
     : snapshot.fallbackReason === "database-empty"
       ? "pending · no normalized rows"
       : "pending · DB read unavailable";
-  const withCatalogState: readonly HealthCheck[] = liveRead
-    ? pipelineChecks.map((check) => check.key === "fixture-catalog"
-      ? {
+  const withCatalogState: readonly HealthCheck[] = liveRead ? pipelineChecks.map((check) => {
+    if (check.key === "fixture-catalog") {
+      return {
         ...check,
         label: "PostgreSQL normalized offers",
-        state: `${snapshot.liveOfferCount ?? snapshot.offers.length} rows read`,
+        state: `${catalogHealth.liveOfferCount} rows read`,
         detail: "Rows passed the market, currency, source, URL, and timestamp checks before entering the storefront.",
         evidence: [
           { kind: "provider", label: "PostgreSQL read" },
           { kind: "policy", label: "Schema validated" },
         ],
-      }
-      : check)
-    : pipelineChecks;
+      };
+    }
+    if (check.key === "live-collectors") {
+      return {
+        ...check,
+        state: `${catalogHealth.liveMarketSlugs.length} market(s) observed`,
+        tone: "ready",
+        detail: "Normalized PostgreSQL rows are present for the listed markets; provider execution remains a separate evidence boundary.",
+        evidence: [
+          { kind: "provider", label: "Live rows observed" },
+          { kind: "policy", label: "Source-bound contract" },
+        ],
+      };
+    }
+    if (check.key === "scheduler-trigger") {
+      return {
+        ...check,
+        state: "Configured · signed workflow",
+        tone: "ready",
+        detail: "The signed schedule/manual workflow is configured for the registered source slices; a database read does not claim a successful self-heal.",
+        evidence: [
+          { kind: "provider", label: "Signed workflow" },
+          { kind: "policy", label: "Trigger gate" },
+        ],
+      };
+    }
+    return check;
+  }) : pipelineChecks;
   const displayedChecks: readonly HealthCheck[] = withCatalogState.map((check) => check.key === "self-heal" && healing
     ? {
       ...check,
@@ -128,11 +159,14 @@ export default async function DataHealth() {
       ],
     }
     : check);
-  const marketHealth: readonly MarketHealth[] = snapshot.markets.map((market) => ({
-    market,
-    tone: market.ready === false ? "pending" : "ready",
-    note: liveRead ? "PostgreSQL row · observed timestamp shown per offer" : "Fixture rows only · live provider not configured",
-  }));
+  const marketHealth: readonly MarketHealth[] = snapshot.markets.map((market) => {
+    const hasLiveRows = catalogHealth.liveOfferCountsByMarket.has(market.slug);
+    return {
+      market,
+      tone: market.ready === false ? "pending" : "ready",
+      note: hasLiveRows ? "PostgreSQL row · observed timestamp shown per offer" : "Fixture rows only · no live normalized rows for this market",
+    };
+  });
   return (
     <main className="site-shell health-page">
       <div className="demo-banner" role="note">
@@ -179,7 +213,7 @@ export default async function DataHealth() {
           </div>
           <div>
             <dt>Live provider</dt>
-            <dd><span className="legend-dot legend-pending" aria-hidden="true" /> not configured</dd>
+            <dd><span className={`legend-dot ${liveRead ? "legend-fixture" : "legend-pending"}`} aria-hidden="true" /> {liveRead ? "normalized rows observed" : "not configured"}</dd>
           </div>
           <div>
             <dt>Publish rule</dt>
@@ -187,7 +221,7 @@ export default async function DataHealth() {
           </div>
           <div>
             <dt>Normalized rows</dt>
-            <dd data-live-count={liveRead ? snapshot.liveOfferCount ?? 0 : "pending"}><span className={`legend-dot ${liveRead ? "legend-fixture" : "legend-pending"}`} aria-hidden="true" /> {liveRowsLabel}</dd>
+            <dd data-live-count={liveRead ? catalogHealth.liveOfferCount : "pending"}><span className={`legend-dot ${liveRead ? "legend-fixture" : "legend-pending"}`} aria-hidden="true" /> {liveRowsLabel}</dd>
           </div>
         </dl>
       </section>

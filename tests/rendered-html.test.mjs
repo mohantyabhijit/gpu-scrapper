@@ -1,8 +1,25 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
+import { aggregateCatalogHealth } from "../app/data-health/health.ts";
 
 const basePath = "/scrapper";
+
+function catalogRead(slug, source, count) {
+  const market = { slug, code: slug === "singapore" ? "SG" : "US", label: slug, currency: slug === "singapore" ? "SGD" : "USD", locale: "en-US", symbol: "$" };
+  return {
+    market,
+    snapshot: {
+      source,
+      offers: Array.from({ length: count }, () => ({})),
+      liveOfferCount: source === "postgres" ? count : null,
+      rejectedRows: 0,
+      markets: [market],
+      marketPacks: [],
+      selectedMarket: market,
+    },
+  };
+}
 
 async function render(path = "/") {
   const workerUrl = new URL("../dist/server/index.js", import.meta.url);
@@ -197,4 +214,17 @@ test("publishes judge-facing data health without fabricating live state", async 
   assert.match(html, /brightdata\.com/);
   assert.doesNotMatch(html, /Self-heal proved|Proven · same ID/i);
   assert.doesNotMatch(html, /c_gpu_|collectors online/i);
+});
+
+test("data-health aggregation keeps a live Singapore read when the default US market is empty", () => {
+  const state = aggregateCatalogHealth([
+    catalogRead("us", "fixture", 0),
+    catalogRead("singapore", "postgres", 2),
+    catalogRead("uk", "fixture", 0),
+  ]);
+  assert.equal(state.liveRead, true);
+  assert.equal(state.liveOfferCount, 2);
+  assert.deepEqual(state.liveMarketSlugs, ["singapore"]);
+  assert.equal(state.liveOfferCountsByMarket.get("singapore"), 2);
+  assert.equal(state.liveOfferCountsByMarket.has("us"), false);
 });
