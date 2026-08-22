@@ -48,3 +48,9 @@ Selections remain market-local. Adding another market pauses with an explicit ac
 - Cross-market add behavior is modeled as an explicit state transition: the existing desk remains selected and persisted while a pending offer waits for acknowledgement; only the acknowledgement replaces it.
 - Added executable transition assertions covering retention across a filter view, pending cross-market replacement, acknowledged replacement, canonical field integrity, and corrupted/unknown storage failure.
 - `npm run lint` passed; `npm run test:render` passed (9 tests); `npm test` passed (124 unit, 16 PostgreSQL, 9 rendered tests).
+
+## Follow-up fix round 3
+
+- Mixed-market persisted IDs now fail closed during canonicalization, preserving the one-market invariant even when local storage is tampered with.
+- Executable focused coverage now models a complete catalog plus a filtered visible catalog, verifies the persisted selection remains retained by the complete catalog, and compares serialized storage before/while pending cross-market replacement and after explicit acknowledgement.
+- `npm run lint` passed; `npm run test:render` passed (9 tests); `npm test` passed (124 unit, 16 PostgreSQL, 9 rendered tests).

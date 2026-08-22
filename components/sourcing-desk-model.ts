@@ -15,7 +15,9 @@ export function canonicalizeStored(value: string | null, catalog: SourceDeskOffe
     const byId = new Map(catalog.map((offer) => [offer.id, offer]));
     const ids = parsed.map((item) => item && typeof item === "object" && typeof (item as Record<string, unknown>).id === "string" ? (item as Record<string, unknown>).id as string : null);
     if (ids.some((id) => !id || !byId.has(id))) return [];
-    return Array.from(new Set(ids as string[])).slice(0, SOURCE_DESK_LIMIT).map((id) => byId.get(id)!);
+    const canonical = Array.from(new Set(ids as string[])).slice(0, SOURCE_DESK_LIMIT).map((id) => byId.get(id)!);
+    if (canonical.some((offer) => offer.market !== canonical[0]?.market || offer.currency !== canonical[0]?.currency)) return [];
+    return canonical;
   } catch { return []; }
 }
 
