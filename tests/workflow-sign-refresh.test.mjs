@@ -1,8 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { createHmac } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { load as parseYaml } from "js-yaml";
+import { fileURLToPath } from "node:url";
 import { createPayload, MAX_SUMMARY_INTEGER, MAX_TIMEOUT_MS, parseSlice, RefreshResponseError, runRefresh, signatureFor, summaryListLength } from "../scripts/sign-refresh.mjs";
 import { MAX_PROVIDER_RUN_MS } from "../lib/brightdata/client.ts";
 import { parseRefreshRequest } from "../lib/brightdata/refresh.ts";
@@ -19,6 +21,7 @@ const APPROVED_STEP_ENV = Object.freeze({
 const normalizeWorkflowValue = (value) => typeof value === "string" ? value.trim() : value;
 const normalizeWorkflowExpression = (value) => normalizeWorkflowValue(value)?.replace(/\s+/g, " ");
 const EXPECTED_REFRESH_IF = "${{ github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}";
+const REPO_ROOT = fileURLToPath(new URL("../", import.meta.url));
 
 function assertWorkflowExecutionPolicy(document) {
   assert.ok(document.on && typeof document.on === "object" && !Array.isArray(document.on), "workflow triggers must be a mapping");
@@ -135,6 +138,22 @@ test("workflow gates production secrets and pins deterministic setup", async () 
 
   const summary = workflow.slice(workflow.indexOf("- name: Publish safe job summary"));
   assert.doesNotMatch(summary, /secrets\./);
+});
+
+test("quality secret-history scans pass leading-dash patterns explicitly", async () => {
+  const workflow = await readFile(new URL("../.github/workflows/quality.yml", import.meta.url), "utf8");
+  assert.match(workflow, /git grep -qE -e "\$pattern" -- \. ':!package-lock\.json'/);
+  assert.match(workflow, /git grep -qE -e "\$pattern" "\$commit" -- \. ':!package-lock\.json'/);
+
+  const leadingDashPattern = ["---", "---", "no-secret-marker", "---", "---"].join("");
+  for (const args of [
+    ["grep", "-qE", "-e", leadingDashPattern, "--", ".", ":!package-lock.json"],
+    ["grep", "-qE", "-e", leadingDashPattern, "HEAD", "--", ".", ":!package-lock.json"],
+  ]) {
+    const result = spawnSync("git", args, { cwd: REPO_ROOT, encoding: "utf8" });
+    assert.equal(result.status, 1, `leading-dash git grep should report no match, not option parsing failure: ${result.stderr}`);
+    assert.equal(result.stderr, "");
+  }
 });
 
 test("workflow execution policy rejects environment suffixes and weakened branch conditions", async () => {

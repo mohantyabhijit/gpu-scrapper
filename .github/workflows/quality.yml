@@ -54,12 +54,12 @@ jobs:
         run: |
           set -euo pipefail
           pattern='-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|(^|[^A-Z_])(api[_-]?key|token|secret)[[:space:]]*[:=][[:space:]]*[A-Za-z0-9_-]{20,}|(BRIGHTDATA_API_KEY|api[_-]?key).{0,20}[0-9a-fA-F]{8}-[0-9a-fA-F-]{27,}'
-          if git grep -qE -- "$pattern" -- . ':!package-lock.json'; then
+          if git grep -qE -e "$pattern" -- . ':!package-lock.json'; then
             echo '::error::probable secret material found in tracked source'
             exit 1
           fi
           while IFS= read -r commit; do
-            if git grep -qE "$pattern" "$commit" -- . ':!package-lock.json'; then
+            if git grep -qE -e "$pattern" "$commit" -- . ':!package-lock.json'; then
               echo "::error::probable secret material found in Git history at $commit"
               exit 1
             fi
