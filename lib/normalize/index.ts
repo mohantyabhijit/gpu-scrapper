@@ -32,7 +32,9 @@ export type NormalizedOffer = {
 };
 
 const MPN_KEY = /(?:mpn|part\s*(?:number|no\.?))\s*[:#-]?\s*([A-Z0-9][A-Z0-9._-]{3,})/i;
-const GPU_KEY = /\b(RTX|GTX|RX|ARC)\s*([0-9]{3,5})(?:\s*(XT|XTX|Ti|SUPER|Super))?/i;
+// Retailer titles commonly place trademark marks between the series and model
+// (for example "RTX™ 5070"). Treat those marks as decoration, not identity.
+const GPU_KEY = /\b(RTX|GTX|RX|ARC)(?:\s*[™®])?\s*([0-9]{3,5})(?:\s*(XT|XTX|Ti|SUPER|Super))?/i;
 const VRAM_KEY = /\b(\d{1,3})\s*(?:GB|GIB)\b/i;
 const BOARD_PARTNERS = [
   "asus",

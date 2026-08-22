@@ -36,6 +36,21 @@ test("MPN is preferred for stable cross-retailer identity", () => {
   assert.equal(one.priceMinor, 249995);
 });
 
+test("GPU identity ignores retailer trademark decoration", () => {
+  const rtx = normalizeOffer(valid({
+    title: "Gigabyte AORUS GeForce RTX™ 5070 Ti MASTER 16GB",
+    mpn: null,
+  }));
+  const rx = normalizeOffer(valid({
+    title: "ASUS Prime Radeon™ RX 9070 XT 16GB",
+    mpn: null,
+  }));
+  assert.equal(rtx.product.model, "RTX 5070 TI");
+  assert.equal(rtx.product.gpuFamily, "RTX");
+  assert.equal(rx.product.model, "RX 9070 XT");
+  assert.equal(rx.product.gpuFamily, "RX");
+});
+
 test("comparisons are isolated by market and fixed currency", () => {
   const us = normalizeOffer(valid(), "2026-08-21T10:00:00.000Z");
   const sg = { ...us, offerKey: "sg:rtx-5080", market: "SG", currency: "SGD" };

@@ -19,6 +19,10 @@ function slugify(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
+function modelFilterKey(value: string) {
+  return slugify(value.replace(/^GeForce\s+/i, ""));
+}
+
 function defaultOfferOrder(a: Offer, b: Offer) {
   const healthRank = { healthy: 0, fixture: 1, degraded: 2, unavailable: 3 };
   const freshnessRank = { fresh: 0, fixture: 1, aging: 2, stale: 3 };
@@ -61,7 +65,7 @@ export default async function Home({ searchParams }: { searchParams?: SearchPara
   const availability = availabilityOptions.includes(valueOf(params.availability) ?? "") ? valueOf(params.availability)! : "all";
   const sortOptions = ["recommended", "price-low", "price-high", "freshness"];
   const sort = sortOptions.includes(valueOf(params.sort) ?? "") ? valueOf(params.sort)! : "recommended";
-  const modelOptions = Array.from(new Map(marketOffers.map((offer) => [offer.modelSlug, offer.model])).entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  const modelOptions = Array.from(new Map(marketOffers.map((offer) => [modelFilterKey(offer.model), offer.model])).entries()).sort((a, b) => a[1].localeCompare(b[1]));
   const sourceOptions = Array.from(new Map(marketOffers.map((offer) => [slugify(offer.source), offer.source])).entries()).sort((a, b) => a[1].localeCompare(b[1]));
   const validModels = new Set(modelOptions.map(([slug]) => slug));
   const validSources = new Set(sourceOptions.map(([slug]) => slug));
@@ -70,7 +74,7 @@ export default async function Home({ searchParams }: { searchParams?: SearchPara
   const filteredOffers = marketOffers.filter((offer) => {
     const matchesQuery = !query || `${offer.model} ${offer.brand} ${offer.source}`.toLowerCase().includes(query);
     const matchesAvailability = availability === "all" || slugify(offer.availability) === availability;
-    const matchesModel = selectedModels.length === 0 || selectedModels.includes(offer.modelSlug);
+    const matchesModel = selectedModels.length === 0 || selectedModels.includes(modelFilterKey(offer.model));
     const matchesSource = selectedSources.length === 0 || selectedSources.includes(slugify(offer.source));
     return matchesQuery && matchesAvailability && matchesModel && matchesSource;
   }).sort((a, b) => {
