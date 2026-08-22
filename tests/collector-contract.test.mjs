@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { marketCurrency, validateCollectorOutput, validateRawOffer } from "../scrapers/contracts.ts";
-import { sourceRegistry } from "../config/sources.ts";
+import { sourceHostIsAllowed, sourceRegistry } from "../config/sources.ts";
 
 const p0ManifestSlugs = ["dynacore", "tech-deals", "pc-themes"];
 
@@ -11,6 +11,14 @@ test("source registry is role keyed and contains no live collector IDs", () => {
   assert.equal(sourceRegistry["central-computer"].currency, "USD");
   assert.equal("tradezone" in sourceRegistry, false);
   assert.equal(Object.values(sourceRegistry).some((source) => Object.keys(source.collectorIds).length > 0), false);
+});
+
+test("Dynacore uses the current public GPU collection and stays disabled pending creation", () => {
+  const source = sourceRegistry.dynacore;
+  assert.equal(source.catalogUrl, "https://dynacoretech.com/collections/gpu");
+  assert.equal(sourceHostIsAllowed("dynacore", source.catalogUrl), true);
+  assert.equal(source.enabled, false);
+  assert.deepEqual(source.collectorIds, {});
 });
 
 test("Singapore P0 manifests are bounded, registry-owned, and ready for real CLI creation", async () => {

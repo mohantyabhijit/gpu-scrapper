@@ -120,7 +120,7 @@ export const sourceRegistry = {
     currency: "SGD",
     baseUrl: "https://dynacoretech.com",
     allowedHosts: ["dynacoretech.com", "www.dynacoretech.com"],
-    catalogUrl: "https://dynacoretech.com/collections/all/graphics-card",
+    catalogUrl: "https://dynacoretech.com/collections/gpu",
     enabled: false,
     collectorIds: {},
     collectorRoles: ["combined"],

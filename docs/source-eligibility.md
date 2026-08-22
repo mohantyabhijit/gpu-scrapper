@@ -15,7 +15,7 @@ contract, overlap, and repeat-read gates pass.
 | UK / GBP | CCL Computers | <https://www.cclonline.com/pc-components/graphics-cards/> | `ccl` | secondary | pending |
 | IN / INR | MDComputers | <https://mdcomputers.in/catalog/graphics-card/nvidia> | `md-computers` | primary | pending |
 | IN / INR | SCL Gaming | <https://sclgaming.in/product-category/graphics-card/> | `scl-gaming` | secondary | pending |
-| SG / SGD | Dynacore Technologies | <https://dynacoretech.com/collections/all/graphics-card> | `dynacore` | primary | pending live gates |
+| SG / SGD | Dynacore Technologies | <https://dynacoretech.com/collections/gpu> | `dynacore` | primary | public page and library exclusion recorded; pending custom collector |
 | SG / SGD | TechDeals | <https://www.techdeals.com.sg/collections/graphics-card-1> | `tech-deals` | secondary | pending live gates |
 | SG / SGD | PC Themes | <https://www.pcthemes.com.sg/video-card-graphics-card> | `pc-themes` | backup | pending conditional review |
 
@@ -48,6 +48,20 @@ See the dated public-page records for [Dynacore](../evidence/sources/dynacore-el
 [TechDeals](../evidence/sources/tech-deals-eligibility.md), and
 [PC Themes](../evidence/sources/pc-themes-eligibility.md). Their pending fields
 remain pending; no live provider state is implied.
+
+### Dynacore update — 2026-08-22
+
+The current public catalog is <https://dynacoretech.com/collections/gpu>.
+The signed-out page exposed two GPU products with SGD prices and canonical
+product links, plus one graphics-card holder accessory. The accessory is
+excluded from Raster's GPU offer set. An authenticated Bright Data Scrapers
+Library search for `dynacoretech.com` returned exactly:
+`This domain isn't in our library yet - but getting data from it is easy:` and
+offered `Build a scraper for any website with Scraper Studio`.
+
+This is an eligibility record only. Dynacore remains disabled with no Collector
+ID until the custom collector creation, run, validation, and repeat-read gates
+are complete.
 
 ## Data handling
 
