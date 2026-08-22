@@ -12,12 +12,12 @@ evidence that already has a dated link in the evidence matrix.
    Raster makes public specialist listings comparable while sending the final
    purchase decision back to the retailer.”
 2. **0:20–0:45 — Why this is a scraper product.** In the terminal, show the
-   redacted Dynacore Scraper Studio create/run command, stable Collector ID
-   `c_mt3qzv5p215cci1r2e`, two accepted rows, one accessory quarantine, SGD,
-   and observed timestamps. Name the source and point to its eligibility
-   record; never show credentials or raw headers.
-3. **0:45–1:20 — Market-local UI proof.** Show Singapore's two live Dynacore
-   offers in the health/catalog surface, then switch through the US, UK, and
+   redacted Dynacore and PC Themes Scraper Studio run commands and stable
+   Collector IDs `c_mt3qzv5p215cci1r2e` and `c_mt3zqdljej45v0g1r`. Show the
+   safe PC Themes summary: 96 rows, 96 valid, zero failures. Never show
+   credentials, raw headers, or raw provider bodies.
+3. **0:45–1:20 — Market-local UI proof.** Show Singapore's 98 live offers
+   across Dynacore and PC Themes, then switch through the US, UK, and
    India fixture views. Filter Singapore, open a model detail page, and follow
    an attributed retailer link. Call out same-currency ranking,
    freshness/health labels, and “verify at retailer.” The visible catalog must
@@ -29,21 +29,18 @@ evidence that already has a dated link in the evidence matrix.
    should show only the safe `{slug,status}` responses; the two payloads must
    keep the same verified country/source/collector boundary.
 4. **1:20–2:05 — Prompt-to-production and automation goal.** Show the structured
-   Dynacore rows crossing validation/normalization into hosted PostgreSQL via
-   private Hyperdrive and the storefront, including safe counts (sources 1,
-   products 2, offers 2, observations 2, runs 2, quarantine 1). Then show
-   green refresh run `32551530109` and quality runs `32552183005` and
-   `32552183008`. Identify `32551530109` as a manual dispatch, then show that
+   PC Themes rows crossing validation/normalization into hosted PostgreSQL via
+   private Hyperdrive and the storefront. Then show green refresh run
+   `32560319450` and quality run `32560226787`. Identify the refresh as a
+   manual dispatch, then show that
    cron is configured without claiming a scheduled occurrence was observed.
    Explain that the unattended goal is a fresh, market-local catalog, not a
    dashboard-only scraper.
-5. **2:05–2:45 — Honest self-healing boundary.** Open the visible Data Health
-   timeline, then show the sanitized failing contract and same-ID
-   `bdata scraper heal` previews. State plainly that self-heal is unproved:
-   one approval is `done` but its rerun remains 2 accepted / 1 accessory
-   quarantined, while other approvals failed without changing the collector.
-   Show quarantine/last-known-good behavior without narrating a successful
-   repair.
+5. **2:05–2:45 — Same-ID self-healing proof.** Open the Data Health timeline,
+   then show the sanitized PC Themes baseline and proof. Say: “The same
+   Collector ID recovered from zero rows to 96 valid rows, while hashes prove
+   all six downstream consumer files stayed unchanged.” Briefly show
+   quarantine/last-known-good behavior and avoid claiming universal healing.
 6. **2:45–3:00 — Close against the rubric.** Give one sentence each for
    impact, creativity, technical excellence, Scraper Studio use, reliability,
    and presentation. End with: “Raster never takes payment or guarantees
@@ -65,4 +62,4 @@ before/after heal evidence are the proof surfaces.
   row is dated and linked.
 - If a required live gate is still pending, say so in the recording; do not
   substitute a fixture while narrating it as production behavior, and do not
-  claim two-source breadth, 12 offers, or a successful self-heal.
+  claim an observed cron run or full 3-of-3 comparison-family overlap.

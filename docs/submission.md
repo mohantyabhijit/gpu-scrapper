@@ -4,12 +4,13 @@
 
 - [x] Public deployment loads signed out on desktop and mobile widths.
 - [ ] Two same-market sources have healthy live output and overlapping models.
-- [x] Real create/run flow and stable Dynacore Collector ID
-      `c_mt3qzv5p215cci1r2e` are recorded.
-- [ ] Same-ID heal is proven with sanitized before/preview/after evidence.
+- [x] Real create/run flows and stable Dynacore `c_mt3qzv5p215cci1r2e` and PC
+      Themes `c_mt3zqdljej45v0g1r` Collector IDs are recorded.
+- [x] Same-ID PC Themes heal is proven with sanitized before/after evidence:
+      0 rows before, 96 valid rows after, unchanged downstream consumers.
 - [x] Manually dispatched GitHub Action has completed and fed PostgreSQL/storefront
-      (`32551530109`; hosted counts: sources 1, products 2, offers 2,
-      observations 2, runs 2, quarantine 1).
+      (`32560319450`: 96 provider rows, 96 valid, zero failures; public catalog
+      98 offers across two retailers).
 - [ ] A cron-triggered occurrence has been separately observed; the schedule is
       configured, but the verified production run above was manual.
 - [x] Search, filters, currency grouping, freshness, source attribution, and
@@ -18,8 +19,8 @@
 - [x] A retained 390 × 844 CSS-pixel responsive screenshot is attached at
       `evidence/screenshots/production-home-mobile-390x844.png`.
 - [ ] Last-known-good behavior is visible for a failed/stale source.
-- [x] README, architecture, evidence matrix, and demo script are current for
-      the one-source Singapore live slice with fixture fallback.
+- [x] Architecture, evidence matrix, QA report, and demo script are current for
+      the two-source Singapore live slice with fixture fallback elsewhere.
 
 ## Safety gate
 
@@ -35,8 +36,8 @@
 
 Include the public repository, deployed URL, short demo, sanitized evidence
 links, source eligibility decision, and a concise explanation of how Bright Data
-Scraper Studio powers the live Dynacore downstream slice. Singapore is the only
-live source in this release state; US, UK, and India remain fixture-backed.
+Scraper Studio powers the Dynacore and PC Themes downstream slices. Singapore is
+the only live market in this release state; US, UK, and India remain fixture-backed.
 
 ## Official Google Form fields
 
@@ -69,21 +70,19 @@ Raster is not a merchant; it makes fragmented regional availability legible.
 ### Draft: how Raster uses Scraper Studio
 
 Bright Data Scraper Studio is Raster's production data source, not an add-on.
-The verified Dynacore collector `c_mt3qzv5p215cci1r2e` is triggered by the
-protected refresh pipeline, validates and normalizes structured rows, quarantines
-the accessory row, writes current state and observations to hosted PostgreSQL
-via private Hyperdrive, and feeds the Singapore storefront through the GitHub
-Actions workflow. The manual production run is verified; cron is configured but
-a scheduled occurrence has not been separately observed. The current evidence
-includes multiple same-ID heal previews, but no
-successful self-heal is claimed: one approval is `done` while its rerun remains
-2 accepted / 1 accessory quarantined, and other approvals failed without changing
-the collector. Infinity Computer remains disabled with 59 `price_required`
-quarantines and zero validated offers.
+The verified Dynacore collector `c_mt3qzv5p215cci1r2e` and PC Themes collector
+`c_mt3zqdljej45v0g1r` are triggered by the protected refresh pipeline, validated
+and normalized, written to hosted PostgreSQL via private Hyperdrive, and rendered
+as 98 Singapore offers. PC Themes also demonstrates code-owned self-healing: the
+same Collector ID recovered from 0 rows to 96 valid rows while hashes prove the
+six downstream consumer files stayed unchanged. Manual production run
+`32560319450` is green; cron is configured but a scheduled occurrence has not
+been separately observed. Infinity Computer remains disabled with 59
+`price_required` quarantines and zero validated offers.
 
 The drafts deliberately describe the current evidence boundary. Do not turn the
-configured cron or heal attempts into claims of an observed scheduled run or a
-successful repair unless those gates later acquire dated proof.
+configured cron into a claim of an observed scheduled run, and describe the
+successful heal only as the controlled PC Themes 0-to-96 recovery that is proven.
 
 ## Why Raster combines the organizer project patterns
 
@@ -97,23 +96,23 @@ strongest patterns:
 2. **Set a goal and walk away:** the goal is a fresh, market-local catalog; a
    scheduled GitHub Action signs one bounded refresh slice and publishes a
    health summary without dashboard work.
-3. **Self-healing scraper (hero, pending proof):** a controlled contract break
-   is previewed with `bdata scraper heal` under the exact same `c_*` ID while
-   downstream code stays unchanged; the current approval/rerun evidence is not
-   yet a successful heal.
+3. **Self-healing scraper (hero):** a controlled PC Themes extraction failure
+   is repaired with `bdata scraper heal` under the exact same `c_*` ID; retained
+   evidence shows 0 rows before, 96 valid rows after, and unchanged downstream
+   consumer hashes.
 4. **Scrapers in CI:** the same signed path runs on schedule or manual dispatch,
    validates output, fails safely, and preserves last-known-good data when a
    source is degraded.
 
-These are implementation goals, not claims of completion. The submission form
-and video must use this language only after the corresponding rows in the
-evidence matrix have moved from `pending` to a dated proof link.
+The pipeline and same-ID heal above are current verified claims. The video must
+still preserve the evidence boundaries in the matrix, especially the unobserved
+cron occurrence and incomplete 3-of-3 cross-retailer model-family overlap.
 
 ## Three-track winning proof
 
 - **Web-Slinger / Best Use of Bright Data:** show terminal-driven create, run,
-  protected trigger, PostgreSQL output, schedule, and the honest same-ID heal
-  boundary without calling the current previews a successful repair.
+  protected trigger, PostgreSQL output, schedule, and the successful bounded
+  PC Themes same-ID heal.
 - **Suit-Up / Best UI:** show the polished four-market journey, accessible
   filters, market-local currency boundary, model detail, and health surface.
 - **Spider-Sense / Best Clean Code:** show typed contracts, allowlists, HMAC
@@ -136,9 +135,9 @@ responses.
    freshness/health, and verify at the retailer.
 4. **1:30–2:15 — Bright Data proof:** real create/run output and the structured
    row that powers the UI.
-5. **2:15–2:45 — Reliability boundary:** show the same-ID heal previews,
-   approval attempts, unchanged rerun, and quarantine/last-known-good behavior;
-   state that a successful repair is not yet proven.
+5. **2:15–2:45 — Reliability proof:** show the retained PC Themes baseline and
+   proof: same Collector ID, 0 rows before, 96 valid rows after, and unchanged
+   downstream hashes. Then mention quarantine and last-known-good behavior.
 6. **2:45–3:00 — Close:** one sentence each for impact, UI finish, clean code,
    and what was learned.
 

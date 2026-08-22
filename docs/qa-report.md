@@ -1,19 +1,19 @@
 # Production QA report
 
 Verified on 2026-08-22 against
-<https://abhijitmohanty.com/scrapper/> at deployed/main commit `434e593` and
-Cloudflare Worker version `7d9e3c5f-b9f6-4fcb-9590-11ea4b65228a`.
+<https://abhijitmohanty.com/scrapper/> at deployed/main commit `f22a2c6` and
+Cloudflare Worker version `291a7e55-4b7c-4c5d-8345-a1e629511fa2`.
 
-The verified production slice is one live Dynacore source in Singapore. The
-public Singapore catalog is live; US, UK, and India remain explicitly
-fixture-backed. Hosted PostgreSQL contains sources 1, products 2, offers 2,
-observations 2, runs 2, and quarantine 1. Storage is hosted PostgreSQL over
-private Hyperdrive. Infinity Computer remains disabled after 59
-`price_required` quarantines and zero validated offers.
+The verified production slice contains live Dynacore and PC Themes sources in
+Singapore. The public catalog renders 98 normalized PostgreSQL rows across the
+two retailers; US, UK, and India remain explicitly fixture-backed. Storage is
+hosted PostgreSQL over private Hyperdrive. The latest PC Themes refresh returned
+96 provider rows, 96 valid rows, and zero failures. Infinity Computer remains
+disabled after 59 `price_required` quarantines and zero validated offers.
 
 ## Automated gates
 
-- 150/150 unit, migration, ingestion, auth, replay, rate-limit, retry-safety,
+- 165/165 unit, migration, ingestion, auth, replay, rate-limit, retry-safety,
   Country Pack, and healing
   evidence tests pass.
 - 16/16 integration tests pass against PostgreSQL, covering migration install,
@@ -26,9 +26,9 @@ private Hyperdrive. Infinity Computer remains disabled after 59
 - `axe-core 4.11.4` reports zero automatically detected violations across the
   deployed home, method, health, and representative product-detail routes;
   this complements, rather than replaces, the manual keyboard checks below.
-- Green refresh run `32551530109` completed against the deployed path. Quality
-  runs `32552183005` and `32552183008` pass; `actionlint v1.7.12` accepts the
-  scheduled and quality workflows.
+- Green refresh run `32560319450` completed against the deployed path with 96
+  provider rows, 96 valid rows, and zero failures. Quality run `32560226787`
+  passes the repository gates.
 - Hosted PostgreSQL contains the applied migrations and the expected production
   tables, including `market_packs`, `request_receipts`, and `healing_events`.
   PostgreSQL integration tests prove unique country/source constraints, the
@@ -44,20 +44,20 @@ private Hyperdrive. Infinity Computer remains disabled after 59
 - The final Worker binding list contains `HYPERDRIVE` and static assets only;
   the D1 binding was removed after the private PostgreSQL smoke check passed.
 - The protected refresh route rejects an unsigned request with HTTP 401. The
-  signed refresh path is exercised by green run `32551530109`; provider
+  signed refresh path is exercised by green run `32560319450`; provider
   execution and database persistence remain separate evidence boundaries.
 
 ## Browser test results
 
 **Driver:** Codex in-app browser  
 **Public server:** <https://abhijitmohanty.com/scrapper/>  
-**Result:** PASS for the deployed one-source Singapore live slice with explicit
-fixture fallback for US, UK, and India; self-heal remains a separate release
-gate.
+**Result:** PASS for the deployed two-source Singapore live slice with explicit
+fixture fallback for US, UK, and India and successful PC Themes same-ID healing
+evidence.
 
 | Route / flow | Status | Notes |
 | --- | --- | --- |
-| `/scrapper/` | Pass | Hero, explicit fixture disclosure, navigation, market/search/availability/sort controls, multi-select filters, cards, exact UTC timestamps, source attribution, and local-currency copy render. |
+| `/scrapper/` | Pass | 98 PostgreSQL-backed Singapore cards across two retailers render with market/search/availability/sort controls, source attribution, and local-currency copy. |
 | Multi-filter + sort | Pass | Selecting RTX 5080, B&H Photo, and price-high produces a deterministic repeated-filter URL, removable chips, and exactly one matching offer. |
 | `/scrapper/how-it-works` | Pass | Country Pack, custom collector, normalization, and same-ID repair stages render. |
 | `/scrapper/data-health` | Pass | Singapore live normalized rows are shown separately from fixture-only US/UK/India cards; Country Pack ledger, seven-stage heal timeline, and pending evidence gates render. |
@@ -76,16 +76,21 @@ regions, status text, exact timestamps, and visible fixture/live disclosures.
 The responsive artifact was visually inspected after capture; it complements
 the exact viewport/overflow measurements above.
 
+The final desktop reload found 98 offer articles, two retailer filters, distinct
+GT/RTX/RX model filters, and zero `Unknown GPU` cards. Both the portfolio route
+and direct Worker route return HTTP 200, `/api/storage-health` returns HTTP 200,
+and an unsigned refresh request returns HTTP 401.
+
 ## Known honest limitations
 
 - US, UK, and India storefront rows remain explicitly labelled fixtures; the
-  Singapore cards are backed by the two live Dynacore offers.
-- Self-heal remains unproved. Multiple same-ID previews exist, one approval has
-  status `done` but its rerun still reports 2 accepted rows and 1 accessory
-  quarantine, and other approvals failed without changing the collector.
+  98 Singapore cards are backed by Dynacore and PC Themes.
+- PC Themes and Dynacore overlap in two of the three target comparison model
+  families, so the full 3-of-3 comparison-pair threshold is not claimed.
+- The retained PC Themes proof establishes same-ID recovery from zero to 96
+  valid rows. It does not claim that every future site change will heal.
 - Infinity Computer remains disabled because all 59 exact-GPU rows were
-  `price_required`; no second-source breadth, 12-offer threshold, or successful
-  self-heal is claimed.
+  `price_required`.
 - `npm audit` reports four moderate issues in development tooling. The only
   proposed automated remediation is a forced breaking downgrade, so it was not
   applied to the production build.
