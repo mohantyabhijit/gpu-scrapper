@@ -139,7 +139,7 @@ export function mapPostgresOffer(row: PostgresCatalogRow, definitions: readonly 
 
   const degraded = row.health !== "healthy";
   const offerAvailability = availability(row.availability);
-  const healthState = degraded ? "degraded" : offerAvailability === "Unavailable" ? "unavailable" : "healthy";
+  const healthState = degraded ? "degraded" : "healthy";
   const boardPartner = row.boardPartner?.trim() || "Unspecified board partner";
   const vram = row.vramGb && row.vramGb > 0 ? `${row.vramGb} GB VRAM` : "VRAM not listed";
   const freshness = `${freshnessState} · observed ${observed} UTC`;

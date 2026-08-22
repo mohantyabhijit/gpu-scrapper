@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatPrice, getMarket, markets, type Offer } from "./catalog";
+import { formatPrice, getMarket, isProcurementReadyOffer, markets, type Offer } from "./catalog";
 import { loadCatalog } from "../lib/postgres/catalog";
 import SourcingDesk, { SourceDeskAddButton, type SourceDeskOffer } from "../components/sourcing-desk";
 
@@ -78,7 +78,7 @@ export default async function Home({ searchParams }: { searchParams?: SearchPara
     if (sort === "freshness") return Date.parse(b.observedAt) - Date.parse(a.observedAt) || defaultOfferOrder(a, b);
     return defaultOfferOrder(a, b);
   });
-  const purchasableOffers = marketOffers.filter((offer) => offer.availability === "In stock" || offer.availability === "Low stock");
+  const purchasableOffers = marketOffers.filter(isProcurementReadyOffer);
   const lowest = [...purchasableOffers].sort((a, b) => a.price - b.price || defaultOfferOrder(a, b))[0];
   const sources = Array.from(new Set(marketOffers.map((offer) => offer.source)));
   const liveRead = snapshot.source === "postgres";

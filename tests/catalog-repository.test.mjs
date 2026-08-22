@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { isProcurementReadyOffer } from "../app/catalog.ts";
 import { classifyFreshness, loadCatalog, mapPostgresOffer } from "../lib/postgres/catalog.ts";
 
 const validRow = {
@@ -53,7 +54,7 @@ test("availability and source health remain separate signals", () => {
   const now = new Date("2026-08-21T12:00:00.000Z");
   const unavailable = mapPostgresOffer({ ...validRow, availability: "out_of_stock" }, undefined, now);
   assert.equal(unavailable.availability, "Unavailable");
-  assert.equal(unavailable.healthState, "unavailable");
+  assert.equal(unavailable.healthState, "healthy");
   assert.equal(unavailable.freshnessState, "fresh");
 
   const degraded = mapPostgresOffer({ ...validRow, health: "degraded", observedAt: "2026-08-19T10:00:00.000Z" }, undefined, now);
@@ -61,6 +62,15 @@ test("availability and source health remain separate signals", () => {
   assert.equal(degraded.healthState, "degraded");
   assert.equal(degraded.freshnessState, "stale");
   assert.match(degraded.note, /last-known-good/);
+});
+
+test("procurement-ready summaries exclude unknown, stale, and degraded observations", () => {
+  const fresh = mapPostgresOffer(validRow, undefined, new Date("2026-08-21T12:00:00.000Z"));
+  assert.equal(isProcurementReadyOffer(fresh), true);
+  assert.equal(isProcurementReadyOffer({ ...fresh, availability: "Unknown" }), false);
+  assert.equal(isProcurementReadyOffer({ ...fresh, freshnessState: "stale" }), false);
+  assert.equal(isProcurementReadyOffer({ ...fresh, healthState: "degraded" }), false);
+  assert.equal(isProcurementReadyOffer({ ...fresh, healthState: "fixture", freshnessState: "fixture" }), true);
 });
 
 test("rejects cross-market currency and untrusted retailer rows", () => {

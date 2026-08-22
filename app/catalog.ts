@@ -50,6 +50,12 @@ export function getMarket(value: string | undefined): Market {
 }
 export function getMarketOffers(market: Market) { return offers.filter((offer) => offer.market === market); }
 export function getModelOffers(slug: string, market: Market) { return offers.filter((offer) => offer.modelSlug === slug && offer.market === market); }
+export function isProcurementReadyOffer(offer: Offer) {
+  const available = offer.availability === "In stock" || offer.availability === "Low stock";
+  if (!available) return false;
+  if (offer.healthState === "fixture" && offer.freshnessState === "fixture") return true;
+  return offer.healthState === "healthy" && offer.freshnessState !== "stale";
+}
 export function formatPrice(price: number, currency: Currency, locale?: string) {
   const resolvedLocale = locale ?? Object.values(markets).find((market) => market.currency === currency)?.locale ?? "en-US";
   return new Intl.NumberFormat(resolvedLocale, { style: "currency", currency }).format(price);
