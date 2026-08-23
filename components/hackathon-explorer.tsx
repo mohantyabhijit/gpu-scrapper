@@ -30,12 +30,28 @@ function deadlineLabel(value: string) {
   return `${days} day${days === 1 ? "" : "s"} left`;
 }
 
+const countryNames: Record<Exclude<MarketCode, "WORLD">, string> = {
+  US: "United States",
+  IN: "India",
+  UK: "United Kingdom",
+  SG: "Singapore",
+};
+
+function eligibilityLabel(item: Hackathon) {
+  if (item.eligibleCountries.length === Object.keys(countryNames).length) return "Every indexed country";
+  return item.eligibleCountries.map((code) => countryNames[code]).join(", ");
+}
+
 export default function HackathonExplorer({ initialHackathons }: { initialHackathons: Hackathon[] }) {
   const [country, setCountry] = useState<MarketCode>("SG");
   const [category, setCategory] = useState<"All" | Category>("All");
   const [items, setItems] = useState(initialHackathons);
   const [dataMode, setDataMode] = useState<"checking live API" | "verified snapshot" | "live API">("checking live API");
+  const [selectedHackathon, setSelectedHackathon] = useState<Hackathon | null>(null);
   const requestGeneration = useRef(0);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const detailTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -57,6 +73,50 @@ export default function HackathonExplorer({ initialHackathons }: { initialHackat
       });
     return () => controller.abort();
   }, [country, initialHackathons]);
+
+  useEffect(() => {
+    if (!selectedHackathon) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setSelectedHackathon(null);
+        detailTriggerRef.current?.focus();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href]');
+      if (!focusable?.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [selectedHackathon]);
+
+  function openDetails(item: Hackathon, trigger: HTMLButtonElement) {
+    detailTriggerRef.current = trigger;
+    setSelectedHackathon(item);
+  }
+
+  function closeDetails() {
+    setSelectedHackathon(null);
+    detailTriggerRef.current?.focus();
+  }
 
   const ranked = useMemo(() => {
     const eligible = category === "All" ? items : items.filter((item) => item.categories.includes(category));
@@ -120,7 +180,7 @@ export default function HackathonExplorer({ initialHackathons }: { initialHackat
                 <div className="tags"><span>{item.mode}</span><span>{item.venueCountry === "GLOBAL" ? "Global / eligible" : `Local · ${item.venueCountry}`}</span>{item.categories.slice(0, 2).map((tag) => <span key={tag} className="category-tag">{tag}</span>)}</div>
                 <h3>{item.title}</h3>
                 <p>{item.summary}</p>
-                <details><summary>View build brief</summary><div className="detail-grid"><span><b>Organizer</b>{item.organizer}</span><span><b>Dates</b>{formatDate(item.startDate)} – {formatDate(item.endDate)}</span><span><b>Source prize claim</b>{item.prizeDisplay}</span><span><b>Effort</b>{item.effortNote}</span><span><b>Verified</b>{item.verifiedAt} via {item.source}</span></div></details>
+                <button className="hack-details-button" type="button" aria-label={`Open details for ${item.title}`} onClick={(event) => openDetails(item, event.currentTarget)}>View details</button>
               </div>
               <div className="hack-signal">
                 <span className={`effort effort-${item.effort.toLowerCase()}`}>{item.effort}</span>
@@ -135,6 +195,32 @@ export default function HackathonExplorer({ initialHackathons }: { initialHackat
           {ranked.length === 0 && <div className="empty"><strong>No {category} entries in this country snapshot.</strong><button type="button" onClick={() => setCategory("All")}>Show all categories</button></div>}
         </div>
       </section>
+
+      {selectedHackathon && (() => {
+        const modalPrize = prizeForMarket(selectedHackathon.prizeUsd, country);
+        return <div className="hack-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeDetails(); }}>
+          <div ref={dialogRef} className="hack-modal" role="dialog" aria-modal="true" aria-labelledby="hack-modal-title" aria-describedby="hack-modal-summary">
+            <button ref={closeButtonRef} className="hack-modal-close" type="button" onClick={closeDetails} aria-label="Close hackathon details">×</button>
+            <div className="hack-modal-kicker"><span>{selectedHackathon.source}</span><span>{selectedHackathon.mode}</span><span>{selectedHackathon.venueCountry === "GLOBAL" ? "Global" : countryNames[selectedHackathon.venueCountry]}</span></div>
+            <h2 id="hack-modal-title">{selectedHackathon.title}</h2>
+            <p id="hack-modal-summary" className="hack-modal-summary">{selectedHackathon.summary}</p>
+            <dl className="hack-modal-grid">
+              <div><dt>Organizer</dt><dd>{selectedHackathon.organizer}</dd></div>
+              <div><dt>Schedule</dt><dd>{formatDate(selectedHackathon.startDate)} – {formatDate(selectedHackathon.endDate)}</dd></div>
+              <div><dt>Registration deadline</dt><dd>{formatDate(selectedHackathon.deadline)}<small>{deadlineLabel(selectedHackathon.deadline)}</small></dd></div>
+              <div><dt>Prize at source</dt><dd>{selectedHackathon.prizeDisplay}{modalPrize && <small>{modalPrize.local} · {modalPrize.usd} USD estimate</small>}</dd></div>
+              <div><dt>Eligible markets</dt><dd>{eligibilityLabel(selectedHackathon)}</dd></div>
+              <div><dt>Categories</dt><dd>{selectedHackathon.categories.join(" · ")}</dd></div>
+              <div><dt>Build effort</dt><dd>{selectedHackathon.effort}<small>{selectedHackathon.effortNote}</small></dd></div>
+              <div><dt>Source verification</dt><dd>{selectedHackathon.source}<small>Checked {formatDate(selectedHackathon.verifiedAt)}</small></dd></div>
+            </dl>
+            <div className="hack-modal-footer">
+              <p>Organizer rules and the original listing remain authoritative.</p>
+              <a href={selectedHackathon.sourceUrl} target="_blank" rel="noreferrer">View original page <span aria-hidden="true">↗</span></a>
+            </div>
+          </div>
+        </div>;
+      })()}
 
       <section className="pipeline" id="pipeline">
         <header className="section-head"><div><span className="section-index">02</span><div><p>Scraper Studio core</p><h2>The model holds when pages move.</h2></div></div><p>Extraction can change. The product contract cannot.</p></header>

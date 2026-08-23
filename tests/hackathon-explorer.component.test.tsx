@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import HackathonExplorer from "../components/hackathon-explorer";
 import { hackathons } from "../data/hackathons";
@@ -59,5 +59,25 @@ describe("HackathonExplorer worldwide and currency workflow", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(screen.getByRole("heading", { name: "Top hackathons for India" })).toBeTruthy();
     expect(screen.getAllByRole("article")).toHaveLength(10);
+  });
+
+  test("opens a source-backed detail modal and restores focus when closed", async () => {
+    render(<HackathonExplorer initialHackathons={hackathons} />);
+    const openButton = await screen.findByRole("button", { name: "Open details for RevenueCat Shipaton 2026" });
+
+    openButton.focus();
+    fireEvent.click(openButton);
+
+    const dialog = screen.getByRole("dialog", { name: "RevenueCat Shipaton 2026" });
+    expect(dialog).toBeTruthy();
+    expect(within(dialog).getByText("Every indexed country")).toBeTruthy();
+    expect(within(dialog).getByText("$685,000 cash")).toBeTruthy();
+    expect(within(dialog).getByRole("link", { name: "View original page" }).getAttribute("href"))
+      .toBe("https://revenuecat-shipaton-2026.devpost.com/");
+
+    fireEvent.keyDown(document, { key: "Escape" });
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(openButton);
   });
 });
