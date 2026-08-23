@@ -2,7 +2,7 @@
 
 Durable product, architecture, scraper, and deployment notes for the repository. Re-check live routes and provider jobs before repeating time-sensitive counts.
 
-**Last reconciled:** 2026-08-23
+**Last reconciled:** 2026-08-24
 
 **Repository:** <https://github.com/mohantyabhijit/hackathon-scrapper>
 
@@ -50,10 +50,10 @@ The backend is FastAPI with SQLAlchemy. `hackathons` stores the normalized paylo
 | Devpost | `devpost-global` | Global online / US anchor | `c_mt5n8l0w1kcr7uzxre` | public upcoming online listing | Same-ID healed twice; 9 flat rows, complete keys, 8 disclosed prizes, 3 rows with usable schedules |
 | Unstop | `unstop-india` | India | `c_mt5n8mon1lgz9hhuoe` | public hackathon listing | Original remains runnable with 18 linked rows; broader same-ID repair failed after Studio validation, so prize/schedule fields remain degraded |
 | Hackathons UK | `hackathons-uk` | United Kingdom | `c_mt5n8jd5y2gdnzt5p` | public events listing | Initial Studio generation failed before a runnable template existed; do not claim it as healed or ready |
-| Luma | `luma-san-francisco`, `luma-new-york` | United States | deterministic JSON-LD adapter | Exa-discovered public pages in San Francisco and New York | Locally validated; production refresh pending |
-| Luma | `luma-london` | United Kingdom | deterministic JSON-LD adapter | Exa-discovered public pages in London | Locally validated; production refresh pending |
-| Luma | `luma-bengaluru`, `luma-mumbai` | India | deterministic JSON-LD adapter | Exa-discovered public pages in Bengaluru and Mumbai | Locally validated; production refresh pending |
-| Luma | `luma-singapore` | Singapore | deterministic JSON-LD adapter | Exa-discovered public pages in Singapore | Locally validated; production refresh pending |
+| Luma | `luma-san-francisco`, `luma-new-york` | United States | deterministic JSON-LD adapter | Exa-discovered public pages in San Francisco and New York | Production refresh completed with 3 current rows; both bindings remain honestly `degraded` because some reviewed targets did not normalize |
+| Luma | `luma-london` | United Kingdom | deterministic JSON-LD adapter | Exa-discovered public pages in London | Production refresh completed with 2 current rows; binding remains `degraded` |
+| Luma | `luma-bengaluru`, `luma-mumbai` | India | deterministic JSON-LD adapter | Exa-discovered public pages in Bengaluru and Mumbai | Production refresh completed with 5 current rows; both bindings remain `degraded` |
+| Luma | `luma-singapore` | Singapore | deterministic JSON-LD adapter | Exa-discovered public pages in Singapore | Production refresh completed with 1 current row; binding remains `degraded` |
 
 The failed UK ID is retained as evidence. A replacement is allowed only because Studio did not create a runnable template to repair; document any replacement ID and validate it independently before changing the registry.
 
@@ -65,7 +65,7 @@ Exa MCP discovered public Luma event URLs for San Francisco, New York, London, B
 
 Luma therefore uses a bounded deterministic fallback rather than a false-ready Studio binding. The Python adapter accepts only allowlisted `https://luma.com/` URLs, selects the JSON-LD `Event` whose canonical path matches the requested URL, ignores recommendations, drops past or incomplete events, retains city-level location only, and excludes people, attendee lists, profiles, emails, street addresses, hidden venues, wallet data, and registration forms. Optional prizes are parsed only when an explicit currency marker is present. Missing values stay unknown.
 
-The six source bindings are `luma-san-francisco`, `luma-new-york`, `luma-london`, `luma-bengaluru`, `luma-mumbai`, and `luma-singapore`. On 2026-08-24, live signed-out validation normalized 11 current events across all six bindings. A refresh with at least one valid event completes and preserves the usable rows, but its source remains `degraded` when fewer events normalize than the reviewed target count. Treat the validation count as time-specific; production remains unverified until an authenticated refresh completes.
+The six source bindings are `luma-san-francisco`, `luma-new-york`, `luma-london`, `luma-bengaluru`, `luma-mumbai`, and `luma-singapore`. On 2026-08-24, authenticated production refreshes normalized 11 current events across all six bindings: 3 US, 2 UK, 5 India, and 1 Singapore. A refresh with at least one valid event completes and preserves the usable rows, but its source remains `degraded` when fewer events normalize than the reviewed target count. Treat these counts as time-specific.
 
 Never reuse SecondSpin collector `c_mt2nbsqd1akac96fiz`; it belongs to a vacuum-parts project and target.
 
@@ -159,7 +159,7 @@ Production release order:
 - FX is display-only. PostgreSQL stores canonical USD values and the original source prize claim; neither ranking nor provenance depends on the selected display currency.
 - Unknown and non-cash awards never receive fabricated currency equivalents.
 
-The live frontend release verified on 2026-08-23 is `96d3b8caeb29`; GitHub quality run `32642368959` passed for that exact feature commit. The unchanged backend remains on healthy release `8070873`. Browser verification covered desktop and 390×844 layouts, card-wide and explicit-button opening, modal content, the independent source URL, Escape dismissal, backdrop dismissal, scroll locking, and focus restoration. The card-wide hit target is implemented by stretching the existing semantic detail button rather than making the article a nested interactive control.
+The live frontend release on 2026-08-24 remains `50e7422`; the Luma-capable backend is release `a966298`. GitHub quality run `32651012024` passed for the exact backend release commit. Public verification returned HTTP 200 for the frontend and API health, with 36 worldwide rows and all 11 production Luma rows visible across the four supported countries. Earlier browser verification covered desktop and 390×844 layouts, card-wide and explicit-button opening, modal content, the independent source URL, Escape dismissal, backdrop dismissal, scroll locking, and focus restoration. The card-wide hit target is implemented by stretching the existing semantic detail button rather than making the article a nested interactive control.
 
 Do not call a successful push a deployment. The public routes and current service revisions must be checked separately.
 
