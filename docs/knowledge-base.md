@@ -113,13 +113,13 @@ Ranking sorts disclosed `prizeUsd` descending and places unknown/non-cash prizes
 | Secret | Local source | Production source |
 | --- | --- | --- |
 | Bright Data API key | macOS Keychain | root-readable service environment file |
-| OpenAI API key | macOS Keychain service `scrapper-ai-key` (account `abhijitmohanty`) | root-readable service environment file as `OPENAI_API_KEY` |
+| OpenAI API key | macOS Keychain service `OPENAI_API_KEY` | root-readable service environment file as `OPENAI_API_KEY` |
 | Operator token | generated locally without display | root-readable service environment file |
 | PostgreSQL URL | local environment | root-readable service environment file |
 
 Never print secret values, raw authorization headers, production environment files, or database credentials. Verification should use service health, provider job status, and non-secret IDs.
 
-On 2026-08-23, production's `OPENAI_API_KEY` was rotated from the local `scrapper-ai-key` entry. A normalized SHA-256 fingerprint comparison confirmed the deployed value matched the Keychain value, and only `hackradar-api.service` was restarted. The root-only pre-rotation environment backup remains on the server for rollback.
+On 2026-08-23, a requested rotation to the local `scrapper-ai-key` entry was deployed and fingerprint-verified, but OpenAI rejected that credential with HTTP 401. Production was immediately restored from the root-only backup; the restored credential returned HTTP 200 from OpenAI and the public API health check passed. Do not retry `scrapper-ai-key` until its value has been replaced with a valid OpenAI project key.
 
 ## Deployment target
 
