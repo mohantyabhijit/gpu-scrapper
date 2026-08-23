@@ -45,7 +45,7 @@ a { color: inherit; }
 .hero-scene::before { content: ""; position: absolute; inset: 9% 5%; border: 1px solid color-mix(in srgb, var(--country-accent) 20%, transparent); border-radius: 48% 52% 55% 45%; transform: rotate(-8deg); }
 .orbit-canvas { width: 100%; height: 100%; display: block; position: relative; z-index: 1; }
 
-.metrics { width: min(1180px, calc(100% - 40px)); margin: 0 auto 100px; display: grid; grid-template-columns: repeat(3,1fr); border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.8); overflow: hidden; box-shadow: 0 18px 55px rgba(16,24,40,.055); }
+.metrics { width: min(1180px, calc(100% - 40px)); margin: 0 auto 100px; display: grid; grid-template-columns: repeat(2,1fr); border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.8); overflow: hidden; box-shadow: 0 18px 55px rgba(16,24,40,.055); }
 .metrics > div { min-height: 112px; padding: 22px 24px; display: grid; align-content: center; border-right: 1px solid var(--line); }
 .metrics > div:last-child { border: 0; }.metrics span { color: #667085; font: 10px var(--font-geist-mono), monospace; text-transform: uppercase; letter-spacing: .09em; }.metrics strong { margin: 5px 0 2px; font-size: 28px; letter-spacing: -.05em; }.metrics small { color: #98a2b3; font-size: 11px; }
 
