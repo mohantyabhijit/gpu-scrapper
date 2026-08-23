@@ -15,6 +15,73 @@ Repository: <https://github.com/mohantyabhijit/gpu-scrapper>
 
 Public deployment: <https://abhijitmohanty.com/scrapper/>
 
+## Hackathon submission answers
+
+These answers mirror the official Scrape-Verse submission form as reviewed on
+2026-08-23. They are kept here so the judges can connect each claim to the
+public code, architecture, deployment, and evidence. The form itself still
+needs to be completed by the participant; no form has been submitted from this
+repository.
+
+| Form question | Answer / status |
+| --- | --- |
+| Email | Enter privately in the form; do not publish a personal email in the repository. |
+| Team name | Enter `SOLO` if submitting alone, as required by the form; otherwise enter the confirmed team name. |
+| Name of the person submitting | Enter the participant's confirmed name in the form. |
+| Track | Submit Raster to all three: **Web-Slinger / Best Use of Bright Data**, **Suit-Up / Best UI**, and **Spider-Sense / Best Clean Code**. |
+| GitHub link | <https://github.com/mohantyabhijit/gpu-scrapper> |
+| Deployed link | <https://abhijitmohanty.com/scrapper/> |
+| YouTube video demo link | **Pending — intentionally deferred for a later README update.** The final video must be no longer than three minutes. |
+| LinkedIn giveaway | Optional and pending. Add only a real public post that tags WeMakeDevs and Bright Data. |
+
+### What does your project do?
+
+Raster is a read-only GPU sourcing and market-intelligence desk for company
+buyers, procurement teams, builders, and researchers. It replaces a maze of
+regional retailer tabs with one market-local view of GPU identity, board
+partner, VRAM, observed price, availability, freshness, source health, and the
+canonical retailer link. Comparisons remain inside the selected currency, so a
+nominally smaller number in another country is never presented as a global
+deal. Raster does not sell, reserve, or guarantee stock; it makes fragmented
+public retailer data legible and sends the final buying decision back to the
+source.
+
+### How did you use Scraper Studio in your project?
+
+Scraper Studio is Raster's production collection and recovery layer. Custom,
+source-bound collectors scrape signed-out public GPU catalog pages for
+Dynacore and PC Themes in Singapore. A scheduled or manually dispatched GitHub
+Action calls Raster's HMAC-authenticated refresh route; the application then
+triggers and polls the allowlisted collector, adapts its source-specific output,
+validates it against a shared GPU contract, quarantines bad rows, normalizes
+accepted offers, and writes them to hosted PostgreSQL through private
+Cloudflare Hyperdrive. The read-only storefront renders that structured output
+with provenance and observation times.
+
+The PC Themes collector is also the bounded self-healing proof. When the exact
+target returned zero rows, `bdata scraper heal` repaired extraction under the
+same Collector ID and the rerun produced 96 valid rows. Retained hashes show
+that the six downstream consumers did not change, demonstrating that the
+scraper could recover without rewriting the application around it. The latest
+verified Singapore storefront contained 98 offers across Dynacore and PC
+Themes; US, UK, and India remain visibly fixture-backed.
+
+### Scraper Studio and CLI feedback
+
+The second page of the form asks for direct product feedback. These are the
+evidence-based draft responses to review when completing it:
+
+| Form question | Draft response |
+| --- | --- |
+| How was the CLI to work with? | **4/5.** It made collector creation, repeatable runs, and same-ID healing practical from an agent-driven terminal workflow. |
+| How easy was it to get your first scrape running? | **4/5.** The happy path was quick once the target and output contract were explicit, but production confidence required additional validation around asynchronous results and empty output. |
+| What was the most frustrating thing you hit? | A provider job can finish while the useful result is still empty or structurally wrong for the downstream contract. That makes “completed” different from “safe to publish” and pushes schema diagnosis into an extra iteration. |
+| Where did you get stuck for the longest, and what got you unstuck? | PC Themes initially returned zero rows from the exact catalog target. Keeping the same code-owned Collector ID, describing the concrete failure to `bdata scraper heal`, rerunning it, and validating all 96 returned rows against Raster's contract resolved the block. |
+| How was the overall developer experience? What would you change? | The combination of Scraper Studio and the CLI is powerful because an agent can create, run, inspect, and repair a source without dashboard-only work. The biggest improvements would be clearer machine-readable job states, first-class schema validation previews, explicit empty-result diagnostics, and a CLI command that explains which required fields failed before a collector is promoted into production. |
+
+The numerical ratings are draft recommendations because they express the
+participant's opinion; confirm them when submitting the form.
+
 ## Current status
 
 Raster is deployed with a live Singapore catalog backed by the custom Dynacore
