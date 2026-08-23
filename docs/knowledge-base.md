@@ -10,7 +10,7 @@ Durable product, architecture, scraper, and deployment notes for the repository.
 
 ## Product contract
 
-HackRadar helps frequent hackathon participants decide what to build next. It presents a prize-ranked top ten for the United States, India, the United Kingdom, and Singapore. Country selection changes the eligible dataset and market visual treatment. Entries retain the original page, organizer, schedule, deadline, mode, categories, prize claim, effort estimate, summary, and verification date.
+HackRadar helps frequent hackathon participants decide what to build next. It presents a prize-ranked top ten for the United States, India, the United Kingdom, and Singapore. Country selection changes the eligible dataset and market visual treatment. Each ranking row opens a keyboard-accessible detail modal with the organizer, schedule, registration deadline, mode, eligible markets, categories, source prize claim, effort estimate, verification date, and a new-tab link to the original page.
 
 The six categories are AI, Web3, Web, Mobile, Climate, and Other. Effort is an editorial planning aid derived from the event schedule: Weekend, Focused, or Marathon. It is not a guarantee of the work required.
 
@@ -135,7 +135,7 @@ Production release order:
 5. Atomically switch `current` symlinks.
 6. Validate and reload Nginx, then restart only HackRadar services.
 7. Verify `/scrapper/`, static assets, `/scrapper-api/healthz`, ten ranked worldwide rows, and ten ranked API rows for all four countries.
-8. Verify the browser market selector, category filter, original links, dual-currency display, and mobile layout.
+8. Verify the browser market selector, category filter, detail modal (including Escape, backdrop, and close-button dismissal), focus restoration, original links, dual-currency display, and mobile layout.
 
 ### Worldwide and currency presentation
 

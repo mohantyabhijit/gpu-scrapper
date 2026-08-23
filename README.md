@@ -12,6 +12,7 @@ HackRadar is a prize-ranked discovery desk for frequent hackathon builders. It t
 - AI, Web3, Web, Mobile, Climate, and Other filters.
 - Local-currency estimates alongside canonical USD values for India, the UK, and Singapore.
 - Original prize claims, dates, eligibility, participation mode, source URL, verification date, and estimated build effort on every record.
+- Keyboard-accessible detail modals with complete event metadata and a direct link to the organizer's original page.
 - A client-side Three.js radar with accessible semantic content and reduced-motion support.
 - A checked-in verified snapshot when the live API cannot provide at least ten valid rows for the selected market.
 
