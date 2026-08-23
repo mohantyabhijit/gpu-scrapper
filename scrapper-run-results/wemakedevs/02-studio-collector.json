@@ -25,6 +25,14 @@
     "observed_issue": "One generic title was polluted and some optional event fields were incomplete.",
     "production_policy": "Use Studio-discovered allow-listed URLs, then complete contract fields from the same public listing payload."
   },
+  "production_refresh": {
+    "job_id": "95bf4c4b9b954088ae135e7d5c0de0e1",
+    "status": "completed",
+    "accepted_rows": 4,
+    "pipeline": "scraper-studio+public-card-enrichment",
+    "source_state": "ready",
+    "public_registry": "https://abhijitmohanty.com/scrapper-api/sources"
+  },
   "repair_history": {
     "first_preview": "rejected because it regressed from four rows to two and rendered dates incorrectly",
     "later_attempt": "not approved; the published runnable version was left unchanged"
