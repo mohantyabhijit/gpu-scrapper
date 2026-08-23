@@ -67,7 +67,20 @@ Healing keeps the same Collector ID:
 4. Run `npx bdata scraper heal` against the same collector and exact target.
 5. Approve and publish only after a non-empty, schema-valid rerun.
 
+#### Verified Devpost recovery
+
+The Devpost collector completed its first run but returned nine unusable rows, each containing an empty `hackathons` array. We then ran two targeted, operator-initiated heals against the same collector (`c_mt5n8l0w1kcr7uzxre`): the first flattened the event model and the second recovered detail-page fields such as prizes and dates. The final preserved run produced nine flat rows, including eight with prize text and three with complete start/end dates; the authenticated production refresh accepted three contract-valid records. This proves same-ID recovery with a human-triggered repair prompt—not yet a fully unattended healing loop.
+
+- **Bright Data Studio — healed collector:** <https://brightdata.com/cp/scrapers/c_mt5n8l0w1kcr7uzxre>
+- **GitHub Actions — successful production refresh:** <https://github.com/mohantyabhijit/hackathon-scrapper/actions/runs/32636380433>
+- **Public API — source health and collector ID:** <https://abhijitmohanty.com/scrapper-api/sources>
+- **HackRadar — live product:** <https://abhijitmohanty.com/scrapper/>
+
 Current collector health and evidence caveats are tracked in [the knowledge base](docs/knowledge-base.md) and [evidence matrix](docs/evidence-matrix.md).
+
+### Luma public-event fallback
+
+Exa MCP supplies a reviewed discovery set for public Luma hackathons in San Francisco, New York, London, Bengaluru, Mumbai, and Singapore. Two generated Studio templates failed exact-target validation, so Luma uses a deterministic Python adapter instead of being presented as a healthy Studio collector. The adapter matches the requested canonical URL to the page's JSON-LD `Event`, rejects recommendations and expired or incomplete events, and excludes attendee identities, profiles, street addresses, hidden venues, and registration-form data.
 
 ### Deployment and automation
 
@@ -103,7 +116,8 @@ Production routes are prefixed with `/scrapper-api`; local FastAPI routes use th
 | API | Python 3.12, FastAPI, Uvicorn | Public reads and authenticated background operations |
 | Contracts and configuration | Pydantic, pydantic-settings | Validation, normalization, environment configuration |
 | Persistence | PostgreSQL, SQLAlchemy 2, psycopg 3 | Last-known-good events, sources, and jobs |
-| Web collection | Bright Data Scraper Studio, DCA API, `@brightdata/cli` | Custom collectors, trigger/poll, create/heal/approve |
+| Web collection | Bright Data Scraper Studio, DCA API, `@brightdata/cli`, Luma JSON-LD adapter | Custom collectors, trigger/poll, create/heal/approve, bounded Luma fallback |
+| Source discovery | Exa MCP | Reviewed public Luma event URL discovery for six target cities |
 | AI repair planning | OpenAI Responses API | Bounded collector creation and schema-drift prompts |
 | HTTP | HTTPX | Async Bright Data API calls |
 | Frontend QA | Node test runner, Vitest, Testing Library, Happy DOM, ESLint | Ranking, currency, race, component, build, and accessibility checks |
