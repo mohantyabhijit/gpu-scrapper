@@ -145,7 +145,7 @@ Production release order:
 - FX is display-only. PostgreSQL stores canonical USD values and the original source prize claim; neither ranking nor provenance depends on the selected display currency.
 - Unknown and non-cash awards never receive fabricated currency equivalents.
 
-The live frontend and backend release verified on 2026-08-23 is `8070873`; both atomic `current` symlinks point to that release and GitHub quality run `32640239062` passed for the exact commit.
+The live frontend release verified on 2026-08-23 is `0da399eec5ab`; GitHub quality run `32641369515` passed for that exact feature commit. The unchanged backend remains on healthy release `8070873`. Browser verification covered desktop and 390×844 layouts, modal content, source URL, Escape dismissal, backdrop dismissal, scroll locking, and focus restoration.
 
 Do not call a successful push a deployment. The public routes and current service revisions must be checked separately.
 
