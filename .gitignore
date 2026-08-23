@@ -19,6 +19,8 @@ __pycache__/
 *.py[cod]
 .venv/
 *.db
+.codex/
+.impeccable/
 
 # next.js
 /.next/
