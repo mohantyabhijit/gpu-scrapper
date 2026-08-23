@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { headers } from "next/headers";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -13,43 +12,16 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const title = "Raster — GPU prices without the tab circus";
-const description = "A public-data GPU offer comparison across the US, UK, India, and Singapore, built for Into the Scrape-Verse.";
-const basePath = "/scrapper";
-const faviconVersion = "v3";
+const title = "HackRadar — Your next build, ranked";
+const description = "Prize-ranked, effort-aware hackathons available from the USA, India, UK, and Singapore.";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const requestHeaders = await headers();
-  const host = requestHeaders.get("x-forwarded-host") ?? requestHeaders.get("host") ?? "localhost:3000";
-  const protocol = requestHeaders.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  const image = new URL(`${basePath}/og.png`, `${protocol}://${host}`).toString();
-
-  return {
-    title,
-    description,
-    icons: {
-      icon: [
-        { url: `${basePath}/favicon.svg?${faviconVersion}`, type: "image/svg+xml" },
-        { url: `${basePath}/favicon-32x32.png?${faviconVersion}`, sizes: "32x32", type: "image/png" },
-      ],
-      shortcut: `${basePath}/favicon.ico?${faviconVersion}`,
-      apple: [{ url: `${basePath}/apple-touch-icon.png?${faviconVersion}`, sizes: "180x180", type: "image/png" }],
-    },
-    manifest: `${basePath}/manifest.webmanifest?${faviconVersion}`,
-    openGraph: {
-      title,
-      description,
-      type: "website",
-      images: [{ url: image, width: 1200, height: 630, alt: "Raster GPU marketplace" }],
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-      images: [image],
-    },
-  };
-}
+export const metadata: Metadata = {
+  metadataBase: new URL("https://abhijitmohanty.com/scrapper/"),
+  title,
+  description,
+  openGraph: { title, description, type: "website", images: ["/scrapper/og.png"] },
+  twitter: { card: "summary_large_image", title, description, images: ["/scrapper/og.png"] },
+};
 
 export default function RootLayout({
   children,
@@ -57,10 +29,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
+      <body className="antialiased">
         {children}
       </body>
     </html>
