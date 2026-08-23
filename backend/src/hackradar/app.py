@@ -137,18 +137,18 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
         try:
             update_job(value, "running")
             is_luma = source.collector_id.startswith("custom:luma:")
-            is_wemakedevs = source.collector_id.startswith("custom:wemakedevs:")
-            is_custom = is_luma or is_wemakedevs
+            is_wemakedevs = source.slug == "wemakedevs-global"
+            is_custom = is_luma
             if is_luma:
                 rows = await LumaService(app.state.http_client).run(source.slug, source.country)
-            elif is_wemakedevs:
-                rows = await WeMakeDevsService(app.state.http_client).run()
             else:
                 if not settings.brightdata_api_key:
                     raise RuntimeError("Bright Data is not configured.")
                 client = BrightDataClient(settings.brightdata_api_key, app.state.http_client)
                 report = await RefreshService(client).run(source.collector_id, source.target_url)
                 rows = report.rows
+                if is_wemakedevs:
+                    rows = await WeMakeDevsService(app.state.http_client).enrich_discovery(rows)
             report = inspect_rows(rows, source.expected_schema)
             normalized = [
                 item for raw in report.rows
@@ -177,6 +177,8 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
             source.last_good_schema, source.last_good_at, source.state = report.schema, datetime.now(UTC), source_state
             database.upsert_source(source)
             result = {"collectorId": source.collector_id, "rows": len(normalized)}
+            if is_wemakedevs:
+                result["pipeline"] = "scraper-studio+public-card-enrichment"
             if is_luma:
                 result["targets"] = target_count
                 result["sourceState"] = source_state

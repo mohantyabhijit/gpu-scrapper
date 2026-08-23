@@ -7,6 +7,7 @@ from hackradar.config import Settings
 from hackradar.contracts import Hackathon
 from hackradar.database import Database
 from hackradar.services.luma import LumaService
+from hackradar.services.refresh import DriftReport, RefreshService
 from hackradar.services.wemakedevs import WeMakeDevsService
 
 
@@ -99,7 +100,20 @@ def test_operator_can_refresh_a_custom_luma_source(tmp_path: Path, monkeypatch) 
 
 
 def test_operator_can_refresh_wemakedevs_for_all_markets(tmp_path: Path, monkeypatch) -> None:
-    async def rows(_service: WeMakeDevsService) -> list[dict[str, object]]:
+    studio_rows = [{
+        "title": "Generic discovery title",
+        "detail_url": "https://www.wemakedevs.org/hackathons/falkordb",
+    }]
+
+    async def studio_run(
+        _service: RefreshService, _collector_id: str, _target_url: str
+    ) -> DriftReport:
+        return DriftReport(studio_rows, [], sorted(studio_rows[0]))
+
+    async def enriched_rows(
+        _service: WeMakeDevsService, discovered: list[dict[str, object]]
+    ) -> list[dict[str, object]]:
+        assert discovered == studio_rows
         return [{
             "title": "Graph Hacks: Building Next-Gen RAG",
             "detail_url": "https://www.wemakedevs.org/hackathons/falkordb",
@@ -118,8 +132,14 @@ def test_operator_can_refresh_wemakedevs_for_all_markets(tmp_path: Path, monkeyp
             "description": "Online hackathon listed by WeMakeDevs.",
         }]
 
-    monkeypatch.setattr(WeMakeDevsService, "run", rows)
-    with client(tmp_path) as app:
+    monkeypatch.setattr(RefreshService, "run", studio_run)
+    monkeypatch.setattr(WeMakeDevsService, "enrich_discovery", enriched_rows)
+    settings = Settings(
+        database_url=f"sqlite:///{tmp_path / 'wemakedevs.db'}",
+        operator_token="offline-operator-token",
+        brightdata_api_key="offline-brightdata-key",
+    )
+    with TestClient(create_app(settings, Database(settings.database_url))) as app:
         response = app.post(
             "/operators/refresh",
             json={"sourceSlug": "wemakedevs-global"},
@@ -137,6 +157,8 @@ def test_operator_can_refresh_wemakedevs_for_all_markets(tmp_path: Path, monkeyp
     assert response.status_code == 202
     assert result.json()["status"] == "completed"
     assert result.json()["result"]["rows"] == 1
+    assert result.json()["result"]["collectorId"] == "c_mt61hvcq1d8np500ya"
+    assert result.json()["result"]["pipeline"] == "scraper-studio+public-card-enrichment"
     assert all(any(item["source"] == "WeMakeDevs" for item in feed) for feed in feeds.values())
 
 

@@ -38,7 +38,7 @@ flowchart LR
     I --> B
     E --> F --> G
     J[Verified repository snapshot] -->|API unavailable or fewer than 10 rows| G
-    K[Public WeMakeDevs hackathon cards] --> L[Bounded Next.js payload adapter] --> C
+    K[Public WeMakeDevs hackathon cards] --> L[Dedicated Studio collector] --> M[Bounded public-card enrichment] --> C
 ```
 
 ### Frontend
@@ -87,7 +87,7 @@ Exa MCP supplies a reviewed discovery set for public Luma hackathons in San Fran
 
 ### WeMakeDevs public hackathons
 
-WeMakeDevs is an independent `wemakedevs-global` source backed by a bounded Python adapter. It reads only the public hackathon cards embedded in the site's Next.js response, preserves the original internal or Luma event link, normalizes dates and explicitly disclosed USD prizes, and drops expired or incomplete cards. Online and hybrid entries are available in all four supported country views. The sanitized listing result is published under [`scrapper-run-results/wemakedevs/`](scrapper-run-results/wemakedevs/).
+WeMakeDevs is an independent `wemakedevs-global` source backed by its own [Bright Data Scraper Studio collector](https://brightdata.com/cp/scrapers/c_mt61hvcq1d8np500ya), `c_mt61hvcq1d8np500ya`. Studio discovers the public event set and original detail URLs. A bounded Python postprocessor then joins only those discovered URLs to the same page's public Next.js card payload, completing dates, organizer, mode, and explicitly disclosed USD prizes without adding undiscovered events. Expired or incomplete cards are dropped, and online or hybrid entries are eligible in all four country views. Sanitized Studio and production evidence is published under [`scrapper-run-results/wemakedevs/`](scrapper-run-results/wemakedevs/).
 
 ### Deployment and automation
 
@@ -123,7 +123,7 @@ Production routes are prefixed with `/scrapper-api`; local FastAPI routes use th
 | API | Python 3.12, FastAPI, Uvicorn | Public reads and authenticated background operations |
 | Contracts and configuration | Pydantic, pydantic-settings | Validation, normalization, environment configuration |
 | Persistence | PostgreSQL, SQLAlchemy 2, psycopg 3 | Last-known-good events, sources, and jobs |
-| Web collection | Bright Data Scraper Studio, DCA API, `@brightdata/cli`, Luma JSON-LD adapter, WeMakeDevs Next.js adapter | Custom collectors, trigger/poll, create/heal/approve, bounded public-source fallbacks |
+| Web collection | Bright Data Scraper Studio, DCA API, `@brightdata/cli`, Luma JSON-LD adapter, WeMakeDevs Studio enrichment | Custom collectors, trigger/poll, create/heal/approve, bounded public-source enrichment and fallbacks |
 | Source discovery | Exa MCP | Reviewed public Luma event URL discovery for six target cities |
 | AI repair planning | OpenAI Responses API | Bounded collector creation and schema-drift prompts |
 | HTTP | HTTPX | Async Bright Data API calls |

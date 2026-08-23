@@ -1,0 +1,33 @@
+{
+  "source": "WeMakeDevs",
+  "target_url": "https://www.wemakedevs.org/#hackathons",
+  "captured_on": "2026-08-24",
+  "collector_id": "c_mt61hvcq1d8np500ya",
+  "studio_url": "https://brightdata.com/cp/scrapers/c_mt61hvcq1d8np500ya",
+  "creation": {
+    "status": "done",
+    "created_at": "2026-08-23T16:46:48.314Z",
+    "workflow": "Bright Data CLI prompt-to-Scraper-Studio creation"
+  },
+  "exact_target_verification": {
+    "response_id": "d2t1787504575415rpr95to744io",
+    "row_count": 4,
+    "discovered_urls": [
+      "https://www.wemakedevs.org/hackathons/falkordb",
+      "https://www.wemakedevs.org/hackathons/scrape-verse",
+      "https://luma.com/rotehack",
+      "https://www.wemakedevs.org/hackathons/trueforge"
+    ]
+  },
+  "validation": {
+    "usable_as_discovery_input": true,
+    "directly_contract_complete": false,
+    "observed_issue": "One generic title was polluted and some optional event fields were incomplete.",
+    "production_policy": "Use Studio-discovered allow-listed URLs, then complete contract fields from the same public listing payload."
+  },
+  "repair_history": {
+    "first_preview": "rejected because it regressed from four rows to two and rendered dates incorrectly",
+    "later_attempt": "not approved; the published runnable version was left unchanged"
+  },
+  "safety": "Signed-out public event-card fields only; no images, profiles, contact details, or registration data retained."
+}

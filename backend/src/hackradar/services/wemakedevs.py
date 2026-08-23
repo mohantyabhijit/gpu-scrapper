@@ -11,6 +11,7 @@ import httpx
 
 WEMAKEDEVS_URL = "https://www.wemakedevs.org/#hackathons"
 WEMAKEDEVS_HOSTS = {"wemakedevs.org", "www.wemakedevs.org"}
+WEMAKEDEVS_COLLECTOR_ID = "c_mt61hvcq1d8np500ya"
 
 
 class _ScriptParser(HTMLParser):
@@ -177,3 +178,25 @@ class WeMakeDevsService:
         )
         response.raise_for_status()
         return parse_wemakedevs_hackathons(response.text)
+
+    async def enrich_discovery(
+        self, discovered_rows: list[dict[str, object]]
+    ) -> list[dict[str, object]]:
+        """Complete Studio-discovered rows from the same public listing payload.
+
+        Scraper Studio remains the discovery boundary: a listing is emitted only
+        when the collector returned its allow-listed detail URL. The deterministic
+        card parser supplies fields that Studio may omit or render inconsistently.
+        """
+        discovered_urls = {
+            url
+            for row in discovered_rows
+            if (url := _detail_url(row.get("detail_url") or row.get("product_page_url")))
+        }
+        if not discovered_urls:
+            return []
+        canonical_rows = await self.run()
+        return [
+            row for row in canonical_rows
+            if row.get("detail_url") in discovered_urls
+        ]

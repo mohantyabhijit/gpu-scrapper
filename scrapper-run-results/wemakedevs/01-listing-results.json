@@ -2,8 +2,15 @@
   "source": "WeMakeDevs",
   "source_url": "https://www.wemakedevs.org/#hackathons",
   "captured_on": "2026-08-24",
-  "adapter": "custom:wemakedevs:global",
+  "adapter": "bounded Next.js card adapter (pre-Studio production baseline)",
   "row_count": 4,
+  "production_refresh": {
+    "job_id": "55ce619889c94b2b8a7e7f890c5fcf0d",
+    "status": "completed",
+    "accepted_rows": 4,
+    "source_state": "ready",
+    "public_registry": "https://abhijitmohanty.com/scrapper-api/sources"
+  },
   "results": [
     {
       "title": "The Agent Harness Hackathon",

@@ -31,7 +31,7 @@ The organizer page remains authoritative. HackRadar does not organize events, ta
 public event pages
   -> Bright Data Scraper Studio collectors -> Bright Data API trigger/dataset polling
   -> allowlisted Luma pages -> bounded canonical JSON-LD adapter
-  -> allowlisted WeMakeDevs listing -> bounded Next.js card adapter
+  -> dedicated WeMakeDevs Studio collector -> bounded same-page card enrichment
   -> contract inspection
   -> Pydantic normalization and category/effort enrichment
   -> PostgreSQL last-known-good records
@@ -55,7 +55,7 @@ The backend is FastAPI with SQLAlchemy. `hackathons` stores the normalized paylo
 | Luma | `luma-london` | United Kingdom | deterministic JSON-LD adapter | Exa-discovered public pages in London | Production refresh completed with 2 current rows; binding remains `degraded` |
 | Luma | `luma-bengaluru`, `luma-mumbai` | India | deterministic JSON-LD adapter | Exa-discovered public pages in Bengaluru and Mumbai | Production refresh completed with 5 current rows; both bindings remain `degraded` |
 | Luma | `luma-singapore` | Singapore | deterministic JSON-LD adapter | Exa-discovered public pages in Singapore | Production refresh completed with 1 current row; binding remains `degraded` |
-| WeMakeDevs | `wemakedevs-global` | Global online / US anchor | deterministic Next.js card adapter | `https://www.wemakedevs.org/#hackathons` | Local exact-target validation normalized 4 public current/ongoing cards on 2026-08-24; production refresh pending |
+| WeMakeDevs | `wemakedevs-global` | Global online / US anchor | [`c_mt61hvcq1d8np500ya`](https://brightdata.com/cp/scrapers/c_mt61hvcq1d8np500ya) | `https://www.wemakedevs.org/#hackathons` | Dedicated Studio collector exact-target run returned 4 linked rows; production binding uses Studio discovery plus bounded same-page enrichment |
 
 The failed UK ID is retained as evidence. A replacement is allowed only because Studio did not create a runnable template to repair; document any replacement ID and validate it independently before changing the registry.
 
@@ -73,9 +73,11 @@ Never reuse SecondSpin collector `c_mt2nbsqd1akac96fiz`; it belongs to a vacuum-
 
 ### WeMakeDevs workflow
 
-WeMakeDevs uses its own `custom:wemakedevs:global` binding and does not share the Luma adapter or any Bright Data Collector ID. The Python adapter requests only the public listing, decodes the `cards` array embedded in the Next.js flight payload, and accepts only HTTPS detail links on WeMakeDevs or Luma. It requires a title and complete start/end dates, excludes expired or incomplete cards, normalizes the listing's doubled dollar-prefix display, and converts only explicitly disclosed USD amounts. It does not retain images, social links, email addresses, profiles, registration data, or unrelated page content.
+WeMakeDevs uses its own Scraper Studio collector, `c_mt61hvcq1d8np500ya`, and does not share a collector with Devpost, Luma, or SecondSpin. An exact-target Studio rerun on 2026-08-24 returned four rows and all four canonical detail URLs. Generic extraction left one title noisy and some optional fields incomplete, so production uses a transparent hybrid: Studio defines the discovered URL set, then the Python postprocessor joins only those URLs to the public `cards` array embedded in the same Next.js listing. This supplies contract fields without allowing the postprocessor to add events Studio did not discover.
 
-On 2026-08-24, local exact-target validation returned four current/ongoing rows: The Agent Harness Hackathon, The Rote Playoffs Hackathon, Graph Hacks: Building Next-Gen RAG, and Into the Scrape-Verse. Treat that count as time-specific. Online and hybrid cards carry explicit `GLOBAL` eligibility through normalization so they appear in US, India, UK, and Singapore views. Sanitized source evidence lives at `scrapper-run-results/wemakedevs/01-listing-results.json`.
+The postprocessor accepts only HTTPS detail links on WeMakeDevs or Luma, requires complete start/end dates, excludes expired or incomplete cards, normalizes the listing's doubled dollar-prefix display, and converts only explicitly disclosed USD amounts. It does not retain images, social links, email addresses, profiles, registration data, or unrelated page content. A first same-ID repair preview regressed from four rows to two and was rejected; a later long-running repair was not approved. The runnable published Studio version therefore remained unchanged and was independently rerun before production binding.
+
+Before the Studio binding, exact-target production refresh job `55ce619889c94b2b8a7e7f890c5fcf0d` validated the same four current/ongoing public cards with the deterministic adapter. The subsequent Studio verification returned those same four canonical URLs. Treat all counts as time-specific. Online and hybrid cards carry explicit `GLOBAL` eligibility through normalization. Sanitized evidence lives under `scrapper-run-results/wemakedevs/`.
 
 ## Normalized event contract
 
@@ -167,7 +169,7 @@ Production release order:
 - FX is display-only. PostgreSQL stores canonical USD values and the original source prize claim; neither ranking nor provenance depends on the selected display currency.
 - Unknown and non-cash awards never receive fabricated currency equivalents.
 
-The live frontend release on 2026-08-24 remains `50e7422`; the Luma-capable backend is release `a966298`. GitHub quality run `32651012024` passed for the exact backend release commit. Public verification returned HTTP 200 for the frontend and API health, with 36 worldwide rows and all 11 production Luma rows visible across the four supported countries. Earlier browser verification covered desktop and 390×844 layouts, card-wide and explicit-button opening, modal content, the independent source URL, Escape dismissal, backdrop dismissal, scroll locking, and focus restoration. The card-wide hit target is implemented by stretching the existing semantic detail button rather than making the article a nested interactive control.
+The live frontend release on 2026-08-24 is `8a230dbe378d4e4fd707544937891c6ea0018a34`; the backend release is `32d34fe`. GitHub quality run `32652525100` passed for the exact backend release commit. Public verification returned HTTP 200 for the frontend and API health, with 40 worldwide rows. The four production WeMakeDevs rows are available in every supported country feed, and between one and three of them appear in each prize-ranked top ten at the verification time. Earlier browser verification covered desktop and 390×844 layouts, card-wide and explicit-button opening, modal content, the independent source URL, Escape dismissal, backdrop dismissal, scroll locking, and focus restoration. The card-wide hit target is implemented by stretching the existing semantic detail button rather than making the article a nested interactive control.
 
 Do not call a successful push a deployment. The public routes and current service revisions must be checked separately.
 
