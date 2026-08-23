@@ -125,9 +125,9 @@ export default function HackathonExplorer({ initialHackathons }: { initialHackat
   const profile = countries.find((item) => item.code === country)!;
   const hasDisclosedPrize = ranked.some((item) => item.prizeUsd !== null);
   const disclosedPool = ranked.reduce((sum, item) => sum + (item.prizeUsd ?? 0), 0);
-  const localCount = country === "WORLD"
+  const coverageCount = country === "WORLD"
     ? new Set(ranked.map((item) => item.venueCountry).filter((value) => value !== "GLOBAL")).size
-    : ranked.filter((item) => item.venueCountry === country).length;
+    : ranked.length;
   const poolMoney = hasDisclosedPrize ? prizeForMarket(disclosedPool, country) : null;
 
   return (
@@ -157,8 +157,7 @@ export default function HackathonExplorer({ initialHackathons }: { initialHackat
       <section className="metrics" aria-label={`${profile.label} ranking summary`}>
         <div><span>View</span><strong>{profile.short}</strong><small>{country === "WORLD" ? "all indexed opportunities" : "local + eligible online"}</small></div>
         <div><span>Ranked pool</span><strong>{poolMoney?.local ?? "Undisclosed"}</strong><small>{poolMoney ? (poolMoney.isUsdMarket ? "USD comparison total" : `${poolMoney.usd} USD · estimated FX`) : "no comparable cash value"}</small></div>
-        <div><span>{country === "WORLD" ? "Markets" : "Local events"}</span><strong>{localCount}</strong><small>{country === "WORLD" ? "represented in this top ten" : "inside this top ten"}</small></div>
-        <div><span>Source model</span><strong>3×</strong><small>Studio collectors</small></div>
+        <div><span>{country === "WORLD" ? "Markets" : "Eligible events"}</span><strong>{coverageCount}</strong><small>{country === "WORLD" ? "represented in this top ten" : "ranked in this view"}</small></div>
       </section>
 
       <section className="rankings" id="rankings">
