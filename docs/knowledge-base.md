@@ -5,7 +5,7 @@ developer or coding agent resuming the project without prior conversation
 history. Evidence files remain authoritative for proof, and live state must be
 re-checked before making time-sensitive claims.
 
-**Last reconciled:** 2026-08-22
+**Last reconciled:** 2026-08-23
 
 **Repository:** <https://github.com/mohantyabhijit/gpu-scrapper>
 
@@ -65,7 +65,8 @@ Key ownership boundaries:
   queries.
 - `app/api/refresh/route.ts` owns the protected production trigger boundary.
 - `app/page.tsx` and `components/` own the sourcing storefront.
-- `.github/workflows/collect.yml` signs one bounded source slice per job.
+- `.github/workflows/collect.yml` obtains the protected ready-source plan and
+  signs one bounded source slug per job.
 
 ## 3. Verified source registry
 
@@ -93,6 +94,45 @@ retailers. Re-check the live page and latest refresh before repeating that count
 The full eligibility and rejection record is in
 [`source-eligibility.md`](source-eligibility.md).
 
+### Scraper Studio inventory and electronics pilots
+
+Scraper Studio is the provider-owned collection and recovery layer, not a
+one-off demo step. Raster exposes the public collector inventory on the Data
+health page while keeping production triggering source-bound and signed.
+
+Production GPU collectors remain:
+
+- Dynacore GPU: `c_mt3qzv5p215cci1r2e`;
+- PC Themes GPU: `c_mt3zqdljej45v0g1r`.
+
+Three category pilots were created on 2026-08-23 and are deliberately excluded
+from the shopper catalog until their own schemas and ingestion boundaries are
+production-ready:
+
+- Dynacore RAM: `c_mt5h2qen1bkc7nbywu`, fixed to
+  <https://dynacoretech.com/collections/ram>. The first live run returned 20
+  public product rows with numeric SGD prices and allowed retailer URLs, but
+  validation caught a capacity parse error on a 128GB RDIMM whose title also
+  contains `32Gbit`. It remains a generated pilot pending same-ID repair and a
+  clean rerun.
+- iStudio Mac mini: `c_mt5h72hcow8slxb6t`, fixed to
+  <https://www.istudiosg.com/collections/mac-mini>. Initial AI generation
+  ended in provider error after the template was created. Preserve the ID and
+  repair in place; do not replace it with another collector or claim a valid
+  run until a non-empty contract-checked rerun exists.
+- Dynacore NVIDIA DGX Spark: `c_mt5hxrzckttss9n11`, fixed to the public
+  Singapore PDP for model SKU/MPN `810152850381`. Its initial one-row output
+  had eight schema defects; same-ID healing corrected the identity, URL, chip,
+  price/currency, specification, and timestamp contract. The rerun produced
+  1/1 valid row: SGD 8,499, `Few Left`, NVIDIA GB10 Grace Blackwell, 128GB
+  DDR5x, and 4TB storage. It is a validated Studio pilot, not yet an enabled
+  shopper-catalog source.
+
+The authenticated Bright Data dashboard also contains an Infinity Computer GPU
+collector and an unfinished zero-delivery Dynacore duplicate. Neither is an
+approved production binding. TechDeals remains rejected by policy and must not
+receive a collector. US, UK, and India approved collectors are still absent.
+
 ## 4. Collection and refresh contract
 
 The deployed refresh route accepts registered source slugs and role only. It
@@ -109,17 +149,17 @@ completion with zero validated rows is a failure, not a green no-op. Provider
 and persistence failures are sanitized, the replay claim is safely released
 when retry is allowed, and the last-known-good catalog is preserved.
 
-### Scheduled slices
+### Scheduled sources
 
-The workflow is scheduled daily and can be manually dispatched. The unattended
-matrix contains the two enabled Singapore slices:
+The daily workflow signs a request to `/api/refresh-plan`, validates the bounded
+slug-only response, and creates one independently locked job for every enabled
+baseline source and ready runtime Country Pack source. Manual dispatch accepts
+one safe source slug; the refresh route still resolves its URL, currency, and
+Collector ID server-side and rejects unknown, pending, or disabled sources.
 
-- `sg-dynacore`
-- `sg-pc-themes`
-
-US, UK, and India baseline slices remain manual diagnostic entries until they
-have live-proven collectors. A manual run proves the pipeline, not that cron has
-fired.
+The current production plan contains the two enabled Singapore sources.
+US, UK, and India remain fixture-backed and outside the plan until they have
+live-proven collectors. A manual run proves the pipeline, not that cron fired.
 
 ## 5. PostgreSQL model
 
@@ -200,7 +240,9 @@ The lifecycle is:
 3. The promotion route verifies the exact persisted identities and evidence in
    one PostgreSQL transaction.
 4. The pack and source become `ready`/enabled atomically.
-5. Only then does the market enter the selector and protected refresh plan.
+5. Only then does the market enter the selector and protected refresh plan; the
+   next scheduled run automatically gives its source a bounded job without a
+   code deployment.
 
 Changing country, currency, source, host, URL, or Collector ID requires new
 evidence. Pending or malformed packs fail closed and remain health-ledger-only.
@@ -210,7 +252,8 @@ The exact rehearsal is documented in [`operations.md`](operations.md).
 
 The customer-facing surface provides:
 
-- market selector with native currency isolation;
+- market selector with native currency isolation and immediate GET submission
+  when the shopper changes country/currency;
 - search by model, brand, and retailer;
 - availability filters and explicit stock uncertainty;
 - multi-select GPU-family and retailer filters;
@@ -219,6 +262,12 @@ The customer-facing surface provides:
 - source-desk selection stored only in the browser;
 - product detail routes and attributed retailer exits;
 - data-health and methodology pages.
+
+The homepage makes Scraper Studio integral to the first viewport with a visible
+public retailer -> Scraper Studio -> validated schema -> market-local offer
+trace. It uses an original light, restrained data-product system at Stripe's
+craft level without copying Stripe brand assets or making Scraper Studio a
+sponsor badge.
 
 The UI must never mix currency rankings, claim checkout, hide fixture state, or
 present stale/degraded rows as guaranteed offers.

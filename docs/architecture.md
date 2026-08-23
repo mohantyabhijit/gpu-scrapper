@@ -6,7 +6,8 @@ SG/SGD; all candidates remain disabled until the eligibility gates pass.
 
 ```text
 Bright Data Scraper Studio collectors (one per eligible source)
-        -> GitHub Actions schedule/manual dispatch
+        -> signed ready-source refresh plan
+        -> one GitHub Actions job per approved source
         -> authenticated server refresh route
         -> bounded trigger/poll + contract validation
         -> normalization and quarantine
@@ -41,8 +42,9 @@ Bright Data Scraper Studio collectors (one per eligible source)
   pending packs remain health-ledger-only.
 - **Refresh plan:** a protected read-only query returns only a bounded,
   deterministic list of static baseline and verified runtime source slugs. The
-  runtime resolver re-checks the same ready boundary before any provider call,
-  so demotion or malformed metadata fails closed.
+  scheduled workflow validates that plan and creates one locked job per source;
+  the runtime resolver re-checks the same ready boundary before any provider
+  call, so demotion or malformed metadata fails closed.
 - **Storefront:** read-only catalog, same-currency filters/sorts, freshness and
   health labels, source attribution, and safe outbound links. No checkout.
 - **Public route:** the portfolio origin proxies only `/scrapper/` to Raster's

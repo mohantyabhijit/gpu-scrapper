@@ -9,6 +9,8 @@ export const REFRESH_SLICES = Object.freeze({
 });
 
 const SAFE_SOURCE_SLUGS = new Set(Object.values(REFRESH_SLICES).map(({ sourceSlug }) => sourceSlug));
+const SOURCE_SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const MAX_SOURCE_SLUG_LENGTH = 64;
 const SAFE_CODES = new Set([
   "bright_data_not_configured",
   "database_error",
@@ -59,9 +61,27 @@ export function parseSlice(value) {
   return { ...slice, slice: value };
 }
 
-export function createPayload({ market, sourceSlug }) {
-  if (!market) throw new Error("market is required");
-  return JSON.stringify({ sourceSlugs: [sourceSlug], role: "combined" });
+export function validateSourceSlug(value) {
+  if (typeof value !== "string" || value.length < 1 || value.length > MAX_SOURCE_SLUG_LENGTH || !SOURCE_SLUG_PATTERN.test(value)) {
+    throw new Error("source slug is invalid");
+  }
+  return value;
+}
+
+export function selectRefreshTarget({ slice, sourceSlug }) {
+  if (slice && sourceSlug) throw new Error("choose either slice or source slug");
+  if (sourceSlug) return { sourceSlug: validateSourceSlug(sourceSlug), slice: sourceSlug };
+  return parseSlice(slice);
+}
+
+export function createPayload({ sourceSlug, onboardingPackSlug }) {
+  validateSourceSlug(sourceSlug);
+  if (onboardingPackSlug !== undefined) validateSourceSlug(onboardingPackSlug);
+  return JSON.stringify({
+    sourceSlugs: [sourceSlug],
+    role: "combined",
+    ...(onboardingPackSlug ? { onboardingPackSlug } : {}),
+  });
 }
 
 export function signatureFor({ secret, timestamp, body }) {
@@ -82,14 +102,14 @@ function parseArgs(argv) {
     const key = argument.slice(2);
     const value = argv[index + 1];
     if (!value || value.startsWith("--")) throw new Error(`missing value for --${key}`);
-    if (!["url", "slice", "timeout-ms"].includes(key)) throw new Error(`unsupported option --${key}`);
+    if (!["url", "slice", "source-slug", "timeout-ms"].includes(key)) throw new Error(`unsupported option --${key}`);
     values[key] = value;
     index += 1;
   }
   return values;
 }
 
-function safeResponseSummary(text) {
+function safeResponseSummary(text, allowedSourceSlugs = SAFE_SOURCE_SLUGS) {
   let parsed;
   try {
     parsed = JSON.parse(text);
@@ -102,7 +122,7 @@ function safeResponseSummary(text) {
   const safeNonNegativeInteger = (value) => (
     Number.isSafeInteger(value) && value >= 0 && value <= MAX_SUMMARY_INTEGER ? value : undefined
   );
-  const safeSourceSlug = (value) => typeof value === "string" && SAFE_SOURCE_SLUGS.has(value) ? value : undefined;
+  const safeSourceSlug = (value) => typeof value === "string" && allowedSourceSlugs.has(value) ? value : undefined;
   const safeCode = (value) => typeof value === "string" && SAFE_CODES.has(value) ? value : "unknown_error";
   const safeObservedAt = (value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value) ? value : undefined;
   if (["requested", "completed", "notConfigured", "failed"].some((key) => key in parsed)) {
@@ -141,10 +161,10 @@ function safeResponseSummary(text) {
   );
 }
 
-export async function runRefresh({ url, slice, secret, timeoutMs = MAX_TIMEOUT_MS, fetchImpl = fetch, now = Date.now }) {
+export async function runRefresh({ url, slice, sourceSlug, secret, timeoutMs = MAX_TIMEOUT_MS, fetchImpl = fetch, now = Date.now }) {
   const parsedUrl = new URL(url);
   if (parsedUrl.protocol !== "https:") throw new Error("refresh URL must use HTTPS");
-  const selected = parseSlice(slice);
+  const selected = selectRefreshTarget({ slice, sourceSlug });
   const boundedTimeout = Math.min(Math.max(Number(timeoutMs) || MAX_TIMEOUT_MS, 1_000), MAX_TIMEOUT_MS);
   const timestamp = Math.floor(now() / 1_000);
   const body = createPayload(selected);
@@ -169,7 +189,7 @@ export async function runRefresh({ url, slice, secret, timeoutMs = MAX_TIMEOUT_M
       slice,
       market: selected.market,
       source_slug: selected.sourceSlug,
-      ...safeResponseSummary(responseText),
+      ...safeResponseSummary(responseText, new Set([...SAFE_SOURCE_SLUGS, selected.sourceSlug])),
     };
     if (!response.ok) {
       throw new RefreshResponseError(response.status, result);
@@ -189,7 +209,13 @@ function main() {
   const secret = process.env.RASTER_INGEST_HMAC_SECRET;
   if (!url) throw new Error("RASTER_REFRESH_URL or --url is required");
   if (!secret) throw new Error("RASTER_INGEST_HMAC_SECRET is required");
-  const result = runRefresh({ url, secret, slice: args.slice ?? "us-central-computer", timeoutMs: args["timeout-ms"] });
+  const result = runRefresh({
+    url,
+    secret,
+    slice: args.slice ?? (args["source-slug"] ? undefined : "sg-dynacore"),
+    sourceSlug: args["source-slug"],
+    timeoutMs: args["timeout-ms"],
+  });
   return result.then((summary) => {
     process.stdout.write(`${JSON.stringify(summary)}\n`);
     if (!refreshSummarySucceeded(summary)) throw new Error("refresh did not complete with validated rows");

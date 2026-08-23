@@ -35,7 +35,10 @@ test("server-renders the Raster market-local fixture desk", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
   assert.match(html, /Raster|raster\./i);
-  assert.match(html, /The GPU market/);
+  assert.match(html, /Every electronics offer/);
+  assert.match(html, /traced to its source/);
+  assert.match(html, /Scraper Studio/);
+  assert.match(html, /Validated schema/);
   assert.match(html, /FIXTURE CATALOG/);
   assert.match(html, /United States/);
   assert.match(html, /USD(?:<!-- -->)? only/);
@@ -256,6 +259,13 @@ test("publishes judge-facing data health without fabricating live state", async 
   assert.match(html, /same-ID rerun/);
   assert.match(html, /Current evidence state: pending/);
   assert.match(html, /brightdata\.com/);
+  assert.match(html, /SCRAPER STUDIO/);
+  assert.match(html, /raster-sg-dynacore-ram/);
+  assert.match(html, /raster-sg-istudio-mac-mini/);
+  assert.match(html, /raster-sg-dynacore-dgx-spark/);
+  assert.match(html, /Validated pilot/);
+  assert.match(html, /Studio pilot/);
+  assert.match(html, /Pilots stay out of the catalog until validated/);
   assert.doesNotMatch(html, /Self-heal proved|Proven · same ID/i);
   assert.doesNotMatch(html, /c_gpu_|collectors online/i);
 });

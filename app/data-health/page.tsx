@@ -3,6 +3,7 @@ import type { MarketDefinition } from "../../config/markets";
 import { loadCatalog, loadHealingEvidence } from "../../lib/postgres/catalog";
 import { HEALING_STAGES, type HealingStage } from "../../lib/postgres/healing-evidence";
 import { aggregateCatalogHealth, marketCatalogHealth, schedulerHealth } from "./health";
+import { studioCollectors, studioCollectorUrl } from "../../config/studio-collectors";
 
 type HealthTone = "ready" | "pending" | "planned";
 type EvidenceKind = "fixture" | "provider" | "policy";
@@ -262,6 +263,36 @@ export default async function DataHealth() {
               </article>
             );
           })}
+        </div>
+      </section>
+
+      <section className="health-section" id="scraper-studio" aria-labelledby="studio-coverage-title">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow"><span>02</span> / SCRAPER STUDIO</p>
+            <h2 id="studio-coverage-title">Collectors, not claims.</h2>
+          </div>
+          <p className="section-note">One fixed public retailer target per collector<br />Pilots stay out of the catalog until validated</p>
+        </div>
+        <div className="studio-collector-grid">
+          {studioCollectors.map((collector) => (
+            <article className="studio-collector-card" key={collector.collectorId} data-collector-state={collector.state}>
+              <div className="studio-collector-topline">
+                <span>{collector.category}</span>
+                <strong>{collector.state === "production" ? "Production" : collector.state === "validated" ? "Validated pilot" : collector.state === "repairing" ? "Repairing" : "Studio pilot"}</strong>
+              </div>
+              <h3>{collector.retailer}</h3>
+              <p>{collector.note}</p>
+              <dl>
+                <div><dt>Collector</dt><dd>{collector.collectorId}</dd></div>
+                <div><dt>Template</dt><dd>{collector.name}</dd></div>
+              </dl>
+              <div className="studio-collector-links">
+                <a href={studioCollectorUrl(collector.collectorId)} target="_blank" rel="noreferrer">Open in Studio ↗</a>
+                <a href={collector.targetUrl} target="_blank" rel="noreferrer">Public target ↗</a>
+              </div>
+            </article>
+          ))}
         </div>
       </section>
 

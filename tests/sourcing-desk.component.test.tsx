@@ -4,6 +4,8 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import SourcingDesk, { SOURCE_DESK_STORAGE_KEY, SourceDeskAddButton } from "../components/sourcing-desk";
 import { encodeSourceDeskCatalog, serializeSourceDesk, type SourceDeskOffer } from "../components/sourcing-desk-model";
+import MarketSelect from "../components/market-select";
+import { marketRegistry } from "../config/markets";
 
 const usOffer: SourceDeskOffer = {
   id: "us-offer",
@@ -80,5 +82,23 @@ describe("SourcingDesk browser workflow", () => {
     fireEvent.click(screen.getByRole("button", { name: "Clear desk" }));
     expect(window.localStorage.getItem(SOURCE_DESK_STORAGE_KEY)).toBe("[]");
     expect(screen.getByText("Your desk is empty.")).toBeTruthy();
+  });
+});
+
+describe("MarketSelect browser workflow", () => {
+  afterEach(cleanup);
+
+  test("submits the filter form immediately when the market changes", () => {
+    let submitted = 0;
+    render(
+      <form onSubmit={(event) => { event.preventDefault(); submitted += 1; }}>
+        <label htmlFor="test-market">Market</label>
+        <MarketSelect id="test-market" market="singapore" markets={Object.values(marketRegistry)} />
+      </form>,
+    );
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Market" }), { target: { value: "india" } });
+
+    expect(submitted).toBe(1);
   });
 });

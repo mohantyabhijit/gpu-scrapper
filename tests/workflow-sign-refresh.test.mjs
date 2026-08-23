@@ -9,28 +9,33 @@ import { createPayload, MAX_SUMMARY_INTEGER, MAX_TIMEOUT_MS, parseSlice, refresh
 import { MAX_PROVIDER_RUN_MS } from "../lib/brightdata/client.ts";
 import { parseRefreshRequest } from "../lib/brightdata/refresh.ts";
 
-const APPROVED_SECRET_STEP_NAMES = new Set([
-  "Validate protected refresh inputs",
-  "Trigger one market/source slice",
-]);
 const APPROVED_STEP_ENV = Object.freeze({
-  RASTER_REFRESH_URL: "${{ secrets.RASTER_REFRESH_URL }}",
-  RASTER_INGEST_HMAC_SECRET: "${{ secrets.RASTER_INGEST_HMAC_SECRET }}",
-  RASTER_REFRESH_SLICE: "${{ matrix.slice }}",
+  "Resolve approved source plan": Object.freeze({
+    RASTER_REFRESH_URL: "${{ secrets.RASTER_REFRESH_URL }}",
+    RASTER_INGEST_HMAC_SECRET: "${{ secrets.RASTER_INGEST_HMAC_SECRET }}",
+    RASTER_MANUAL_SOURCE: "${{ inputs.source_slug }}",
+  }),
+  "Trigger one market/source slice": Object.freeze({
+    RASTER_REFRESH_URL: "${{ secrets.RASTER_REFRESH_URL }}",
+    RASTER_INGEST_HMAC_SECRET: "${{ secrets.RASTER_INGEST_HMAC_SECRET }}",
+    RASTER_SOURCE_SLUG: "${{ matrix.source_slug }}",
+  }),
 });
 const normalizeWorkflowValue = (value) => typeof value === "string" ? value.trim() : value;
 const normalizeWorkflowExpression = (value) => normalizeWorkflowValue(value)?.replace(/\s+/g, " ");
 const EXPECTED_REFRESH_IF = "${{ github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}";
-const EXPECTED_REFRESH_SLICES = ["us-central-computer", "uk-overclockers-uk", "in-md-computers", "sg-dynacore", "sg-pc-themes"];
-const EXPECTED_SCHEDULED_SLICES = ["sg-dynacore", "sg-pc-themes"];
 const REPO_ROOT = fileURLToPath(new URL("../", import.meta.url));
 
 function assertWorkflowExecutionPolicy(document) {
   assert.ok(document.on && typeof document.on === "object" && !Array.isArray(document.on), "workflow triggers must be a mapping");
   assert.deepEqual(Object.keys(document.on).sort(), ["schedule", "workflow_dispatch"], "workflow may trigger only on schedule or workflow_dispatch");
+  assert.ok(document.jobs?.plan && typeof document.jobs.plan === "object", "plan job must exist");
   assert.ok(document.jobs?.refresh && typeof document.jobs.refresh === "object", "refresh job must exist");
+  assert.equal(document.jobs.plan.environment, "raster-production", "plan job must use the exact production environment");
   assert.equal(document.jobs.refresh.environment, "raster-production", "refresh job must use the exact production environment");
-  assert.equal(normalizeWorkflowExpression(document.jobs.refresh.if), normalizeWorkflowExpression(EXPECTED_REFRESH_IF), "refresh job must require the trusted main schedule/manual condition");
+  assert.equal(normalizeWorkflowExpression(document.jobs.plan.if), normalizeWorkflowExpression(EXPECTED_REFRESH_IF), "plan job must require the trusted main schedule/manual condition");
+  assert.equal(normalizeWorkflowExpression(document.jobs.refresh.if), normalizeWorkflowExpression("${{ needs.plan.result == 'success' }}"), "refresh job must require a successful signed plan");
+  assert.equal(document.jobs.refresh.needs, "plan", "refresh job must depend on the signed plan");
 }
 
 function assertWorkflowPolicy(workflow) {
@@ -47,7 +52,7 @@ function assertWorkflowPolicy(workflow) {
       if (secretReference.test(value)) {
         secretReferences += 1;
         assert.equal(allowed, true, "secrets.* references must stay in approved step env blocks");
-        assert.ok(Object.values(APPROVED_STEP_ENV).includes(normalizeWorkflowValue(value)), "secret references must use exact approved expressions");
+        assert.ok(Object.values(APPROVED_STEP_ENV).flatMap((env) => Object.values(env)).includes(normalizeWorkflowValue(value)), "secret references must use exact approved expressions");
       }
       return;
     }
@@ -71,12 +76,13 @@ function assertWorkflowPolicy(workflow) {
     assert.ok(Array.isArray(job.steps), `${jobName} must define steps`);
     for (const step of job.steps) {
       assert.ok(step && typeof step === "object" && !Array.isArray(step), "workflow steps must be mappings");
-      const approved = APPROVED_SECRET_STEP_NAMES.has(step.name);
+      const expectedEnv = APPROVED_STEP_ENV[step.name];
+      const approved = Boolean(expectedEnv);
       if (approved) {
         approvedEnvBlocks += 1;
         assert.ok(step.env && typeof step.env === "object" && !Array.isArray(step.env), `${step.name} must define an env mapping`);
-        assert.deepEqual(Object.keys(step.env).sort(), Object.keys(APPROVED_STEP_ENV).sort(), `${step.name} env must contain only the approved mappings`);
-        for (const [key, expected] of Object.entries(APPROVED_STEP_ENV)) {
+        assert.deepEqual(Object.keys(step.env).sort(), Object.keys(expectedEnv).sort(), `${step.name} env must contain only the approved mappings`);
+        for (const [key, expected] of Object.entries(expectedEnv)) {
           assert.equal(normalizeWorkflowValue(step.env[key]), expected, `${step.name} env.${key} must use the exact approved expression`);
         }
       }
@@ -118,19 +124,18 @@ test("signature matches the documented timestamp.body HMAC", () => {
   assert.equal(signatureFor({ secret, timestamp, body }), expected);
 });
 
-test("workflow schedules only live sources and keeps every baseline slice manually dispatchable", async () => {
+test("workflow schedules the signed dynamic plan and accepts one safe manual source slug", async () => {
   const workflow = await readFile(new URL("../.github/workflows/collect.yml", import.meta.url), "utf8");
   const document = parseYaml(workflow);
-  assert.deepEqual(document.on.workflow_dispatch.inputs.slice.options, EXPECTED_REFRESH_SLICES);
-  const matrixExpression = document.jobs.refresh.strategy.matrix.slice;
-  for (const slice of EXPECTED_SCHEDULED_SLICES) assert.match(matrixExpression, new RegExp(slice));
-  for (const slice of EXPECTED_REFRESH_SLICES.filter((slice) => !EXPECTED_SCHEDULED_SLICES.includes(slice))) {
-    assert.doesNotMatch(matrixExpression, new RegExp(slice));
-  }
-  const validationStep = document.jobs.refresh.steps.find((step) => step.name === "Validate protected refresh inputs");
-  assert.ok(validationStep);
-  for (const slice of EXPECTED_REFRESH_SLICES) assert.match(validationStep.run, new RegExp(slice));
-  assert.match(workflow, /group: raster-refresh-\$\{\{ matrix\.slice \}\}/);
+  assert.equal(document.on.workflow_dispatch.inputs.source_slug.type, "string");
+  assert.equal(document.on.workflow_dispatch.inputs.source_slug.default, "dynacore");
+  assert.equal(document.jobs.plan.outputs.sources, "${{ steps.plan.outputs.sources }}");
+  assert.equal(document.jobs.refresh.strategy.matrix.source_slug, "${{ fromJSON(needs.plan.outputs.sources) }}");
+  const planStep = document.jobs.plan.steps.find((step) => step.name === "Resolve approved source plan");
+  assert.match(planStep.run, /fetch-refresh-plan\.mjs/);
+  assert.match(planStep.run, /--source-slug/);
+  assert.match(workflow, /group: raster-refresh-\$\{\{ matrix\.source_slug \}\}/);
+  assert.match(workflow, /sign-refresh\.mjs --source-slug "\$RASTER_SOURCE_SLUG"/);
   assert.ok(MAX_TIMEOUT_MS >= MAX_PROVIDER_RUN_MS + 60_000);
 });
 
@@ -184,14 +189,14 @@ test("workflow execution policy rejects environment suffixes and weakened branch
 test("workflow policy catches inline job env secrets and tolerates reordered step env mappings", async () => {
   const workflow = await readFile(new URL("../.github/workflows/collect.yml", import.meta.url), "utf8");
   const reordered = workflow.replace(
-    / {8}env:\n {10}RASTER_REFRESH_URL: \$\{\{ secrets\.RASTER_REFRESH_URL \}\}\n {10}RASTER_INGEST_HMAC_SECRET: \$\{\{ secrets\.RASTER_INGEST_HMAC_SECRET \}\}\n {10}RASTER_REFRESH_SLICE: \$\{\{ matrix\.slice \}\}/g,
-    "        env:\n          RASTER_REFRESH_SLICE: ${{ matrix.slice }}\n          RASTER_INGEST_HMAC_SECRET: ${{ secrets.RASTER_INGEST_HMAC_SECRET }}\n          RASTER_REFRESH_URL: ${{ secrets.RASTER_REFRESH_URL }}",
+    / {8}env:\n {10}RASTER_REFRESH_URL: \$\{\{ secrets\.RASTER_REFRESH_URL \}\}\n {10}RASTER_INGEST_HMAC_SECRET: \$\{\{ secrets\.RASTER_INGEST_HMAC_SECRET \}\}\n {10}RASTER_SOURCE_SLUG: \$\{\{ matrix\.source_slug \}\}/,
+    "        env:\n          RASTER_SOURCE_SLUG: ${{ matrix.source_slug }}\n          RASTER_INGEST_HMAC_SECRET: ${{ secrets.RASTER_INGEST_HMAC_SECRET }}\n          RASTER_REFRESH_URL: ${{ secrets.RASTER_REFRESH_URL }}",
   );
   assertWorkflowPolicy(reordered);
 
   const inlineJobEnv = reordered.replace(
-    "  refresh:\n    if:",
-    "  refresh:\n    env: { RASTER_REFRESH_URL: \"${{ secrets.RASTER_REFRESH_URL }}\" }\n    if:",
+    "  refresh:\n    needs:",
+    "  refresh:\n    env: { RASTER_REFRESH_URL: \"${{ secrets.RASTER_REFRESH_URL }}\" }\n    needs:",
   );
   assert.throws(() => assertWorkflowPolicy(inlineJobEnv), /approved step env blocks/);
 });
@@ -206,8 +211,8 @@ test("workflow policy rejects non-exact secret expressions even in approved envs
   assert.throws(() => assertWorkflowPolicy(workflow.replaceAll("${{ secrets.RASTER_REFRESH_URL }}", "${{ secrets.RASTER_INGEST_HMAC_SECRET }}")), /exact approved expression/);
 
   const extraSecret = workflow.replaceAll(
-    "          RASTER_REFRESH_SLICE: ${{ matrix.slice }}",
-    "          RASTER_REFRESH_SLICE: ${{ matrix.slice }}\n          EXTRA_SECRET: ${{ secrets.RASTER_REFRESH_URL }}",
+    "          RASTER_SOURCE_SLUG: ${{ matrix.source_slug }}",
+    "          RASTER_SOURCE_SLUG: ${{ matrix.source_slug }}\n          EXTRA_SECRET: ${{ secrets.RASTER_REFRESH_URL }}",
   );
   assert.throws(() => assertWorkflowPolicy(extraSecret), /only the approved mappings/);
 
@@ -218,8 +223,8 @@ test("workflow policy rejects non-exact secret expressions even in approved envs
   ];
   for (const leak of leaks) {
     const outsideApprovedEnv = workflow.replace(
-      "  refresh:\n    if:",
-      `  refresh:\n    env:\n      ${leak}\n    if:`,
+      "  refresh:\n    needs:",
+      `  refresh:\n    env:\n      ${leak}\n    needs:`,
     );
     assert.throws(() => assertWorkflowPolicy(outsideApprovedEnv), /approved step env blocks/);
   }

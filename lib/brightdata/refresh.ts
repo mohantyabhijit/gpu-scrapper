@@ -24,7 +24,11 @@ export type RefreshEnvironment = {
   RASTER_INGEST_HMAC_SECRET?: string;
 };
 
-export type RefreshRequest = { sourceSlugs: SourceSlug[]; role: CollectorRole };
+export type RefreshRequest = {
+  sourceSlugs: SourceSlug[];
+  role: CollectorRole;
+  onboardingPackSlug?: string;
+};
 
 export type RefreshSuccess = {
   sourceSlug: SourceSlug;
@@ -96,6 +100,7 @@ export function parseRefreshRequest(raw: unknown): RefreshRequest {
   const body = raw as Record<string, unknown>;
   const sourceSlugs = body.sourceSlugs;
   const role = body.role ?? "combined";
+  const onboardingPackSlug = body.onboardingPackSlug;
   if (!Array.isArray(sourceSlugs) || sourceSlugs.length < 1 || sourceSlugs.length > MAX_REFRESH_SOURCES) {
     throw new RefreshRequestError(`sourceSlugs must contain 1-${MAX_REFRESH_SOURCES} registered sources`);
   }
@@ -105,10 +110,24 @@ export function parseRefreshRequest(raw: unknown): RefreshRequest {
   const unique = [...new Set(sourceSlugs)] as SourceSlug[];
   if (unique.length !== sourceSlugs.length) throw new RefreshRequestError("sourceSlugs must not contain duplicates");
   if (typeof role !== "string" || !roles.has(role as CollectorRole)) throw new RefreshRequestError("role is invalid");
+  if (
+    onboardingPackSlug !== undefined
+    && (
+      typeof onboardingPackSlug !== "string"
+      || onboardingPackSlug.length > 64
+      || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(onboardingPackSlug)
+    )
+  ) {
+    throw new RefreshRequestError("onboardingPackSlug is invalid");
+  }
   for (const key of ["url", "urls", "input", "inputs", "collectorId", "collectorIds"]) {
     if (key in body) throw new RefreshRequestError("Only registered source slugs may be requested");
   }
-  return { sourceSlugs: unique, role: role as CollectorRole };
+  return {
+    sourceSlugs: unique,
+    role: role as CollectorRole,
+    ...(onboardingPackSlug ? { onboardingPackSlug } : {}),
+  };
 }
 
 export async function authenticateRefreshRequest(

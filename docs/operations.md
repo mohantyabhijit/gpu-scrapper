@@ -88,23 +88,16 @@ offline operator sequence.
 ## Workflow behavior
 
 `.github/workflows/collect.yml` runs on a daily schedule and supports
-`workflow_dispatch`. The schedule expands into two independently locked live
-source jobs; manual dispatch selects exactly one of five allowlisted baseline
-slices:
+`workflow_dispatch`. Scheduled runs call the HMAC-protected refresh-plan route,
+validate its bounded slug-only response, and expand it into one independently
+locked job per enabled baseline or ready runtime Country Pack source. Manual
+dispatch accepts one source slug and uses the same fail-closed server resolver;
+it never accepts a URL, currency, market, or Collector ID.
 
-| Slice | Market | Source |
-| --- | --- | --- |
-| `us-central-computer` | US / USD | Central Computers |
-| `uk-overclockers-uk` | UK / GBP | Overclockers UK |
-| `in-md-computers` | IN / INR | MDComputers |
-| `sg-dynacore` | SG / SGD | Dynacore Technologies |
-| `sg-pc-themes` | SG / SGD | PC Themes |
-
-Only enabled, live-proven sources enter the unattended schedule. Baseline
-sources that are not configured remain available for explicit manual diagnosis,
-where `not_configured` or an empty result fails the job instead of creating a
-green no-op. Concurrency is serialized per source slice, each job has a
-15-minute timeout, and permissions are read-only.
+Only enabled, live-proven sources enter the unattended plan. Unknown, pending,
+disabled, empty, or invalid sources fail instead of creating a green no-op.
+Concurrency is serialized per source slug, each refresh job has a 15-minute
+timeout, and permissions are read-only.
 
 ## Onboarding another country
 
@@ -195,7 +188,7 @@ Use a secure local secret injection mechanism. Do not echo or paste the secret:
 ```bash
 RASTER_REFRESH_URL="https://example.invalid/api/refresh" \
 RASTER_INGEST_HMAC_SECRET="(load from secure storage)" \
-node scripts/sign-refresh.mjs --slice us-central-computer
+node scripts/sign-refresh.mjs --source-slug example-japan
 ```
 
 For an offline test, use `tests/workflow-sign-refresh.test.mjs`; it uses mocked

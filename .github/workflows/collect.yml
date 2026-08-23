@@ -5,36 +5,25 @@ on:
     - cron: "17 3 * * *"
   workflow_dispatch:
     inputs:
-      slice:
-        description: "Run exactly one allowlisted market/source slice"
+      source_slug:
+        description: "Run one ready, allowlisted source slug"
         required: true
-        type: choice
-        default: us-central-computer
-        options:
-          - us-central-computer
-          - uk-overclockers-uk
-          - in-md-computers
-          - sg-dynacore
-          - sg-pc-themes
+        type: string
+        default: dynacore
 
 permissions:
   contents: read
 
 jobs:
-  refresh:
+  plan:
     if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
     environment: raster-production
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        slice: ${{ fromJSON(github.event_name == 'schedule' && '["sg-dynacore","sg-pc-themes"]' || format('["{0}"]', inputs.slice)) }}
-    concurrency:
-      group: raster-refresh-${{ matrix.slice }}
-      cancel-in-progress: false
+    timeout-minutes: 5
     permissions:
       contents: read
+    outputs:
+      sources: ${{ steps.plan.outputs.sources }}
     steps:
       - name: Check out workflow code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -43,37 +32,68 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22.13.0
-          cache: npm
 
-      - name: Install locked dependencies
-        run: npm ci --ignore-scripts
-
-      - name: Validate protected refresh inputs
+      - name: Resolve approved source plan
+        id: plan
         env:
           RASTER_REFRESH_URL: ${{ secrets.RASTER_REFRESH_URL }}
           RASTER_INGEST_HMAC_SECRET: ${{ secrets.RASTER_INGEST_HMAC_SECRET }}
-          RASTER_REFRESH_SLICE: ${{ matrix.slice }}
+          RASTER_MANUAL_SOURCE: ${{ inputs.source_slug }}
         shell: bash
         run: |
           set -euo pipefail
           test -n "$RASTER_REFRESH_URL" || { echo "::error::RASTER_REFRESH_URL secret is missing"; exit 1; }
           test -n "$RASTER_INGEST_HMAC_SECRET" || { echo "::error::refresh signing secret is missing"; exit 1; }
-          case "$RASTER_REFRESH_SLICE" in
-            us-central-computer|uk-overclockers-uk|in-md-computers|sg-dynacore|sg-pc-themes) ;;
-            *) echo "::error::unsupported refresh slice"; exit 1 ;;
-          esac
-          node --version
+          if [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
+            node scripts/fetch-refresh-plan.mjs > "$RUNNER_TEMP/raster-refresh-plan.json"
+          else
+            node scripts/fetch-refresh-plan.mjs --source-slug "$RASTER_MANUAL_SOURCE" > "$RUNNER_TEMP/raster-refresh-plan.json"
+          fi
+          sources="$(sed -n '1p' "$RUNNER_TEMP/raster-refresh-plan.json")"
+          test -n "$sources" || { echo "::error::refresh plan is empty"; exit 1; }
+          echo "sources=$sources" >> "$GITHUB_OUTPUT"
+
+  refresh:
+    needs: plan
+    if: ${{ needs.plan.result == 'success' }}
+    environment: raster-production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        source_slug: ${{ fromJSON(needs.plan.outputs.sources) }}
+    concurrency:
+      group: raster-refresh-${{ matrix.source_slug }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    steps:
+      - name: Check out workflow code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Use Node.js 22.13.0
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.1
+        with:
+          node-version: 22.13.0
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
 
       - name: Trigger one market/source slice
         env:
           RASTER_REFRESH_URL: ${{ secrets.RASTER_REFRESH_URL }}
           RASTER_INGEST_HMAC_SECRET: ${{ secrets.RASTER_INGEST_HMAC_SECRET }}
-          RASTER_REFRESH_SLICE: ${{ matrix.slice }}
+          RASTER_SOURCE_SLUG: ${{ matrix.source_slug }}
         shell: bash
         run: |
           set -euo pipefail
+          test -n "$RASTER_REFRESH_URL" || { echo "::error::RASTER_REFRESH_URL secret is missing"; exit 1; }
+          test -n "$RASTER_INGEST_HMAC_SECRET" || { echo "::error::refresh signing secret is missing"; exit 1; }
+          [[ "$RASTER_SOURCE_SLUG" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]] || { echo "::error::source slug is invalid"; exit 1; }
           : > "$RUNNER_TEMP/raster-refresh-result.json"
-          node scripts/sign-refresh.mjs --slice "$RASTER_REFRESH_SLICE" \
+          node scripts/sign-refresh.mjs --source-slug "$RASTER_SOURCE_SLUG" \
             | tee "$RUNNER_TEMP/raster-refresh-result.json"
 
       - name: Publish safe job summary
@@ -84,7 +104,7 @@ jobs:
           {
             echo "### Raster refresh"
             echo ""
-            echo '- Slice: `${{ matrix.slice }}`'
+            echo '- Source: `${{ matrix.source_slug }}`'
             if [ -s "$RUNNER_TEMP/raster-refresh-result.json" ]; then
               echo "- Safe route summary:"
               echo '```json'
