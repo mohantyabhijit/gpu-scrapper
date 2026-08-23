@@ -1,80 +1,162 @@
 # HackRadar
 
-HackRadar is a prize-ranked hackathon discovery desk for people who build often. It turns fragmented public event listings into a deduplicated worldwide top ten plus focused views for the United States, India, the United Kingdom, and Singapore, with categories, original source links, prize values, deadlines, and a practical effort estimate.
+HackRadar is a prize-ranked discovery desk for frequent hackathon builders. It turns fragmented public event listings into a deduplicated worldwide leaderboard and eligibility-aware views for the United States, India, the United Kingdom, and Singapore.
 
-**Public app:** <https://abhijitmohanty.com/scrapper/>
+- **Live application:** <https://abhijitmohanty.com/scrapper/>
+- **Public API:** <https://abhijitmohanty.com/scrapper-api/healthz>
+- **Repository:** <https://github.com/mohantyabhijit/hackathon-scrapper>
 
-**Repository:** <https://github.com/mohantyabhijit/hackathon-scrapper>
+## Product experience
 
-## What makes it useful
+- Worldwide and country-specific prize-ranked top tens.
+- AI, Web3, Web, Mobile, Climate, and Other filters.
+- Local-currency estimates alongside canonical USD values for India, the UK, and Singapore.
+- Original prize claims, dates, eligibility, participation mode, source URL, verification date, and estimated build effort on every record.
+- A client-side Three.js radar with accessible semantic content and reduced-motion support.
+- A checked-in verified snapshot when the live API cannot provide at least ten valid rows for the selected market.
 
-- A market selector switches between worldwide discovery and country-aware eligibility views.
-- Each country gets a prize-ranked top ten rather than an endless directory.
-- Country views show an estimated local-currency value alongside canonical USD; the original source prize claim remains visible in the build brief.
-- AI, Web3, Web, Mobile, Climate, and Other filters make the list actionable.
-- Every card links to the original event and exposes dates, eligibility, prize, mode, and estimated build effort.
-- A playful Three.js radar makes exploration tactile without blocking the content or accessibility path.
-- Verified seed data keeps the product useful when a source is degraded; live collector rows replace matching records after validation.
+HackRadar is a discovery product, not an organizer or application portal. Source pages remain authoritative for eligibility, dates, rules, and prizes. Currency conversions are dated display estimates and never alter ranking or stored provenance.
 
-HackRadar is a discovery product, not an organizer or application portal. Source pages remain authoritative for eligibility, dates, rules, and prizes.
+## Production architecture
 
-## Scraper Studio workflow
+```mermaid
+flowchart LR
+    A[Public Devpost, Unstop, and Hackathons UK pages]
+    B[Custom Bright Data Scraper Studio collectors]
+    C[FastAPI refresh jobs]
+    D[Schema inspection and Pydantic normalization]
+    E[(PostgreSQL last-known-good records)]
+    F[Public country/category API]
+    G[Static Next.js and Three.js frontend]
 
-The Python service treats Bright Data Scraper Studio as an operational subsystem:
-
-```text
-public event listing
-  -> allowlisted Scraper Studio collector
-  -> asynchronous Bright Data trigger and dataset polling
-  -> schema-drift inspection
-  -> HackRadar normalization
-  -> PostgreSQL last-known-good upsert
-  -> FastAPI country/category feed
-  -> Next.js ranking UI
+    A --> B --> C --> D
+    D -->|valid non-empty rows| E
+    D -->|schema drift| H[OpenAI repair prompt]
+    H --> I[Same-ID Bright Data CLI heal]
+    I --> B
+    E --> F --> G
+    J[Verified repository snapshot] -->|API unavailable or fewer than 10 rows| G
 ```
 
-Collector creation and recovery are prompt-driven. An authenticated operator can ask the backend to create a collector for a new public source. GPT converts that goal into a bounded Studio extraction contract, while the Bright Data CLI creates the collector. On schema drift, the service describes the missing fields and heals the same Collector ID; a repaired template is promoted only after a non-empty contract-valid rerun. Failed runs never erase the last-known-good dataset.
+### Frontend
 
-Current source bindings and their verified state are recorded in [the knowledge base](docs/knowledge-base.md). Raw provider output, credentials, and authorization headers are intentionally excluded from Git.
+Next.js produces a static export with `basePath: /scrapper`. Nginx serves versioned releases through the atomic `/srv/hackradar/frontend/current` symlink. The browser initially receives the verified repository snapshot, requests `/scrapper-api/hackathons`, and adopts live data only when the response contains at least ten rows. Request generations and abort signals prevent stale market responses from replacing the active view.
 
-## Stack
+Worldwide results are deduplicated by normalized event identity. Country views apply eligibility filtering, then rank by canonical `prizeUsd`. Local currency is calculated only in the presentation layer; unknown and non-cash prizes remain undisclosed.
 
-- Next.js 16, React 19, TypeScript, and Three.js
-- FastAPI, Pydantic, SQLAlchemy, and PostgreSQL
-- Bright Data Scraper Studio, MCP search/scrape tools, API, and CLI
-- OpenAI for bounded prompt generation and schema-drift repair instructions
+### Backend and database
+
+FastAPI runs under systemd as the unprivileged `deploy` user and binds to `127.0.0.1:8095`. Nginx exposes it at `/scrapper-api/`. SQLAlchemy owns three PostgreSQL tables:
+
+- `hackathons`: normalized event payload, canonical USD value, source URL, and update timestamp.
+- `scraper_sources`: source URL, stable Collector ID, expected schema, health state, and last-good metadata.
+- `studio_jobs`: asynchronous create, refresh, heal, and approve job state.
+
+Valid collector output is normalized and upserted. Empty, failed, or drifted runs preserve the last-known-good rows. Browser reads are public; operator mutations require `X-HackRadar-Operator-Token`.
+
+### Scraper Studio and self-healing
+
+The backend triggers Bright Data's DCA endpoint, polls the returned collection ID, inspects the flattened schema, and normalizes contract-valid events. Authenticated operators can create a source from a plain-English goal. The OpenAI Responses API turns that goal—or a detected schema failure—into a bounded Scraper Studio instruction.
+
+Healing keeps the same Collector ID:
+
+1. Detect missing fields or rows that fail normalization.
+2. Preserve the current PostgreSQL dataset and mark the job as drifted.
+3. Generate a narrow repair instruction without inventing values.
+4. Run `npx bdata scraper heal` against the same collector and exact target.
+5. Approve and publish only after a non-empty, schema-valid rerun.
+
+Current collector health and evidence caveats are tracked in [the knowledge base](docs/knowledge-base.md) and [evidence matrix](docs/evidence-matrix.md).
+
+### Deployment and automation
+
+- Nginx serves `/scrapper/` and reverse-proxies `/scrapper-api/`.
+- Frontend and backend releases use versioned directories plus atomic `current` symlinks.
+- `hackradar-api.service` runs Uvicorn with a root-readable environment file outside the repository.
+- GitHub Actions runs the frontend/backend quality suite on pushes and pull requests.
+- A daily `03:17 UTC` workflow calls the authenticated refresh endpoint; manual source-scoped dispatch is also supported.
+- Provider failures do not delete the last-known-good catalog.
+
+## API surface
+
+| Method | Route | Purpose | Access |
+| --- | --- | --- | --- |
+| `GET` | `/healthz` | Service liveness | Public |
+| `GET` | `/hackathons?country={WORLD,US,IN,UK,SG}&category=…&limit=…` | Ranked event feed | Public |
+| `GET` | `/sources` | Collector bindings and disclosed health | Public |
+| `POST` | `/operators/sources` | Create a custom source and collector | Operator token |
+| `POST` | `/operators/sources/{slug}/heal` | Start same-ID healing | Operator token |
+| `POST` | `/operators/sources/{slug}/approve` | Approve a repaired collector | Operator token |
+| `POST` | `/operators/refresh` | Refresh one or all runnable sources | Operator token |
+| `GET` | `/operators/jobs/{job_id}` | Poll asynchronous job state | Operator token |
+
+Production routes are prefixed with `/scrapper-api`; local FastAPI routes use the paths shown above.
+
+## Tech stack
+
+| Layer | Technology | Role |
+| --- | --- | --- |
+| Web application | Next.js 16, React 19, TypeScript 5.9 | Static export, market state, ranking UI, accessibility |
+| Visualization | Three.js 0.181 | Client-side radar scene |
+| Styling and formatting | CSS, `Intl.DateTimeFormat`, `Intl.NumberFormat` | Responsive layout, dated local-currency estimates |
+| API | Python 3.12, FastAPI, Uvicorn | Public reads and authenticated background operations |
+| Contracts and configuration | Pydantic, pydantic-settings | Validation, normalization, environment configuration |
+| Persistence | PostgreSQL, SQLAlchemy 2, psycopg 3 | Last-known-good events, sources, and jobs |
+| Web collection | Bright Data Scraper Studio, DCA API, `@brightdata/cli` | Custom collectors, trigger/poll, create/heal/approve |
+| AI repair planning | OpenAI Responses API | Bounded collector creation and schema-drift prompts |
+| HTTP | HTTPX | Async Bright Data API calls |
+| Frontend QA | Node test runner, Vitest, Testing Library, Happy DOM, ESLint | Ranking, currency, race, component, build, and accessibility checks |
+| Backend QA | pytest, Ruff | API, contract, normalization, auth, and failure-path checks |
+| Operations | Nginx, systemd, GitHub Actions | Static hosting, reverse proxy, service lifecycle, CI and scheduled refresh |
+
+## Repository map
+
+```text
+app/                         Next.js entry, metadata, and global styles
+components/                  HackRadar explorer and Three.js radar
+data/hackathons.{ts,json}    Verified frontend/backend fallback snapshot
+backend/src/hackradar/       FastAPI app, contracts, database, clients, services
+backend/tests/               Python API and service tests
+deploy/                      Nginx and systemd production definitions
+.github/workflows/           Quality and scheduled refresh automation
+docs/                        Architecture, operations, security, demo, evidence
+tests/hackathon-*            Current frontend ranking and component tests
+```
+
+The repository also retains earlier Raster implementation and evidence modules under paths such as `config/`, `db/`, `drizzle-postgres/`, `lib/`, `scrapers/`, and older top-level tests. They remain in Git history by design but are not imported by the deployed HackRadar frontend or Python backend. Drizzle, Workers, Wrangler, and the Raster sourcing desk are therefore not part of the current production architecture.
 
 ## Local development
 
-Requirements: Node.js 22+, Python 3.12+, and `uv`.
+Requirements: Node.js 22.13+, Python 3.12+, and [`uv`](https://docs.astral.sh/uv/).
 
 ```bash
 npm ci
 npm run dev
 ```
 
-The app is served under `/scrapper` to match production.
+The Next.js app uses `/scrapper` locally and in production.
 
 ```bash
 cd backend
-uv sync --group dev
-uv run uvicorn hackradar.app:app --reload --port 8000
+uv sync --group dev --locked
+uv run uvicorn --app-dir src hackradar.app:app --reload --port 8000
 ```
 
-The frontend reads `/scrapper-api/hackathons?country=WORLD|US|IN|UK|SG` in production and falls back to the checked-in verified snapshot if the API is unavailable. FX values are presentation estimates derived from the canonical USD amount; they never change ranking or source evidence.
+The backend defaults to local SQLite only when `DATABASE_URL` is absent. Production uses hosted PostgreSQL.
 
 ## Configuration
 
-Copy names only from `backend/.env.example`; supply values through Keychain or the deployment secret store.
+Copy variable names from `backend/.env.example`; provide values through macOS Keychain or the deployment secret store.
 
 - `DATABASE_URL`
 - `BRIGHTDATA_API_KEY`
 - `OPENAI_API_KEY`
 - `OPERATOR_TOKEN`
 - `AUTO_HEAL_ENABLED`
+- `COLLECTOR_CLI_TIMEOUT_SECONDS`
 - `ALLOWED_ORIGINS`
 
-Never commit API keys or paste them into logs, screenshots, issues, or submission material.
+Never commit API keys, database credentials, raw authorization headers, or unsanitized provider responses.
 
 ## Quality gates
 
@@ -84,14 +166,17 @@ npm test
 npm audit --omit=dev
 
 cd backend
+uv sync --group dev --locked
 uv run ruff check .
 uv run pytest -q
 ```
 
+The latest verified release evidence lives in [the QA report](docs/qa-report.md). Operational deployment and rollback instructions live in [operations](docs/operations.md).
+
 ## Data boundary
 
-HackRadar reads signed-out public catalog and event pages only. It does not scrape logins, accounts, applications, private communities, carts, paywalled pages, personal data, restricted pages, or government systems. The original source URL and verification date remain part of every record.
+HackRadar collects signed-out public event pages only. It does not scrape logins, accounts, applications, private communities, carts, checkout, paywalled content, personal data, restricted pages, or government systems. Every published record preserves its original HTTPS source and verification date.
 
-## Submission
+## Submission evidence
 
-Judge-facing architecture, demo steps, collector evidence, and honest completion gates live under `docs/`. A Studio job reaching `done` is not presented as success unless its exact target produces non-empty, schema-valid output and the public application renders the resulting model.
+Judge-facing architecture, demo steps, collector evidence, rules compliance, and honest completion gates live under [`docs/`](docs/). A provider job reaching `done` is not presented as success unless the exact target produces non-empty, schema-valid output and the public application renders the normalized model.
