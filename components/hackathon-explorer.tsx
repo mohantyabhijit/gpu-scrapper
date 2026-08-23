@@ -151,7 +151,7 @@ export default function HackathonExplorer({ initialHackathons }: { initialHackat
             <span>{profile.note}</span>
           </div>
         </div>
-        <div className="hero-scene"><OrbitScene /><span className="scene-label label-a">Prize signal</span><span className="scene-label label-b">Effort model</span><span className="scene-label label-c">Source proof</span></div>
+        <div className="hero-scene"><OrbitScene /></div>
       </section>
 
       <section className="metrics" aria-label={`${profile.label} ranking summary`}>
