@@ -5,6 +5,7 @@ HackRadar is a prize-ranked discovery desk for frequent hackathon builders. It t
 - **Live application:** <https://abhijitmohanty.com/scrapper/>
 - **Public API:** <https://abhijitmohanty.com/scrapper-api/healthz>
 - **Repository:** <https://github.com/mohantyabhijit/hackathon-scrapper>
+- **Self-healing evidence deck:** <https://docs.google.com/presentation/d/1oHZxqam62OdWZeXtLP-oMonpgfl0R9OZBLsOiA9wIDA/edit?usp=sharing>
 
 ## Product experience
 
