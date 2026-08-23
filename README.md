@@ -95,7 +95,7 @@ WeMakeDevs is an independent `wemakedevs-global` source backed by a bounded Pyth
 - Frontend and backend releases use versioned directories plus atomic `current` symlinks.
 - `hackradar-api.service` runs Uvicorn with a root-readable environment file outside the repository.
 - GitHub Actions runs the frontend/backend quality suite on pushes and pull requests.
-- A daily `03:17 UTC` workflow calls the authenticated refresh endpoint; manual source-scoped dispatch is also supported.
+- A scheduled GitHub Actions workflow calls the authenticated refresh endpoint; manual source-scoped dispatch is also supported. The exact cadence is defined in [`.github/workflows/collect.yml`](.github/workflows/collect.yml).
 - Provider failures do not delete the last-known-good catalog.
 
 ## API surface
