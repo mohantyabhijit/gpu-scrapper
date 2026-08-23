@@ -95,4 +95,17 @@ describe("HackathonExplorer worldwide and currency workflow", () => {
     expect(credit.getAttribute("href")).toBe("https://www.linkedin.com/in/mohantyabhijit/");
     expect(credit.getAttribute("target")).toBe("_blank");
   });
+
+  test("explains the scheduled ingestion and self-healing workflow", () => {
+    render(<HackathonExplorer initialHackathons={hackathons} />);
+
+    expect(screen.getByRole("heading", { name: "From the open web to a ranked shortlist." })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Signed cron job" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Country scrapers" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Schema validation" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Postgres ingestion" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Ranked storefront" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Diagnose → repair → re-run" })).toBeTruthy();
+    expect(screen.queryByText("Scraper Studio core")).toBeNull();
+  });
 });

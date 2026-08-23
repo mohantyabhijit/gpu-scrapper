@@ -134,7 +134,7 @@ export default function HackathonExplorer({ initialHackathons }: { initialHackat
     <main className="site" data-country={country.toLowerCase()}>
       <nav className="nav" aria-label="Primary navigation">
         <a className="brand" href="#top" aria-label="HackRadar home"><span className="brand-glyph">H</span><span>hackradar</span><i /></a>
-        <div className="nav-links"><a href="#rankings">Rankings</a><a href="#pipeline">How it heals</a><a href="https://github.com/mohantyabhijit/hackathon-scrapper" target="_blank" rel="noreferrer">GitHub ↗</a></div>
+        <div className="nav-links"><a href="#rankings">Rankings</a><a href="#pipeline">How it works</a><a href="https://github.com/mohantyabhijit/hackathon-scrapper" target="_blank" rel="noreferrer">GitHub ↗</a></div>
         <span className="fresh-pill" aria-live="polite"><i /> {dataMode}</span>
       </nav>
 
@@ -223,12 +223,56 @@ export default function HackathonExplorer({ initialHackathons }: { initialHackat
       })()}
 
       <section className="pipeline" id="pipeline">
-        <header className="section-head"><div><span className="section-index">02</span><div><p>Scraper Studio core</p><h2>The model holds when pages move.</h2></div></div><p>Extraction can change. The product contract cannot.</p></header>
-        <div className="pipeline-grid">
-          <div><span>01</span><b>Discover</b><p>Public Devpost, Unstop, and Hackathons UK pages.</p></div>
-          <div><span>02</span><b>Validate</b><p>Dates, prizes, URLs, country eligibility, and provenance.</p></div>
-          <div><span>03</span><b>Diagnose</b><p>Python compares each run to the stored schema and last good model.</p></div>
-          <div className="heal-step"><span>04</span><b>Heal in place</b><p>AI writes a narrow repair prompt; Bright Data keeps the same collector ID.</p></div>
+        <header className="section-head"><div><span className="section-index">02</span><div><p>How HackRadar works</p><h2>From the open web to a ranked shortlist.</h2></div></div><p>Scheduled collection, guarded ingestion, and a repair loop keep the storefront useful when source pages change.</p></header>
+        <div className="workflow-diagram" aria-label="HackRadar data pipeline from scheduled scraping through self-healing and ingestion to the website">
+          <div className="workflow-spine">
+            <div className="workflow-node schedule-node">
+              <span className="workflow-step">01 · SCHEDULE</span>
+              <div className="workflow-icon" aria-hidden="true">03:17</div>
+              <h3>Signed cron job</h3>
+              <p>GitHub Actions starts a scoped refresh every day at 03:17 UTC.</p>
+            </div>
+            <span className="workflow-arrow" aria-hidden="true">→</span>
+            <div className="workflow-node scraper-node">
+              <span className="workflow-step">02 · COLLECT</span>
+              <div className="workflow-icon" aria-hidden="true">{`{ }`}</div>
+              <h3>Country scrapers</h3>
+              <p>Custom collectors read public hackathon pages and return structured rows.</p>
+            </div>
+            <span className="workflow-arrow" aria-hidden="true">→</span>
+            <div className="workflow-node guard-node">
+              <span className="workflow-step">03 · GUARD</span>
+              <div className="workflow-icon" aria-hidden="true">✓</div>
+              <h3>Schema validation</h3>
+              <p>Dates, prizes, URLs, eligibility, and provenance are checked before any write.</p>
+            </div>
+            <span className="workflow-arrow" aria-hidden="true">→</span>
+            <div className="workflow-node ingest-node">
+              <span className="workflow-step">04 · INGEST</span>
+              <div className="workflow-icon" aria-hidden="true">DB</div>
+              <h3>Postgres ingestion</h3>
+              <p>Valid rows are normalized, deduplicated, and transactionally upserted.</p>
+            </div>
+            <span className="workflow-arrow" aria-hidden="true">→</span>
+            <div className="workflow-node publish-node">
+              <span className="workflow-step">05 · SERVE</span>
+              <div className="workflow-icon" aria-hidden="true">↗</div>
+              <h3>Ranked storefront</h3>
+              <p>FastAPI serves fresh country and worldwide rankings to HackRadar.</p>
+            </div>
+          </div>
+          <div className="healing-branch">
+            <span className="branch-line" aria-hidden="true" />
+            <span className="branch-label">Schema drift detected</span>
+            <div className="healing-node">
+              <span className="workflow-step">SELF-HEALING LOOP</span>
+              <div>
+                <h3>Diagnose → repair → re-run</h3>
+                <p>Last-known-good listings stay live while AI generates a narrow repair for the same collector ID. The repaired scraper must pass a fresh exact-target run before ingestion resumes.</p>
+              </div>
+              <span className="loop-back">↺ Back to country scrapers</span>
+            </div>
+          </div>
         </div>
       </section>
 
