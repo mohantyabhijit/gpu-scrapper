@@ -232,7 +232,7 @@ export default function HackathonExplorer({ initialHackathons }: { initialHackat
         </div>
       </section>
 
-      <footer><a className="brand" href="#top"><span className="brand-glyph">H</span><span>hackradar</span><i /></a><p>Public pages only · prize amounts are source claims · eligibility must be verified</p><span>Built with Next.js, Three.js, FastAPI &amp; Bright Data</span></footer>
+      <footer><a className="brand" href="#top"><span className="brand-glyph">H</span><span>hackradar</span><i /></a><p>Public pages only · prize amounts are source claims · eligibility must be verified</p><a className="footer-credit" href="https://www.linkedin.com/in/mohantyabhijit/" target="_blank" rel="noreferrer">Made with <span aria-hidden="true">❤️</span> by Abhijit</a></footer>
     </main>
   );
 }

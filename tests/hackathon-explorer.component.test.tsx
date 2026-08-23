@@ -87,4 +87,12 @@ describe("HackathonExplorer worldwide and currency workflow", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(document.activeElement).toBe(openButton);
   });
+
+  test("links the footer attribution to Abhijit's LinkedIn profile", () => {
+    render(<HackathonExplorer initialHackathons={hackathons} />);
+
+    const credit = screen.getByRole("link", { name: "Made with by Abhijit" });
+    expect(credit.getAttribute("href")).toBe("https://www.linkedin.com/in/mohantyabhijit/");
+    expect(credit.getAttribute("target")).toBe("_blank");
+  });
 });
