@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "evidence_type": "create",
+  "source_file": "create-evidence.json",
+  "generated_at_utc": "2026-08-22T02:40:07.489Z",
+  "collector_ids": [
+    "c_mt3qzv5p215cci1r2e"
+  ],
+  "status": "done",
+  "counts": {
+    "source_cards": 0,
+    "adapted_rows": 0,
+    "accepted_rows": 0,
+    "quarantined_rows": 0
+  },
+  "sample_rows": [],
+  "redactions": {
+    "sensitive_fields_removed": 0,
+    "sensitive_values_removed": 0,
+    "provider_payloads_omitted": true,
+    "sample_rows_seen": 0,
+    "sample_rows_included": 0,
+    "sample_rows_limit": 5
+  },
+  "target_url": "https://dynacoretech.com/collections/gpu",
+  "catalog_url": "https://dynacoretech.com/collections/gpu",
+  "source_binding": {
+    "source_slug": "dynacore",
+    "market": "SG",
+    "currency": "SGD",
+    "manifest_name": "scrapers/manifests/dynacore.json",
+    "scraper_name": "raster-sg-dynacore-gpus",
+    "target_url": "https://dynacoretech.com/collections/gpu",
+    "catalog_url": "https://dynacoretech.com/collections/gpu"
+  },
+  "processing": {
+    "adapter_result": "not_applied",
+    "validator_result": "not_applied"
+  }
+}

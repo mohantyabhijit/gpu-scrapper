@@ -1,0 +1,185 @@
+[
+  {
+    "title": "evensonarisnord",
+    "detail_url": "https://evensonarisnord.devpost.com/?ref_feature=challenge&ref_medium=discover",
+    "organizer": "HoustonHacks2026",
+    "location": "Online",
+    "country": "Global",
+    "start_date": null,
+    "end_date": null,
+    "registration_deadline": null,
+    "prize_text": "$150 in prizes",
+    "prize_amount": {
+      "value": 150,
+      "currency": "USD",
+      "symbol": "$"
+    },
+    "prize_currency": "USD",
+    "themes": null,
+    "participation_mode": "Online"
+  },
+  {
+    "title": "OneAquaHealth IEEE Global Hackathon",
+    "detail_url": "https://oneaquahealth-ieee-hackathon.devpost.com/?ref_feature=challenge&ref_medium=discover",
+    "organizer": "OneAquaHealth",
+    "location": "Online",
+    "country": "Global",
+    "start_date": null,
+    "end_date": null,
+    "registration_deadline": null,
+    "prize_text": "$3,000 in prizes",
+    "prize_amount": {
+      "value": 3000,
+      "currency": "USD",
+      "symbol": "$"
+    },
+    "prize_currency": "USD",
+    "themes": [
+      "Machine Learning/AI"
+    ],
+    "participation_mode": "Online"
+  },
+  {
+    "title": "GatewayHacks 2026 | Software & AI",
+    "detail_url": "https://gatewayhacks-2026.devpost.com/?ref_feature=challenge&ref_medium=discover",
+    "organizer": "GatewayGS",
+    "location": "Online",
+    "country": "Global",
+    "start_date": "Sep 1, 2026",
+    "end_date": "Oct 2, 2026",
+    "registration_deadline": null,
+    "prize_text": "$53,585 in prizes",
+    "prize_amount": {
+      "value": 53585,
+      "currency": "USD",
+      "symbol": "$"
+    },
+    "prize_currency": "USD",
+    "themes": [
+      "Machine Learning/AI"
+    ],
+    "participation_mode": "Online"
+  },
+  {
+    "title": "LaunchHacks V",
+    "detail_url": "https://launchhacks-v.devpost.com/?ref_feature=challenge&ref_medium=discover",
+    "organizer": "LaunchHacks",
+    "location": "Online",
+    "country": "Global",
+    "start_date": null,
+    "end_date": null,
+    "registration_deadline": null,
+    "prize_text": "$17,575 in prizes",
+    "prize_amount": {
+      "value": 17575,
+      "currency": "USD",
+      "symbol": "$"
+    },
+    "prize_currency": "USD",
+    "themes": [
+      "Machine Learning/AI"
+    ],
+    "participation_mode": "Online"
+  },
+  {
+    "title": "United Hackathons V1",
+    "detail_url": "https://devonomicsv1.devpost.com/?ref_feature=challenge&ref_medium=discover",
+    "organizer": "United Hackathons",
+    "location": "Online",
+    "country": "Global",
+    "start_date": null,
+    "end_date": null,
+    "registration_deadline": null,
+    "prize_text": null,
+    "prize_amount": null,
+    "prize_currency": null,
+    "themes": [
+      "Machine Learning/AI"
+    ],
+    "participation_mode": "Online"
+  },
+  {
+    "title": "IEEE ClimateChain Global Hackathon",
+    "detail_url": "https://ieee-climatechain-hack.devpost.com/?ref_feature=challenge&ref_medium=discover",
+    "organizer": "IEEE Turkey",
+    "location": "Online",
+    "country": "Global",
+    "start_date": null,
+    "end_date": null,
+    "registration_deadline": null,
+    "prize_text": "$3,000 in prizes",
+    "prize_amount": {
+      "value": 3000,
+      "currency": "USD",
+      "symbol": "$"
+    },
+    "prize_currency": "USD",
+    "themes": [
+      "Machine Learning/AI"
+    ],
+    "participation_mode": "Online"
+  },
+  {
+    "title": "United Hacks V8",
+    "detail_url": "https://unitedhacksv8.devpost.com/?ref_feature=challenge&ref_medium=discover",
+    "organizer": "Hack United",
+    "location": "Online",
+    "country": "Global",
+    "start_date": null,
+    "end_date": null,
+    "registration_deadline": null,
+    "prize_text": "$700 in prizes",
+    "prize_amount": {
+      "value": 700,
+      "currency": "USD",
+      "symbol": "$"
+    },
+    "prize_currency": "USD",
+    "themes": null,
+    "participation_mode": "Online"
+  },
+  {
+    "title": "OpenCV AI Competition 2026, powered by AWS",
+    "detail_url": "https://opencv26.devpost.com/?ref_feature=challenge&ref_medium=discover",
+    "organizer": "OpenCV",
+    "location": "Online",
+    "country": "Global",
+    "start_date": "Aug 26, 2026",
+    "end_date": "Oct 26, 2026",
+    "registration_deadline": null,
+    "prize_text": "$12,000 in prizes",
+    "prize_amount": {
+      "value": 12000,
+      "currency": "USD",
+      "symbol": "$"
+    },
+    "prize_currency": "USD",
+    "themes": [
+      "Machine Learning/AI"
+    ],
+    "participation_mode": "Online"
+  },
+  {
+    "title": "TikTok TechJam 2026",
+    "detail_url": "https://tiktoktechjam2026.devpost.com/?ref_feature=challenge&ref_medium=discover",
+    "organizer": "TikTok",
+    "location": "Online",
+    "country": "Global",
+    "start_date": "Aug 29, 2026",
+    "end_date": "Sep 1, 2026",
+    "registration_deadline": "1 September, 12:00pm",
+    "prize_text": "$34,500 in prizes",
+    "prize_amount": {
+      "value": 34500,
+      "currency": "USD",
+      "symbol": "$"
+    },
+    "prize_currency": "USD",
+    "themes": [
+      "Machine Learning/AI",
+      "Cybersecurity",
+      "E-commerce/Retail"
+    ],
+    "participation_mode": "Online"
+  }
+]

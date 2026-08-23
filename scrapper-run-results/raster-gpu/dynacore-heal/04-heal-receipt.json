@@ -1,0 +1,10 @@
+{
+  "collector_id": "c_mt3qzv5p215cci1r2e",
+  "status": "poll_failed",
+  "completed_step_count": 0,
+  "completed_steps": [],
+  "prompt": "The live GPU catalog output contract is incomplete. Return only actual GPU product cards; exclude graphics-card holders and accessories. Every row must include source_slug='dynacore', market='SG', currency='SGD', title, canonical public product_url on dynacoretech.com, numeric price (not an object), explicit availability from the public listing or 'unknown' only when absent, sku, mpn, manufacturer, board_partner, raw_model, image_url, and scraped_at as ISO UTC. Do not collect account, cart, checkout, contact, review, or personal data.",
+  "view_url": "https://brightdata.com/cp/scrapers/c_mt3qzv5p215cci1r2e",
+  "next_step": "bdata scraper run c_mt3qzv5p215cci1r2e https://dynacoretech.com/collections/gpu",
+  "error": "Timeout after 600 seconds waiting for self-healing (collector c_mt3qzv5p215cci1r2e)."
+}

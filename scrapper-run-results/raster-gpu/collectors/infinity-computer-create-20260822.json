@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "evidence_type": "create",
+  "source_file": "create-input.json",
+  "generated_at_utc": "2026-08-22T03:55:45.461Z",
+  "collector_ids": [
+    "c_mt3snqaln8ckpnqxt"
+  ],
+  "status": "done",
+  "counts": {
+    "source_cards": 0,
+    "gpu_cards": 0,
+    "adapted_rows": 0,
+    "accepted_rows": 0,
+    "quarantined_rows": 0,
+    "excluded_categories": 0,
+    "price_required": 0,
+    "validated_offers": 0,
+    "canonical_models": 0,
+    "cross_retailer_matches": 0
+  },
+  "sample_rows": [],
+  "redactions": {
+    "sensitive_fields_removed": 0,
+    "sensitive_values_removed": 0,
+    "provider_payloads_omitted": true,
+    "sample_rows_seen": 0,
+    "sample_rows_included": 0,
+    "sample_rows_limit": 5
+  },
+  "target_url": "https://infinitycomputer.com.sg/prices",
+  "catalog_url": "https://infinitycomputer.com.sg/prices",
+  "source_binding": {
+    "source_slug": "infinity-computer",
+    "market": "SG",
+    "currency": "SGD",
+    "manifest_name": "scrapers/manifests/infinity-computer.json",
+    "scraper_name": "raster-sg-infinity-computer-gpus",
+    "target_url": "https://infinitycomputer.com.sg/prices",
+    "catalog_url": "https://infinitycomputer.com.sg/prices"
+  },
+  "processing": {
+    "adapter_result": "not_applied",
+    "validator_result": "not_applied"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "collector_id": "c_mt5h72hcow8slxb6t",
+  "status": "error",
+  "completed_step_count": 8,
+  "completed_steps": [
+    "prepare_intent_analyzer",
+    "planner",
+    "discovery",
+    "pagination_detector",
+    "code_generator",
+    "input_schema_generator",
+    "preview_runner",
+    "preview_picker"
+  ],
+  "created_at": "2026-08-23T07:18:32.016Z",
+  "name": "raster-sg-istudio-mac-mini",
+  "view_url": "https://brightdata.com/cp/scrapers/c_mt5h72hcow8slxb6t",
+  "error": "AI generation finished with status \"error\"."
+}

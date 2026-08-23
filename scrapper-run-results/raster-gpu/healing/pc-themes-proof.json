@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "evidence_type": "healing-proof",
+  "status": "passed",
+  "source_slug": "pc-themes",
+  "collector_id": "c_mt3zqdljej45v0g1r",
+  "input_url": "https://www.pcthemes.com.sg/video-card-graphics-card",
+  "required_field": "price",
+  "failure_mode": "empty_output",
+  "before": {
+    "path": "evidence/raw/pc-themes-heal-before-envelope.json",
+    "sha256": "69dcbc971a4b3d93d38036281ba727b2f077c791cdf8e6b98c4e25186a920673",
+    "rows": 0,
+    "contract": "failed"
+  },
+  "preview": {
+    "path": "evidence/raw/pc-themes-heal-preview-envelope.json",
+    "sha256": "923e2b86b4ae732dec261a5fdfd8b19ff284a976357a2db8637dcb4b75a22b0b",
+    "status": "previewed"
+  },
+  "after": {
+    "path": "evidence/raw/pc-themes-heal-after-envelope.json",
+    "sha256": "db6b1d5aa10488746685b23c90f67e0d4c30e503128213dc2ddbba21bf684924",
+    "rows": 96,
+    "valid_rows": 96,
+    "contract": "passed"
+  },
+  "downstream": {
+    "unchanged": true,
+    "files": [
+      {
+        "path": "config/sources.ts",
+        "sha256": "c607d63d2d79b34684b18f06393a077105f0c179badf3f95b3614dd5a3a6406e",
+        "beforeSha256": "c607d63d2d79b34684b18f06393a077105f0c179badf3f95b3614dd5a3a6406e",
+        "afterSha256": "c607d63d2d79b34684b18f06393a077105f0c179badf3f95b3614dd5a3a6406e"
+      },
+      {
+        "path": "lib/brightdata/refresh.ts",
+        "sha256": "be7d4504710ad74ebb07048cf05a6975ea57680a6aa995d916297485d7ec57b6",
+        "beforeSha256": "be7d4504710ad74ebb07048cf05a6975ea57680a6aa995d916297485d7ec57b6",
+        "afterSha256": "be7d4504710ad74ebb07048cf05a6975ea57680a6aa995d916297485d7ec57b6"
+      },
+      {
+        "path": "app/api/refresh/route.ts",
+        "sha256": "496c4c42a532aa59fd28c91dd12465502b8cebda33daa92edc1e5619e1e6e7ef",
+        "beforeSha256": "496c4c42a532aa59fd28c91dd12465502b8cebda33daa92edc1e5619e1e6e7ef",
+        "afterSha256": "496c4c42a532aa59fd28c91dd12465502b8cebda33daa92edc1e5619e1e6e7ef"
+      },
+      {
+        "path": "lib/ingest.ts",
+        "sha256": "cf4eb3fa322fc8e13bcf8854dc9f0fcee6f939ac37d5bbe5256abef0f32fa40f",
+        "beforeSha256": "cf4eb3fa322fc8e13bcf8854dc9f0fcee6f939ac37d5bbe5256abef0f32fa40f",
+        "afterSha256": "cf4eb3fa322fc8e13bcf8854dc9f0fcee6f939ac37d5bbe5256abef0f32fa40f"
+      },
+      {
+        "path": "lib/postgres/repository.ts",
+        "sha256": "62448fa05f320adda39f4747d3061abe3004f417e3e5a8aac8d9e737751f3ed5",
+        "beforeSha256": "62448fa05f320adda39f4747d3061abe3004f417e3e5a8aac8d9e737751f3ed5",
+        "afterSha256": "62448fa05f320adda39f4747d3061abe3004f417e3e5a8aac8d9e737751f3ed5"
+      },
+      {
+        "path": "app/page.tsx",
+        "sha256": "351beeb6d0dbbb109dd4e552360930723212fe25c9501f9f92f7a03d096ad22b",
+        "beforeSha256": "351beeb6d0dbbb109dd4e552360930723212fe25c9501f9f92f7a03d096ad22b",
+        "afterSha256": "351beeb6d0dbbb109dd4e552360930723212fe25c9501f9f92f7a03d096ad22b"
+      }
+    ]
+  }
+}

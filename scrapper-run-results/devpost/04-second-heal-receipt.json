@@ -1,0 +1,20 @@
+{
+  "collector_id": "c_mt5n8l0w1kcr7uzxre",
+  "status": "done",
+  "completed_step_count": 10,
+  "completed_steps": [
+    "planner",
+    "control_preview_runner",
+    "step_advance",
+    "control_preview_runner",
+    "code_fixer",
+    "step_preview_runner",
+    "request_fulfillment_validator",
+    "step_advance",
+    "user_approval",
+    "save_new_template"
+  ],
+  "prompt": "The flat rows are correct, but all 9 omit start_date, end_date, and country; 8/9 omit prize_text, prize_amount, prize_currency, and registration_deadline. On every detail_url, extract the displayed submission deadline and challenge schedule dates, and visit the prizes section/tab for total cash prize. Always emit every required key; use null only when genuinely absent. For online global challenges set country to Global. Keep the existing working title, link, organizer, themes, eligibility, mode, and description extraction.",
+  "view_url": "https://brightdata.com/cp/scrapers/c_mt5n8l0w1kcr7uzxre",
+  "next_step": "bdata scraper run c_mt5n8l0w1kcr7uzxre https://devpost.com/hackathons?challenge_type[]=online&open_to[]=public&status[]=upcoming"
+}

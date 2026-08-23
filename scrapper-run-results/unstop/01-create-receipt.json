@@ -1,0 +1,19 @@
+{
+  "collector_id": "c_mt5n8mon1lgz9hhuoe",
+  "status": "done",
+  "completed_step_count": 9,
+  "completed_steps": [
+    "prepare_intent_analyzer",
+    "planner",
+    "discovery",
+    "collector_mainatiner",
+    "output_schema_generator",
+    "code_generator",
+    "input_schema_generator",
+    "preview_runner",
+    "preview_picker"
+  ],
+  "created_at": "2026-08-23T10:07:42.551Z",
+  "name": "hackradar-unstop-india",
+  "view_url": "https://brightdata.com/cp/scrapers/c_mt5n8mon1lgz9hhuoe"
+}

@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "evidence_type": "healing-baseline",
+  "source_slug": "dynacore",
+  "collector_id": "c_mt3qzv5p215cci1r2e",
+  "input_url": "https://dynacoretech.com/collections/gpu",
+  "required_field": "availability",
+  "before_artifact": {
+    "path": "evidence/raw/dynacore-heal-before.json",
+    "sha256": "a1e692d046cf1b5014703cf579adf2f6000abae8ef72be877d8a40e9af53c40c"
+  },
+  "downstream_files": [
+    {
+      "path": "config/sources.ts",
+      "sha256": "b4ef7ce135c0fff5a96c73cdc700aacf522c3991d90d638daa919da4b90f0727"
+    },
+    {
+      "path": "lib/brightdata/refresh.ts",
+      "sha256": "b4c6373e081c17fa4e4e1e9137ff8778fe73024512ff563eb009784ded529fee"
+    },
+    {
+      "path": "app/api/refresh/route.ts",
+      "sha256": "a62190578ea596995e756160eb0338b34eb9f1662c1381f5b205ef08a47e5557"
+    },
+    {
+      "path": "lib/ingest.ts",
+      "sha256": "6703b549d96cd15524b24071f70a5218e611ede581ad0e030bdfcf5ac464e85e"
+    },
+    {
+      "path": "lib/postgres/repository.ts",
+      "sha256": "80e7c858e62c60de02c168dd1fce65400c190a164c5a7a255950b97738b843ba"
+    },
+    {
+      "path": "app/page.tsx",
+      "sha256": "0459f1001ed6c905438459818c71fe79ea4bda1a8530e3bb54b2d80e0d132f05"
+    }
+  ]
+}

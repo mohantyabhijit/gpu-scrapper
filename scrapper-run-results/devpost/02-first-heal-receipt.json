@@ -1,0 +1,27 @@
+{
+  "collector_id": "c_mt5n8l0w1kcr7uzxre",
+  "status": "done",
+  "completed_step_count": 17,
+  "completed_steps": [
+    "planner",
+    "control_preview_runner",
+    "code_fixer",
+    "step_preview_runner",
+    "request_fulfillment_validator",
+    "step_advance",
+    "control_preview_runner",
+    "code_fixer",
+    "step_preview_runner",
+    "request_fulfillment_validator",
+    "code_fixer",
+    "css_selector_extractor",
+    "step_preview_runner",
+    "request_fulfillment_validator",
+    "step_advance",
+    "user_approval",
+    "save_new_template"
+  ],
+  "prompt": "The current output nests an empty hackathons array under each product_page_url. Return one flat row per visible upcoming public hackathon. Extract title, detail_url, organizer, location, country, start_date, end_date, registration_deadline, prize_text, prize_amount, prize_currency, themes, eligibility, participation_mode, and description. Follow each event link when listing cards omit detail fields. Never return private/account data. Preserve null for unavailable values, not invented data.",
+  "view_url": "https://brightdata.com/cp/scrapers/c_mt5n8l0w1kcr7uzxre",
+  "next_step": "bdata scraper run c_mt5n8l0w1kcr7uzxre https://devpost.com/hackathons?challenge_type[]=online&open_to[]=public&status[]=upcoming"
+}

@@ -1,0 +1,35 @@
+{
+  "source": "devpost-global",
+  "collector_id": "c_mt5n8l0w1kcr7uzxre",
+  "initial_run": {
+    "provider_completed": true,
+    "record_count": 9,
+    "records_with_empty_hackathons_array": 9,
+    "contract_valid": false
+  },
+  "first_heal": {
+    "status": "done",
+    "completed_step_count": 17,
+    "collector_id_preserved": true
+  },
+  "first_healed_run": {
+    "flat_record_count": 9
+  },
+  "second_heal": {
+    "status": "done",
+    "completed_step_count": 10,
+    "collector_id_preserved": true
+  },
+  "final_healed_run": {
+    "flat_record_count": 9,
+    "records_with_prize_text": 8,
+    "records_with_start_and_end_dates": 3
+  },
+  "production_refresh": {
+    "accepted_record_count": 3,
+    "github_actions_url": "https://github.com/mohantyabhijit/hackathon-scrapper/actions/runs/32636380433"
+  },
+  "bright_data_studio_url": "https://brightdata.com/cp/scrapers/c_mt5n8l0w1kcr7uzxre",
+  "scope_note": "Evidence proves operator-initiated same-ID healing; a fully unattended healing loop is not claimed."
+}
+

@@ -1,0 +1,42 @@
+{
+  "collector_id": "c_mt3zqdljej45v0g1r",
+  "status": "awaiting_approval",
+  "completed_step_count": 15,
+  "completed_steps": [
+    "planner",
+    "control_preview_runner",
+    "code_fixer",
+    "step_preview_runner",
+    "request_fulfillment_validator",
+    "step_advance",
+    "control_preview_runner",
+    "code_fixer",
+    "step_preview_runner",
+    "request_fulfillment_validator",
+    "css_selector_extractor",
+    "code_fixer",
+    "step_preview_runner",
+    "request_fulfillment_validator",
+    "step_advance"
+  ],
+  "prompt": "The exact public GPU catalog run completed with zero rows even though the page contains paginated product cards. Repair discovery to traverse every public catalog page and return only actual graphics cards. Every row must include source_slug='pc-themes', market='SG', currency='SGD', title, canonical product_url, numeric price, explicit availability or 'unknown', sku, mpn, manufacturer, board_partner, raw_model, image_url, and scraped_at ISO UTC. Exclude accessories and all personal/account/cart data.",
+  "view_url": "https://brightdata.com/cp/scrapers/c_mt3zqdljej45v0g1r",
+  "next_step": "bdata scraper approve c_mt3zqdljej45v0g1r --url https://www.pcthemes.com.sg/video-card-graphics-card",
+  "diff_summary": "proposed template has 2 step(s) — review at view_url",
+  "preview_result": [
+    {
+      "source_slug": "pc-themes",
+      "market": "SG",
+      "currency": "SGD",
+      "title": "ASUS GT 730 2GB DDR5 Low Profile Graphics Card",
+      "product_url": "https://www.pcthemes.com.sg/video-card-graphics-card/asus-gt-710-2gb-ddr3-4-x-hdmi",
+      "price": 119,
+      "availability": "out of stock",
+      "sku": null,
+      "manufacturer": "ASUS",
+      "board_partner": "ASUS",
+      "raw_model": "ASUS GT 730 2GB DDR5 Low Profile Graphics Card",
+      "image_url": null
+    }
+  ]
+}

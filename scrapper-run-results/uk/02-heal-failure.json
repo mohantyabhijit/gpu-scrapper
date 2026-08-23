@@ -1,0 +1,10 @@
+{
+  "collector_id": "c_mt5n8jd5y2gdnzt5p",
+  "status": "heal_trigger_failed",
+  "completed_step_count": 0,
+  "completed_steps": [],
+  "prompt": "Initial generation failed before producing code. Complete this public UK events Discovery plus detail scraper. Return one row per upcoming event with title, detail_url, organizer, venue, city, country, start_date, end_date, registration_deadline, prize_text, prize_amount, prize_currency, themes, eligibility, participation_mode, and description. Missing values must be null, never invented.",
+  "view_url": "https://brightdata.com/cp/scrapers/c_mt5n8jd5y2gdnzt5p",
+  "next_step": "bdata scraper run c_mt5n8jd5y2gdnzt5p https://www.hackathons.org.uk/events/",
+  "error": "Missing template id"
+}

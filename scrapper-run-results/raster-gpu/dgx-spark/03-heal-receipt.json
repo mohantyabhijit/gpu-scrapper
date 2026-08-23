@@ -1,0 +1,18 @@
+{
+  "collector_id": "c_mt5hxrzckttss9n11",
+  "status": "done",
+  "completed_step_count": 8,
+  "completed_steps": [
+    "planner",
+    "control_preview_runner",
+    "code_fixer",
+    "step_preview_runner",
+    "request_fulfillment_validator",
+    "step_advance",
+    "user_approval",
+    "save_new_template"
+  ],
+  "prompt": "The run returns one product but violates the requested contract. Add constants source_slug='dynacore-dgx-spark', category='dgx-spark', market='SG', manufacturer='NVIDIA', model='DGX Spark'; rename canonical_url to product_url; set chip exactly 'NVIDIA GB10 Grace Blackwell' from the public title; add scraped_at as current ISO UTC. Preserve numeric price 8499 and currency SGD, availability, sku/mpn, memory_gb 128, memory_type DDR5x, storage_gb 4000, allowed canonical PDP and image URL. Never add contacts, reviews, accounts, cart, checkout, financing or personal data.",
+  "view_url": "https://brightdata.com/cp/scrapers/c_mt5hxrzckttss9n11",
+  "next_step": "bdata scraper run c_mt5hxrzckttss9n11 https://dynacoretech.com/products/nvidia-dgx-spark-ai-supercomputer-128gb-ddr5x-4tb-nvidia-gb10-grace-blackwell-dgx-os-810152850381"
+}

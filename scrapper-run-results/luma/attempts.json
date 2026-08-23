@@ -1,0 +1,25 @@
+{
+  "source": "luma-public-events",
+  "studio_attempts": [
+    {
+      "collector_id": "c_mt5ylasf26gxfk0wx6",
+      "purpose": "city listing collector",
+      "outcome": "Studio did not produce a runnable template",
+      "production_binding": false,
+      "studio_url": "https://brightdata.com/cp/scrapers/c_mt5ylasf26gxfk0wx6"
+    },
+    {
+      "collector_id": "c_mt5z2whq2q1we2xpeh",
+      "purpose": "exact event detail collector",
+      "outcome": "Exact-target run was empty; proposed heal selected an unrelated recommendation and was rejected",
+      "production_binding": false,
+      "studio_url": "https://brightdata.com/cp/scrapers/c_mt5z2whq2q1we2xpeh"
+    }
+  ],
+  "fallback": {
+    "type": "bounded public JSON-LD adapter",
+    "reason": "Both Studio attempts failed exact-target validation",
+    "safety": "Only allowlisted public event URLs are accepted; recommendations, attendee data, profiles, street addresses, hidden venues, and registration forms are excluded."
+  }
+}
+

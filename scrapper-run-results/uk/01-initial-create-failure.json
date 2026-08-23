@@ -1,0 +1,12 @@
+{
+  "collector_id": "c_mt5n8jd5y2gdnzt5p",
+  "status": "failed",
+  "completed_step_count": 1,
+  "completed_steps": [
+    "prepare_intent_analyzer"
+  ],
+  "created_at": "2026-08-23T10:07:38.249Z",
+  "name": "hackradar-hackathons-uk",
+  "view_url": "https://brightdata.com/cp/scrapers/c_mt5n8jd5y2gdnzt5p",
+  "error": "AI generation finished with status \"failed\"."
+}

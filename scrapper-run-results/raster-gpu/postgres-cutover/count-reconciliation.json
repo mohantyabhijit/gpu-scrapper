@@ -1,0 +1,36 @@
+{
+  "capturedAt": "2026-08-21T12:09:00.000Z",
+  "source": {
+    "engine": "Cloudflare D1",
+    "database": "raster-gpu-market",
+    "counts": {
+      "sources": 0,
+      "products": 0,
+      "offers": 0,
+      "price_observations": 0,
+      "collector_runs": 0,
+      "quarantined_rows": 0,
+      "market_packs": 0,
+      "healing_events": 0,
+      "request_receipts": 0
+    }
+  },
+  "destination": {
+    "engine": "hosted PostgreSQL 17",
+    "database": "raster_gpu_market",
+    "connection": "private Cloudflare Tunnel, Workers VPC, and Hyperdrive",
+    "counts": {
+      "sources": 0,
+      "products": 0,
+      "offers": 0,
+      "price_observations": 0,
+      "collector_runs": 0,
+      "quarantined_rows": 0,
+      "market_packs": 0,
+      "healing_events": 0,
+      "request_receipts": 0
+    }
+  },
+  "reconciliation": "all application-table counts match; no catalog or evidence rows required transfer",
+  "requestReceiptsPolicy": "start empty so no stale replay or rate-limit lease survives the cutover"
+}

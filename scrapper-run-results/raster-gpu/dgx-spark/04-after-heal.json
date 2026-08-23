@@ -1,0 +1,24 @@
+[
+  {
+    "source_slug": "dynacore-dgx-spark",
+    "category": "dgx-spark",
+    "market": "SG",
+    "manufacturer": "NVIDIA",
+    "model": "DGX Spark",
+    "title": "NVIDIA DGX SPARK AI SUPERCOMPUTER (128GB DDR5x/4TB/NVIDIA GB10 GRACE BLACKWELL/DGX OS) - 810152850381",
+    "product_url": "https://dynacoretech.com/products/nvidia-dgx-spark-ai-supercomputer-128gb-ddr5x-4tb-nvidia-gb10-grace-blackwell-dgx-os-810152850381",
+    "price": {
+      "value": 8499,
+      "currency": "SGD"
+    },
+    "availability": "Few Left",
+    "sku": "810152850381",
+    "mpn": "810152850381",
+    "memory_gb": 128,
+    "memory_type": "DDR5x",
+    "storage_gb": 4000,
+    "chip": "NVIDIA GB10 Grace Blackwell",
+    "image_url": "https://dynacoretech.com/cdn/shop/files/810152850381.jpg?v=1778777180&width=800",
+    "scraped_at": "2026-08-23T07:42:31.592Z"
+  }
+]

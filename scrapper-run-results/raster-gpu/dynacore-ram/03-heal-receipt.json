@@ -1,0 +1,10 @@
+{
+  "collector_id": "c_mt5h2qen1bkc7nbywu",
+  "status": "poll_failed",
+  "completed_step_count": 0,
+  "completed_steps": [],
+  "prompt": "Fix capacity_gb extraction: use the explicit memory-module capacity such as 128GB, 64GB, 32GB, 16GB or 8GB; never parse die-density tokens such as 32Gbit as capacity. For title 'Micron DDR5-6400MHz RDIMM 2Rx4 CL52 (32Gbit) Single Pack - 128GB', capacity_gb must be 128. Preserve all other public RAM listing fields and the fixed collection URL.",
+  "view_url": "https://brightdata.com/cp/scrapers/c_mt5h2qen1bkc7nbywu",
+  "next_step": "bdata scraper run c_mt5h2qen1bkc7nbywu https://dynacoretech.com/collections/ram",
+  "error": "Timeout after 900 seconds waiting for self-healing (collector c_mt5h2qen1bkc7nbywu)."
+}

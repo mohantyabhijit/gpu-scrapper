@@ -1,0 +1,10 @@
+{
+  "collector_id": "c_mt5h72hcow8slxb6t",
+  "status": "heal_trigger_failed",
+  "completed_step_count": 0,
+  "completed_steps": [],
+  "prompt": "AI generation completed with status error before producing a usable Mac mini preview. Repair the public collection-page extraction so it returns non-empty Mac mini product records with canonical URL, numeric SGD price, availability, Apple chip, memory and storage where present.",
+  "view_url": "https://brightdata.com/cp/scrapers/c_mt5h72hcow8slxb6t",
+  "next_step": "bdata scraper run c_mt5h72hcow8slxb6t https://www.istudiosg.com/collections/mac-mini",
+  "error": "Missing template id"
+}

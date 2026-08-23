@@ -1,0 +1,60 @@
+[
+  {
+    "source_slug": "dynacore",
+    "market": "SG",
+    "title": "GIGABYTE GEFORCE RTX5070 AORUS MASTER 12GB TRIPLE FAN GDDR7 - 4719331355753",
+    "product_url": "https://dynacoretech.com/products/gigabyte-geforce-rtx-5070-aorus-master-12gb-gddr7-graphics-card-rtx5070-4719331355753",
+    "price": {
+      "value": 1569,
+      "currency": "SGD"
+    },
+    "currency": "SGD",
+    "availability": "Few Left",
+    "sku": "4719331355753",
+    "mpn": "4719331355753",
+    "manufacturer": "GIGABYTE",
+    "board_partner": "GIGABYTE",
+    "raw_model": "GEFORCE RTX5070 AORUS MASTER 12GB TRIPLE FAN GDDR7",
+    "image_url": "https://dynacoretech.com/cdn/shop/files/4719331355753.jpg?v=1749915487&width=800",
+    "scraped_at": "2026-08-22T06:28:41.746Z",
+    "product_page_url": "https://dynacoretech.com/products/gigabyte-geforce-rtx-5070-aorus-master-12gb-gddr7-graphics-card-rtx5070-4719331355753"
+  },
+  {
+    "source_slug": "dynacore",
+    "market": "SG",
+    "title": "ASUS ROG Herculx Graphics Card Holder - 195553206389",
+    "product_url": "https://dynacoretech.com/products/asus-rog-herculx-graphics-card-holder",
+    "price": {
+      "value": 89,
+      "currency": "SGD"
+    },
+    "currency": "SGD",
+    "sku": "195553206389",
+    "mpn": "195553206389",
+    "manufacturer": "ASUS",
+    "board_partner": "ASUS",
+    "raw_model": "ROG Herculx Graphics Card Holder",
+    "image_url": "https://dynacoretech.com/cdn/shop/files/ASUSROGHerculxGraphicsCardHolder01.jpg?v=1765281791&width=800",
+    "scraped_at": "2026-08-22T06:28:41.941Z",
+    "product_page_url": "https://dynacoretech.com/products/asus-rog-herculx-graphics-card-holder"
+  },
+  {
+    "source_slug": "dynacore",
+    "market": "SG",
+    "title": "Gigabyte GeForce RTX5070Ti WINDFORCE OC SFF 16G GDDR7 Graphics Card GV-N507TWF3OC-16GD - 4719331355579",
+    "product_url": "https://dynacoretech.com/products/gigabyte-geforce-rtx%e2%84%a2-5070-ti-windforce-oc-sff-16g-gddr7-graphics-card-gv-n507twf3oc-16gd-4719331355579",
+    "price": {
+      "value": 1959,
+      "currency": "SGD"
+    },
+    "currency": "SGD",
+    "sku": "4719331355579",
+    "mpn": "4719331355579",
+    "manufacturer": "GIGABYTE",
+    "board_partner": "GIGABYTE",
+    "raw_model": "Gigabyte GeForce RTX5070Ti WINDFORCE OC SFF 16G GDDR7 Graphics Card GV-N507TWF3OC-16GD",
+    "image_url": "https://dynacoretech.com/cdn/shop/files/img1_e0af33cc-e8ad-4393-a478-a2bf0e3144e7.png?v=1778755397&width=800",
+    "scraped_at": "2026-08-22T06:28:42.131Z",
+    "product_page_url": "https://dynacoretech.com/products/gigabyte-geforce-rtx%E2%84%A2-5070-ti-windforce-oc-sff-16g-gddr7-graphics-card-gv-n507twf3oc-16gd-4719331355579"
+  }
+]

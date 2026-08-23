@@ -1,0 +1,20 @@
+{
+  "collector_id": "c_mt3zqdljej45v0g1r",
+  "status": "done",
+  "completed_step_count": 10,
+  "completed_steps": [
+    "planner",
+    "control_preview_runner",
+    "step_advance",
+    "control_preview_runner",
+    "code_fixer",
+    "step_preview_runner",
+    "request_fulfillment_validator",
+    "step_advance",
+    "user_approval",
+    "save_new_template"
+  ],
+  "prompt": "",
+  "view_url": "https://brightdata.com/cp/scrapers/c_mt3zqdljej45v0g1r",
+  "next_step": "bdata scraper run c_mt3zqdljej45v0g1r https://www.pcthemes.com.sg/video-card-graphics-card"
+}

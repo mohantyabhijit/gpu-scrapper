@@ -75,6 +75,7 @@ The Devpost collector completed its first run but returned nine unusable rows, e
 - **GitHub Actions — successful production refresh:** <https://github.com/mohantyabhijit/hackathon-scrapper/actions/runs/32636380433>
 - **Public API — source health and collector ID:** <https://abhijitmohanty.com/scrapper-api/sources>
 - **HackRadar — live product:** <https://abhijitmohanty.com/scrapper/>
+- **Published before/after run results:** [`scrapper-run-results/`](scrapper-run-results/)
 
 Current collector health and evidence caveats are tracked in [the knowledge base](docs/knowledge-base.md) and [evidence matrix](docs/evidence-matrix.md).
 

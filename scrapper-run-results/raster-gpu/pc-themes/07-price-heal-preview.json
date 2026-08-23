@@ -1,0 +1,35 @@
+{
+  "collector_id": "c_mt3zqdljej45v0g1r",
+  "status": "awaiting_approval",
+  "completed_step_count": 8,
+  "completed_steps": [
+    "planner",
+    "control_preview_runner",
+    "step_advance",
+    "control_preview_runner",
+    "code_fixer",
+    "step_preview_runner",
+    "request_fulfillment_validator",
+    "step_advance"
+  ],
+  "prompt": "The same URL now discovers 96 GPU products, but 77 rows still have null price and every row is labeled out of stock. For each discovered public product_url, visit the PDP. Extract numeric SGD from visible .product-special-price/.old-prices or meta product:price:amount/og:price:amount. Determine availability from the visible waiting-list Out of Stock state first, otherwise public product:availability meta; never interact with notification email. Preserve all 96 rows and the exact 14-field contract; no account/cart/contact/review/personal data.",
+  "view_url": "https://brightdata.com/cp/scrapers/c_mt3zqdljej45v0g1r",
+  "next_step": "bdata scraper approve c_mt3zqdljej45v0g1r --url https://www.pcthemes.com.sg/video-card-graphics-card",
+  "diff_summary": "proposed template has 2 step(s) — review at view_url",
+  "preview_result": [
+    {
+      "source_slug": "pc-themes",
+      "market": "SG",
+      "currency": "SGD",
+      "title": "ASUS GT 730 2GB DDR5 Low Profile Graphics Card",
+      "product_url": "https://www.pcthemes.com.sg/video-card-graphics-card/asus-gt-710-2gb-ddr3-4-x-hdmi",
+      "price": 119,
+      "availability": "out of stock",
+      "sku": null,
+      "manufacturer": "ASUS",
+      "board_partner": "ASUS",
+      "raw_model": "ASUS GT 730 2GB DDR5 Low Profile Graphics Card",
+      "image_url": null
+    }
+  ]
+}
