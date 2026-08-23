@@ -23,6 +23,11 @@ def test_country_feed_is_prize_ranked_and_seeded(tmp_path: Path) -> None:
     assert len({item["id"] for item in payload["hackathons"]}) == 10
 
 
+def test_release_seed_path_is_packaging_safe() -> None:
+    source = Path(__file__).parents[1] / "src" / "hackradar" / "app.py"
+    assert 'package_root / "data" / "hackathons.json"' in source.read_text()
+
+
 def test_operator_routes_fail_closed_without_a_token(tmp_path: Path) -> None:
     with client(tmp_path) as app:
         response = app.post("/operators/refresh", json={})

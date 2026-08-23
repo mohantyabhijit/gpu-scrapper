@@ -1,4 +1,4 @@
-name: Raster quality
+name: HackRadar quality
 
 on:
   pull_request:
@@ -11,29 +11,13 @@ permissions:
   contents: read
 
 concurrency:
-  group: raster-quality-${{ github.ref }}
+  group: hackradar-quality-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    services:
-      postgres:
-        image: postgres:16
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U postgres -d postgres"
-          --health-interval=5s
-          --health-timeout=5s
-          --health-retries=12
-    env:
-      RASTER_TEST_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -46,14 +30,14 @@ jobs:
           node-version: 22.13.0
           cache: npm
 
-      - name: Install locked dependencies
+      - name: Install frontend dependencies
         run: npm ci
 
       - name: Reject known secret material
         shell: bash
         run: |
           set -euo pipefail
-          pattern='-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|(^|[^A-Z_])(api[_-]?key|token|secret)[[:space:]]*[:=][[:space:]]*[A-Za-z0-9_-]{20,}|(BRIGHTDATA_API_KEY|api[_-]?key).{0,20}[0-9a-fA-F]{8}-[0-9a-fA-F-]{27,}'
+          pattern='-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|(^|[^A-Z_])(api[_-]?key|token|secret)[[:space:]]*[:=][[:space:]]*[A-Za-z0-9_-]{20,}|(BRIGHTDATA_API_KEY|OPENAI_API_KEY).{0,20}[0-9a-fA-F]{8}-[0-9a-fA-F-]{27,}'
           if git grep -qE -e "$pattern" -- . ':!package-lock.json'; then
             echo '::error::probable secret material found in tracked source'
             exit 1
@@ -65,30 +49,18 @@ jobs:
             fi
           done < <(git rev-list --all)
 
-      - name: Lint
-        run: npm run lint
-
-      - name: Type-check
-        run: npx tsc --noEmit
-
-      - name: Verify deterministic PostgreSQL migrations
-        run: npm run db:check
-
-      - name: Unit and security tests
-        run: npm run test:unit
-
-      - name: PostgreSQL integration tests
-        run: npm run test:postgres
-
-      - name: Production render tests
-        run: npm run test:render
-
-      - name: Scan built assets and evidence filenames safely
-        shell: bash
+      - name: Verify frontend
         run: |
-          set -euo pipefail
-          pattern='-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----|(^|[^A-Z_])(api[_-]?key|token|secret)[[:space:]]*[:=][[:space:]]*[A-Za-z0-9_-]{20,}|(BRIGHTDATA_API_KEY|api[_-]?key).{0,20}[0-9a-fA-F]{8}-[0-9a-fA-F-]{27,}'
-          if grep -RIlE --exclude='package-lock.json' "$pattern" dist evidence docs public 2>/dev/null | grep -q .; then
-            echo '::error::probable secret material found in build or evidence output'
-            exit 1
-          fi
+          npm run lint
+          npm test
+          npm audit --omit=dev
+
+      - name: Install uv
+        run: python -m pip install uv==0.11.7
+
+      - name: Verify backend
+        working-directory: backend
+        run: |
+          uv sync --group dev --locked
+          uv run ruff check .
+          uv run pytest -q

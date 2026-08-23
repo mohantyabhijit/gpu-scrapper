@@ -1,4 +1,4 @@
-name: Raster refresh
+name: HackRadar refresh
 
 on:
   schedule:
@@ -6,111 +6,55 @@ on:
   workflow_dispatch:
     inputs:
       source_slug:
-        description: "Run one ready, allowlisted source slug"
-        required: true
+        description: "Run one registered source slug; leave blank for all"
+        required: false
         type: string
-        default: dynacore
+        default: devpost-global
 
 permissions:
   contents: read
 
+concurrency:
+  group: hackradar-refresh
+  cancel-in-progress: false
+
 jobs:
-  plan:
-    if: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') }}
-    environment: raster-production
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      contents: read
-    outputs:
-      sources: ${{ steps.plan.outputs.sources }}
-    steps:
-      - name: Check out workflow code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Use Node.js 22.13.0
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: 22.13.0
-
-      - name: Resolve approved source plan
-        id: plan
-        env:
-          RASTER_REFRESH_URL: ${{ secrets.RASTER_REFRESH_URL }}
-          RASTER_INGEST_HMAC_SECRET: ${{ secrets.RASTER_INGEST_HMAC_SECRET }}
-          RASTER_MANUAL_SOURCE: ${{ inputs.source_slug }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -n "$RASTER_REFRESH_URL" || { echo "::error::RASTER_REFRESH_URL secret is missing"; exit 1; }
-          test -n "$RASTER_INGEST_HMAC_SECRET" || { echo "::error::refresh signing secret is missing"; exit 1; }
-          if [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
-            node scripts/fetch-refresh-plan.mjs > "$RUNNER_TEMP/raster-refresh-plan.json"
-          else
-            node scripts/fetch-refresh-plan.mjs --source-slug "$RASTER_MANUAL_SOURCE" > "$RUNNER_TEMP/raster-refresh-plan.json"
-          fi
-          sources="$(sed -n '1p' "$RUNNER_TEMP/raster-refresh-plan.json")"
-          test -n "$sources" || { echo "::error::refresh plan is empty"; exit 1; }
-          echo "sources=$sources" >> "$GITHUB_OUTPUT"
-
   refresh:
-    needs: plan
-    if: ${{ needs.plan.result == 'success' }}
-    environment: raster-production
+    if: ${{ github.ref == 'refs/heads/main' }}
+    environment: hackradar-production
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        source_slug: ${{ fromJSON(needs.plan.outputs.sources) }}
-    concurrency:
-      group: raster-refresh-${{ matrix.source_slug }}
-      cancel-in-progress: false
-    permissions:
-      contents: read
     steps:
-      - name: Check out workflow code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Use Node.js 22.13.0
-        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.1
-        with:
-          node-version: 22.13.0
-          cache: npm
-
-      - name: Install locked dependencies
-        run: npm ci --ignore-scripts
-
-      - name: Trigger one market/source slice
+      - name: Trigger bounded refresh jobs
+        id: trigger
         env:
-          RASTER_REFRESH_URL: ${{ secrets.RASTER_REFRESH_URL }}
-          RASTER_INGEST_HMAC_SECRET: ${{ secrets.RASTER_INGEST_HMAC_SECRET }}
-          RASTER_SOURCE_SLUG: ${{ matrix.source_slug }}
+          HACKRADAR_API_URL: ${{ secrets.HACKRADAR_API_URL }}
+          HACKRADAR_OPERATOR_TOKEN: ${{ secrets.HACKRADAR_OPERATOR_TOKEN }}
+          HACKRADAR_SOURCE_SLUG: ${{ inputs.source_slug }}
         shell: bash
         run: |
           set -euo pipefail
-          test -n "$RASTER_REFRESH_URL" || { echo "::error::RASTER_REFRESH_URL secret is missing"; exit 1; }
-          test -n "$RASTER_INGEST_HMAC_SECRET" || { echo "::error::refresh signing secret is missing"; exit 1; }
-          [[ "$RASTER_SOURCE_SLUG" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]] || { echo "::error::source slug is invalid"; exit 1; }
-          : > "$RUNNER_TEMP/raster-refresh-result.json"
-          node scripts/sign-refresh.mjs --source-slug "$RASTER_SOURCE_SLUG" \
-            | tee "$RUNNER_TEMP/raster-refresh-result.json"
+          test -n "$HACKRADAR_API_URL" || { echo "::error::HACKRADAR_API_URL is missing"; exit 1; }
+          test -n "$HACKRADAR_OPERATOR_TOKEN" || { echo "::error::HACKRADAR_OPERATOR_TOKEN is missing"; exit 1; }
+          payload='{}'
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ] && [ -n "$HACKRADAR_SOURCE_SLUG" ]; then
+            [[ "$HACKRADAR_SOURCE_SLUG" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]] || { echo "::error::invalid source slug"; exit 1; }
+            payload="{\"sourceSlug\":\"$HACKRADAR_SOURCE_SLUG\"}"
+          fi
+          response="$(curl --fail-with-body --silent --show-error --max-time 30 \
+            -X POST "$HACKRADAR_API_URL/operators/refresh" \
+            -H 'Content-Type: application/json' \
+            -H "X-HackRadar-Operator-Token: $HACKRADAR_OPERATOR_TOKEN" \
+            --data "$payload")"
+          jobs="$(jq -r '.jobs | length' <<<"$response")"
+          test "$jobs" -gt 0 || { echo "::error::no runnable collectors were queued"; exit 1; }
+          echo "jobs=$jobs" >> "$GITHUB_OUTPUT"
 
-      - name: Publish safe job summary
-        if: always()
-        shell: bash
+      - name: Publish safe summary
         run: |
-          set -euo pipefail
           {
-            echo "### Raster refresh"
-            echo ""
-            echo '- Source: `${{ matrix.source_slug }}`'
-            if [ -s "$RUNNER_TEMP/raster-refresh-result.json" ]; then
-              echo "- Safe route summary:"
-              echo '```json'
-              sed -n '1p' "$RUNNER_TEMP/raster-refresh-result.json"
-              echo '```'
-            else
-              echo "- Result: no safe response emitted; the request failed before a response was available."
-            fi
+            echo '### HackRadar refresh'
+            echo ''
+            echo "- Queued jobs: ${{ steps.trigger.outputs.jobs }}"
+            echo '- Drifted runs preserve the last-known-good dataset and can trigger same-ID healing.'
           } >> "$GITHUB_STEP_SUMMARY"

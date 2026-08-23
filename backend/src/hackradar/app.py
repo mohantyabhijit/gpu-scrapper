@@ -53,8 +53,9 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         database.create()
         database.seed_sources()
-        seed_path = Path(__file__).resolve().parents[3] / "data" / "hackathons.json"
-        if seed_path.exists():
+        package_root = Path(__file__).resolve().parents[2]
+        seed_paths = (package_root / "data" / "hackathons.json", package_root.parent / "data" / "hackathons.json")
+        if seed_path := next((path for path in seed_paths if path.exists()), None):
             database.seed_hackathons(seed_path)
         client = httpx.AsyncClient(timeout=httpx.Timeout(20.0))
         app.state.http_client = client
