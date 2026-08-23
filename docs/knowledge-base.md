@@ -135,6 +135,7 @@ Production release order:
 5. Atomically switch `current` symlinks.
 6. Validate and reload Nginx, then restart only HackRadar services.
 7. Verify `/scrapper/`, static assets, `/scrapper-api/healthz`, ten ranked worldwide rows, and ten ranked API rows for all four countries.
+8. Verify the browser market selector, category filter, original links, dual-currency display, and mobile layout.
 
 ### Worldwide and currency presentation
 
@@ -143,7 +144,8 @@ Production release order:
 - Country cards show estimated USD-to-local presentation values using the checked-in normalization reference rates: USD 1, INR 83.61, GBP 0.7407, and SGD 1.287 per USD.
 - FX is display-only. PostgreSQL stores canonical USD values and the original source prize claim; neither ranking nor provenance depends on the selected display currency.
 - Unknown and non-cash awards never receive fabricated currency equivalents.
-8. Verify the browser country selector, category filter, original links, and mobile layout.
+
+The live frontend and backend release verified on 2026-08-23 is `8070873`; both atomic `current` symlinks point to that release and GitHub quality run `32640239062` passed for the exact commit.
 
 Do not call a successful push a deployment. The public routes and current service revisions must be checked separately.
 

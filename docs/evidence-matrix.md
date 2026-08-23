@@ -3,8 +3,8 @@
 | Claim | Evidence | State on 2026-08-23 |
 | --- | --- | --- |
 | Public working product | `/scrapper/`, browser interaction pass | Verified live |
-| Worldwide + four country top tens | Frontend tests + five public API queries | Pending live deployment verification |
-| Dual-currency prize display | Formatting contract tests + browser interaction | Pending live deployment verification |
+| Worldwide + four country top tens | Frontend tests + five public API queries | Verified live: WORLD 25, US 13, IN 18, UK 17, SG 17 |
+| Dual-currency prize display | Formatting contract tests + browser interaction | Verified live: INR, GBP, SGD plus USD; US/WORLD use USD |
 | Real database | PostgreSQL count + API responses | 25 normalized rows after live refresh |
 | Next.js + Three.js frontend | `app/`, `components/orbit-scene.tsx`, production build | Verified |
 | Python backend | `backend/src/hackradar`, Ruff and pytest | Verified |
@@ -16,6 +16,6 @@
 | Authenticated refresh | GitHub Actions run `32636380433` | Manual production dispatch succeeded; Devpost wrote 3 rows |
 | Scheduled refresh | `.github/workflows/collect.yml`, repo secrets | Daily cron configured; first HackRadar cron occurrence not yet observed |
 | Secret safety | Keychain/systemd secret stores, GitHub scan | Values not committed |
-| Main push and CI | GitHub `main`, required `verify` workflow | `68f77aa` passed; re-check final SHA before submission |
+| Main push and CI | GitHub `main`, required `verify` workflow | `8070873` passed in run `32640239062` |
 
 Provider completion and public deployment are separate gates. State exact counts and dates when presenting this table.
