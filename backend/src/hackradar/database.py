@@ -67,8 +67,8 @@ class Database:
 
     def seed_sources(self) -> None:
         sources = [
-            SourceRow(slug="devpost-global", name="Devpost", target_url="https://devpost.com/hackathons?challenge_type[]=online&open_to[]=public&status[]=upcoming", collector_id="c_mt5n8l0w1kcr7uzxre", country="US", state="repairing", expected_schema=EXPECTED_FIELDS),
-            SourceRow(slug="unstop-india", name="Unstop India", target_url="https://unstop.com/hackathons", collector_id="c_mt5n8mon1lgz9hhuoe", country="IN", state="repairing", expected_schema=EXPECTED_FIELDS),
+            SourceRow(slug="devpost-global", name="Devpost", target_url="https://devpost.com/hackathons?challenge_type[]=online&open_to[]=public&status[]=upcoming", collector_id="c_mt5n8l0w1kcr7uzxre", country="US", state="ready", expected_schema=EXPECTED_FIELDS),
+            SourceRow(slug="unstop-india", name="Unstop India", target_url="https://unstop.com/hackathons", collector_id="c_mt5n8mon1lgz9hhuoe", country="IN", state="degraded", expected_schema=EXPECTED_FIELDS),
             SourceRow(slug="hackathons-uk", name="Hackathons UK", target_url="https://www.hackathons.org.uk/events/", collector_id="c_mt5n8jd5y2gdnzt5p", country="UK", state="generation_failed", expected_schema=EXPECTED_FIELDS),
         ]
         with Session(self.engine) as session:

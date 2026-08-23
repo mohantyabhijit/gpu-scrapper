@@ -1,18 +1,10 @@
-<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <title>Raster GPU price intelligence</title>
-  <rect width="64" height="64" fill="#0A0C0C"/>
-  <rect x="7" y="9" width="44" height="39" rx="6" fill="#B9EF6A"/>
-  <path d="M51 15H55V48H51V15Z" fill="#FF6258"/>
-  <path d="M55 21H59M55 29H59M55 37H59" stroke="#F7F4EC" stroke-width="2" stroke-linecap="round"/>
-
-  <!-- GPU package pins -->
-  <path d="M17 48V53M24 48V53M31 48V53M38 48V53M45 48V53" stroke="#F2A15F" stroke-width="3" stroke-linecap="square"/>
-  <path d="M17 9V6M24 9V6M31 9V6M38 9V6M45 9V6" stroke="#F2A15F" stroke-width="3" stroke-linecap="square"/>
-
-  <!-- chip with an upward market signal -->
-  <rect x="15" y="16" width="29" height="27" rx="4" fill="#101515"/>
-  <path d="M20 34V29M25 34V26M30 34V30M35 34V22" stroke="#F7F4EC" stroke-width="3" stroke-linecap="square"/>
-  <path d="M20 28L25 25L30 29L35 21L39 24" stroke="#B9EF6A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="39" cy="24" r="3" fill="#F2A15F"/>
-  <path d="M37.5 20.5L40 23L42.5 20.5" stroke="#FF6258" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <title>HackRadar</title>
+  <defs><linearGradient id="g" x1="8" y1="6" x2="57" y2="59" gradientUnits="userSpaceOnUse"><stop stop-color="#635BFF"/><stop offset="1" stop-color="#00D4A8"/></linearGradient></defs>
+  <rect width="64" height="64" rx="15" fill="#0B1020"/>
+  <circle cx="32" cy="32" r="23" fill="none" stroke="url(#g)" stroke-width="2" opacity=".75"/>
+  <circle cx="32" cy="32" r="14" fill="none" stroke="#FFFFFF" stroke-width="1.5" opacity=".45"/>
+  <path d="M32 32L51 19" stroke="#8B84FF" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="48" cy="21" r="4" fill="#00D4A8"/>
+  <path d="M22 19V45M42 19V45M22 32H42" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
 </svg>

@@ -48,10 +48,12 @@ The backend is FastAPI with SQLAlchemy. `hackathons` stores the normalized paylo
 | Source | Slug | Country scope | Collector ID | Exact target | State on 2026-08-23 |
 | --- | --- | --- | --- | --- | --- |
 | Devpost | `devpost-global` | Global online / US anchor | `c_mt5n8l0w1kcr7uzxre` | public upcoming online listing | Same-ID healed twice; 9 flat rows, complete keys, 8 disclosed prizes, 3 rows with usable schedules |
-| Unstop | `unstop-india` | India | `c_mt5n8mon1lgz9hhuoe` | public hackathon listing | Same-ID repair and exact-target verification in progress |
+| Unstop | `unstop-india` | India | `c_mt5n8mon1lgz9hhuoe` | public hackathon listing | Original remains runnable with 18 linked rows; broader same-ID repair failed after Studio validation, so prize/schedule fields remain degraded |
 | Hackathons UK | `hackathons-uk` | United Kingdom | `c_mt5n8jd5y2gdnzt5p` | public events listing | Initial Studio generation failed before a runnable template existed; do not claim it as healed or ready |
 
 The failed UK ID is retained as evidence. A replacement is allowed only because Studio did not create a runnable template to repair; document any replacement ID and validate it independently before changing the registry.
+
+The GPT-authored replacement attempt created half-built collector `c_mt5pvcq9238pirddsq`, then failed during Studio intent analysis before a runnable template existed. It is evidence that the secured prompt-to-create path reached Studio, not a production source. Do not create a third UK collector until the two provider failures are inspected.
 
 Never reuse SecondSpin collector `c_mt2nbsqd1akac96fiz`; it belongs to a vacuum-parts project and target.
 
@@ -136,6 +138,8 @@ Production release order:
 8. Verify the browser country selector, category filter, original links, and mobile layout.
 
 Do not call a successful push a deployment. The public routes and current service revisions must be checked separately.
+
+The first authenticated HackRadar workflow dispatch was observed successful on 2026-08-23. Its Devpost refresh completed with three normalized rows and promoted `devpost-global` to `ready`. This proves the configured workflow path; a future cron occurrence remains a separate scheduling observation.
 
 ## Quality gates
 

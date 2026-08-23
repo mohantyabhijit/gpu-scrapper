@@ -34,6 +34,17 @@ def test_operator_routes_fail_closed_without_a_token(tmp_path: Path) -> None:
     assert response.status_code == 401
 
 
+def test_source_registry_discloses_live_health(tmp_path: Path) -> None:
+    with client(tmp_path) as app:
+        response = app.get("/sources")
+    states = {item["slug"]: item["state"] for item in response.json()["sources"]}
+    assert states == {
+        "devpost-global": "ready",
+        "hackathons-uk": "generation_failed",
+        "unstop-india": "degraded",
+    }
+
+
 def test_public_target_rejects_private_and_government_hosts() -> None:
     for value in ("http://example.com", "https://127.0.0.1/events", "https://agency.gov/events"):
         try:

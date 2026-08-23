@@ -19,8 +19,10 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://abhijitmohanty.com/scrapper/"),
   title,
   description,
-  openGraph: { title, description, type: "website", images: ["/scrapper/og.png"] },
-  twitter: { card: "summary_large_image", title, description, images: ["/scrapper/og.png"] },
+  manifest: "/scrapper/manifest.webmanifest",
+  icons: { icon: "/scrapper/favicon.svg" },
+  openGraph: { title, description, type: "website", images: ["/scrapper/og-hackradar.svg"] },
+  twitter: { card: "summary_large_image", title, description, images: ["/scrapper/og-hackradar.svg"] },
 };
 
 export default function RootLayout({

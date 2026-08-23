@@ -24,6 +24,7 @@ class PromptBuilder:
             f"and exactly these field names: {fields}. Dates must be ISO YYYY-MM-DD and unavailable values "
             "must be null. Do not request private, login, personal, or restricted data.",
             f"Target: {target_url}. Operator goal: {goal}",
+            max_length=500,
         )
 
     async def for_drift(self, collector_id: str, missing: list[str], rows: list[dict[str, object]]) -> str:
@@ -32,13 +33,14 @@ class PromptBuilder:
             "Write one narrow repair instruction for an existing Scraper Studio collector. Preserve its ID and "
             "flat output contract. Never invent missing values.",
             f"Collector: {collector_id}. Missing or drifted fields: {', '.join(missing)}. Sample: {sample}",
+            max_length=1000,
         )
 
-    async def _ask(self, instructions: str, input_text: str) -> str:
+    async def _ask(self, instructions: str, input_text: str, *, max_length: int) -> str:
         response = await self._client.responses.create(
             model=self._model, store=False, instructions=instructions, input=input_text
         )
         value = str(getattr(response, "output_text", "")).strip()
         if not value:
             raise ValueError("OpenAI did not return a scraper prompt.")
-        return value[:1000]
+        return value[:max_length]

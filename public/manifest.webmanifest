@@ -1,30 +1,18 @@
 {
-  "name": "Raster GPU Marketplace",
-  "short_name": "Raster",
+  "name": "HackRadar",
+  "short_name": "HackRadar",
   "id": "/scrapper/",
-  "description": "Market-local GPU offer comparison across the US, UK, India, and Singapore.",
+  "description": "Prize-ranked, effort-aware hackathons for builders in the USA, India, UK, and Singapore.",
   "start_url": "/scrapper/",
   "scope": "/scrapper/",
   "display": "standalone",
-  "background_color": "#0A0C0C",
-  "theme_color": "#0A0C0C",
+  "background_color": "#f7f8ff",
+  "theme_color": "#635bff",
   "icons": [
     {
-      "src": "/scrapper/favicon.svg?v=3",
+      "src": "/scrapper/favicon.svg?v=4",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/scrapper/icon-192.png?v=3",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/scrapper/icon-512.png?v=3",
-      "sizes": "512x512",
-      "type": "image/png",
       "purpose": "any maskable"
     }
   ]

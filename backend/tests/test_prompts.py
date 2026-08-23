@@ -11,7 +11,7 @@ class ResponsesStub:
 
     async def create(self, **kwargs: object) -> object:
         self.arguments = kwargs
-        return SimpleNamespace(output_text="flat Studio prompt")
+        return SimpleNamespace(output_text="flat Studio prompt" * 100)
 
 
 class ClientStub:
@@ -26,7 +26,7 @@ def test_new_source_prompt_enumerates_the_runtime_schema() -> None:
             "https://example.com/events", "Extract genuine upcoming build events."
         )
     )
-    assert value == "flat Studio prompt"
+    assert len(value) == 500
     instructions = str(client.responses.arguments["instructions"])
     assert all(field in instructions for field in EXPECTED_FIELDS)
     assert "ISO YYYY-MM-DD" in instructions
