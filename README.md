@@ -23,17 +23,6 @@ public code, architecture, deployment, and evidence. The form itself still
 needs to be completed by the participant; no form has been submitted from this
 repository.
 
-| Form question | Answer / status |
-| --- | --- |
-| Email | Enter privately in the form; do not publish a personal email in the repository. |
-| Team name | Enter `SOLO` if submitting alone, as required by the form; otherwise enter the confirmed team name. |
-| Name of the person submitting | Enter the participant's confirmed name in the form. |
-| Track | Submit Raster to all three: **Web-Slinger / Best Use of Bright Data**, **Suit-Up / Best UI**, and **Spider-Sense / Best Clean Code**. |
-| GitHub link | <https://github.com/mohantyabhijit/gpu-scrapper> |
-| Deployed link | <https://abhijitmohanty.com/scrapper/> |
-| YouTube video demo link | **Pending — intentionally deferred for a later README update.** The final video must be no longer than three minutes. |
-| LinkedIn giveaway | Optional and pending. Add only a real public post that tags WeMakeDevs and Bright Data. |
-
 ### What does your project do?
 
 Raster is a read-only GPU sourcing and market-intelligence desk for company
@@ -68,9 +57,6 @@ Themes; US, UK, and India remain visibly fixture-backed.
 
 ### Scraper Studio and CLI feedback
 
-The second page of the form asks for direct product feedback. These are the
-evidence-based draft responses to review when completing it:
-
 | Form question | Draft response |
 | --- | --- |
 | How was the CLI to work with? | **4/5.** It made collector creation, repeatable runs, and same-ID healing practical from an agent-driven terminal workflow. |
@@ -85,44 +71,11 @@ participant's opinion; confirm them when submitting the form.
 ## Current status
 
 Raster is deployed with a live Singapore catalog backed by the custom Dynacore
-and PC Themes Scraper Studio collectors. The latest verified storefront showed
-98 hosted-PostgreSQL offers across the two retailers; United States, United
-Kingdom, and India remain clearly fixture-backed. The protected pipeline,
-private Hyperdrive/VPC PostgreSQL schema, four-market schedule, Country Pack
-contract, and same-ID healing evidence are implemented and verified by 165
-unit/security tests, 1 component test, 16 PostgreSQL integration tests, and 10
-production-render tests. See the maintained [Raster knowledge
-base](docs/knowledge-base.md) and [master
-plan](docs/plans/2026-08-21-raster-gpu-marketplace-master-plan.md).
-
-The registry now supports four display markets: United States (USD), United
-Kingdom (GBP), India (INR), and Singapore (SGD). Candidate
-regional/specialist sources are listed in [docs/source-eligibility.md](docs/source-eligibility.md).
-A candidate is not enabled until it is confirmed public, stable, permitted for
-the intended access pattern, has same-market overlap, and is not already
-covered by a Bright Data pre-built scraper. Region-specific discounts, tax, and
-shipping labels remain source claims and are never silently normalized away.
-
-Country support is registry-driven. The four baseline markets live in
-`config/markets.ts`; additional countries arrive through the authenticated
-Country Pack API. One pack atomically stores the country/currency definition
-and a server-resolved retailer source. It remains pending until dated
-eligibility, custom Collector creation, and successful run evidence exist.
-Only then does it enter the selector. Shopper input can never supply a URL,
-currency, or Collector ID and therefore cannot bypass the public-data gates.
-
-## Judge-proof status
-
-The public deployment contains the product contract, typed source registry,
-protected refresh route, migrated private Hyperdrive/VPC PostgreSQL database,
-append-only healing ledger, and two live Singapore sources. Dynacore collector
-`c_mt3qzv5p215cci1r2e` and PC Themes collector
-`c_mt3zqdljej45v0g1r` feed the production path. PC Themes has retained same-ID
-healing proof from 0 rows to 96 valid rows with unchanged downstream consumer
-hashes, and a manually dispatched GitHub Actions refresh has written the live
-catalog. Remaining honest gates are an independently observed cron occurrence
-and the 3-of-3 cross-retailer comparison-family target; current overlap is 2/3.
-See the [evidence matrix](docs/evidence-matrix.md) for the dated proof boundary.
+and PC Themes collectors; the latest verified view contained 98 offers. Ready
+Country Packs provide an evidence-gated path for adding approved country-local
+sources without exposing retailer URLs or Collector IDs to shoppers. US, UK,
+and India remain clearly fixture-backed until their collectors pass those
+gates.
 
 ## Product boundary and data policy
 
@@ -197,41 +150,6 @@ output is not accepted as proof: behavior is verified with tests, migrations,
 browser/accessibility checks, secret scans, public Git history, and live
 Scraper Studio evidence.
 
-## Secrets and contributions
-
-The setup key was rotated. Its replacement is stored in macOS Keychain service
-`my-api-key` and the Cloudflare Worker secret `BRIGHTDATA_API_KEY`; GitHub
-Actions does not receive the provider key. The public repository contains only
-names, non-secret collector identifiers, and sanitized fixtures/evidence.
-Review [docs/security.md](docs/security.md) before adding a provider or a
-workflow. Do not add a new retailer without updating the eligibility record.
-
 ## Architecture and implementation
 
-- [Agent instructions](AGENTS.md) — mandatory working rules and invariants.
-- [Knowledge base](docs/knowledge-base.md) — maintained architecture,
-  operations, deployment, evidence, and release context.
-- [Architecture](docs/architecture.md) — implemented collector-to-storefront flow.
-- [Source eligibility](docs/source-eligibility.md) — candidate and go/no-go
-  checklist.
-- [Security](docs/security.md) — secret, public-data, and refresh boundaries.
-- [Operations](docs/operations.md) — scheduled/manual refresh, signing, and
-  failure-safe runbook.
-- [Evidence matrix](docs/evidence-matrix.md) — organizer expectation to proof.
-- [Demo script](docs/demo-script.md) — terminal-first judge walkthrough.
-- [Submission notes](docs/submission.md) — final release checklist.
-- [Production QA](docs/qa-report.md) — automated, browser, API, PostgreSQL, and
-  deployment verification evidence.
-- [Rules compliance](docs/rules-compliance.md) — rule-by-rule proof ledger.
-- [Structured output example](examples/structured-output.json) — safe fixture
-  showing the collector contract; live evidence remains a separate release gate.
-- [Country Pack templates](examples/country-pack.pending.template.json) —
-  non-runnable redacted pending/ready payloads for the dynamic-country rehearsal.
-- [Master plan](docs/plans/2026-08-21-raster-gpu-marketplace-master-plan.md) —
-  product, technical, sequencing, and verification contract.
-
-This project uses [vinext](https://github.com/cloudflare/vinext) on a Cloudflare
-Worker with hosted PostgreSQL through a private Hyperdrive/VPC connection and Drizzle. The public portfolio origin proxies only `/scrapper/`
-to the Worker, leaving all other `abhijitmohanty.com` routes untouched. Hosting
-bindings are non-secret configuration; credentials remain in deployment secret
-stores and never belong in this repository.
+![Raster architecture](public/architecture/raster-architecture.png)
