@@ -1,6 +1,8 @@
 import json
 from typing import Protocol
 
+from hackradar.database import EXPECTED_FIELDS
+
 
 class Responses(Protocol):
     async def create(self, **kwargs: object) -> object: ...
@@ -16,9 +18,11 @@ class PromptBuilder:
         self._model = model
 
     async def for_new_source(self, target_url: str, goal: str) -> str:
+        fields = ", ".join(EXPECTED_FIELDS)
         return await self._ask(
-            "Write one concise Bright Data Scraper Studio creation prompt. Require flat records and the exact "
-            "HackRadar fields. Do not request private, login, personal, or restricted data.",
+            "Write one concise Bright Data Scraper Studio creation prompt. Require one flat record per event "
+            f"and exactly these field names: {fields}. Dates must be ISO YYYY-MM-DD and unavailable values "
+            "must be null. Do not request private, login, personal, or restricted data.",
             f"Target: {target_url}. Operator goal: {goal}",
         )
 

@@ -71,10 +71,18 @@ def normalize_collector_row(
         value = text(*keys)
         if not value:
             return None
-        try:
-            return date.fromisoformat(value[:10])
-        except ValueError:
-            return None
+        candidates = (value[:10], value, re.sub(r"(\d{1,2}) (\w+),", r"\1 \2", value))
+        for candidate in candidates:
+            for pattern in (None, "%b %d, %Y", "%B %d, %Y", "%d %B %Y", "%d %b %Y"):
+                try:
+                    return (
+                        date.fromisoformat(candidate)
+                        if pattern is None
+                        else datetime.strptime(candidate, pattern).replace(tzinfo=UTC).date()
+                    )
+                except ValueError:
+                    continue
+        return None
 
     title = text("title", "name")
     source_url = text("detail_url", "source_url", "product_page_url", "url")

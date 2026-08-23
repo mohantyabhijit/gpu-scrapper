@@ -1,0 +1,22 @@
+[Unit]
+Description=HackRadar FastAPI backend
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+WorkingDirectory=/srv/hackradar/backend/current
+EnvironmentFile=/etc/hackradar-api.env
+ExecStart=/srv/hackradar/backend/venv/bin/uvicorn --app-dir /srv/hackradar/backend/current/src hackradar.app:app --host 127.0.0.1 --port 8095 --proxy-headers
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/srv/hackradar/backend
+
+[Install]
+WantedBy=multi-user.target
