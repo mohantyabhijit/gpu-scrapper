@@ -153,7 +153,7 @@ export default function HackathonExplorer({ initialHackathons }: { initialHackat
 
       <section className="metrics" aria-label={`${profile.label} ranking summary`}>
         <div><span>View</span><strong>{profile.short}</strong><small>{country === "WORLD" ? "all indexed opportunities" : "local + eligible online"}</small></div>
-        <div><span>Ranked pool</span><strong>{poolMoney?.local ?? "Undisclosed"}</strong><small>{poolMoney ? (poolMoney.isUsdMarket ? "USD comparison total" : `${poolMoney.usd} USD · estimated FX`) : "no comparable cash value"}</small></div>
+        <div><span>Pool</span><strong>{poolMoney?.local ?? "Undisclosed"}</strong><small>{poolMoney ? (poolMoney.isUsdMarket ? "USD comparison total" : `${poolMoney.usd} USD · estimated FX`) : "no comparable cash value"}</small></div>
       </section>
 
       <section className="rankings" id="rankings">
