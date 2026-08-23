@@ -161,7 +161,7 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
 
     @app.get("/hackathons")
     async def hackathons(
-        country: str = Query(pattern="^(US|IN|UK|SG)$"),
+        country: str = Query(pattern="^(WORLD|US|IN|UK|SG)$"),
         category: str | None = Query(default=None, pattern="^(AI|Web3|Web|Mobile|Climate|Other)$"),
         limit: int = Query(default=10, ge=1, le=50),
     ) -> dict[str, object]:

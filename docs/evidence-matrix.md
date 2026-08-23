@@ -3,7 +3,8 @@
 | Claim | Evidence | State on 2026-08-23 |
 | --- | --- | --- |
 | Public working product | `/scrapper/`, browser interaction pass | Verified live |
-| Four country top tens | Frontend tests + four public API queries | 10 unique rows each |
+| Worldwide + four country top tens | Frontend tests + five public API queries | Pending live deployment verification |
+| Dual-currency prize display | Formatting contract tests + browser interaction | Pending live deployment verification |
 | Real database | PostgreSQL count + API responses | 25 normalized rows after live refresh |
 | Next.js + Three.js frontend | `app/`, `components/orbit-scene.tsx`, production build | Verified |
 | Python backend | `backend/src/hackradar`, Ruff and pytest | Verified |

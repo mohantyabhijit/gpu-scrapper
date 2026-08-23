@@ -17,4 +17,4 @@ For a new source, use the authenticated `POST /operators/sources` route. It vali
 
 Frontend releases live under `/srv/hackradar/frontend/releases`; backend releases live under `/srv/hackradar/backend/releases`. `current` symlinks are changed atomically. Restart only `hackradar-api.service`; test Nginx before reload.
 
-Verify health, four country counts, assets, systemd state, database row count, browser selector/filter behavior, and console errors. Roll back by repointing each `current` symlink to the previous explicit release and restarting only HackRadar.
+Verify health, the worldwide count, four country counts, dual-currency rendering, assets, systemd state, database row count, browser selector/filter behavior, and console errors. Roll back by repointing each `current` symlink to the previous explicit release and restarting only HackRadar.

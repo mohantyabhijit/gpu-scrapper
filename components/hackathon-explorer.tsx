@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import type { Category, CountryCode, Hackathon } from "../data/hackathons";
-import { rankedForCountry } from "../data/hackathons";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { Category, Hackathon, MarketCode } from "../data/hackathons";
+import { marketMoney, prizeForMarket, rankedForCountry } from "../data/hackathons";
 import OrbitScene from "./orbit-scene";
 
-const countries: Array<{ code: CountryCode; label: string; short: string; note: string }> = [
+const countries: Array<{ code: MarketCode; label: string; short: string; note: string }> = [
+  { code:"WORLD", label:"Worldwide", short:"World", note:"Every indexed market · one global leaderboard" },
   { code:"US", label:"United States", short:"USA", note:"Big pools · global online builds" },
   { code:"IN", label:"India", short:"India", note:"Dense student circuit · national rounds" },
   { code:"UK", label:"United Kingdom", short:"UK", note:"Campus weekends · applied AI" },
@@ -13,6 +14,10 @@ const countries: Array<{ code: CountryCode; label: string; short: string; note: 
 ];
 const categories: Array<"All" | Category> = ["All", "AI", "Web3", "Web", "Mobile", "Climate", "Other"];
 const apiBase = (process.env.NEXT_PUBLIC_HACKRADAR_API_URL ?? "/scrapper-api").replace(/\/$/, "");
+
+function uniqueById(items: readonly Hackathon[]) {
+  return [...new Map(items.map((item) => [item.id, item])).values()];
+}
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en", { month:"short", day:"numeric", year:"numeric" }).format(new Date(`${value}T12:00:00Z`));
@@ -26,49 +31,61 @@ function deadlineLabel(value: string) {
 }
 
 export default function HackathonExplorer({ initialHackathons }: { initialHackathons: Hackathon[] }) {
-  const [country, setCountry] = useState<CountryCode>("SG");
+  const [country, setCountry] = useState<MarketCode>("SG");
   const [category, setCategory] = useState<"All" | Category>("All");
   const [items, setItems] = useState(initialHackathons);
-  const [dataMode, setDataMode] = useState<"verified snapshot" | "live API">("verified snapshot");
+  const [dataMode, setDataMode] = useState<"checking live API" | "verified snapshot" | "live API">("checking live API");
+  const requestGeneration = useRef(0);
 
   useEffect(() => {
     const controller = new AbortController();
+    const generation = ++requestGeneration.current;
     fetch(`${apiBase}/hackathons?country=${country}&limit=50`, { signal: controller.signal })
       .then((response) => response.ok ? response.json() : Promise.reject(new Error("API unavailable")))
       .then((payload: { hackathons?: Hackathon[] }) => {
-        if (Array.isArray(payload.hackathons) && payload.hackathons.length >= 10) {
-          setItems((current) => [...current.filter((item) => !item.eligibleCountries.includes(country)), ...payload.hackathons!]);
-          setDataMode("live API");
-        }
+        if (generation !== requestGeneration.current || controller.signal.aborted) return;
+        if (!Array.isArray(payload.hackathons) || payload.hackathons.length < 10) throw new Error("API returned too few rows");
+        setItems((current) => country === "WORLD"
+          ? uniqueById(payload.hackathons!)
+          : uniqueById([...current.filter((item) => !item.eligibleCountries.includes(country)), ...payload.hackathons!]));
+        setDataMode("live API");
       })
-      .catch(() => setDataMode("verified snapshot"));
+      .catch(() => {
+        if (generation !== requestGeneration.current || controller.signal.aborted) return;
+        setItems(initialHackathons);
+        setDataMode("verified snapshot");
+      });
     return () => controller.abort();
-  }, [country]);
+  }, [country, initialHackathons]);
 
   const ranked = useMemo(() => {
     const eligible = category === "All" ? items : items.filter((item) => item.categories.includes(category));
     return rankedForCountry(eligible, country, 10);
   }, [category, country, items]);
   const profile = countries.find((item) => item.code === country)!;
+  const hasDisclosedPrize = ranked.some((item) => item.prizeUsd !== null);
   const disclosedPool = ranked.reduce((sum, item) => sum + (item.prizeUsd ?? 0), 0);
-  const localCount = ranked.filter((item) => item.venueCountry === country).length;
+  const localCount = country === "WORLD"
+    ? new Set(ranked.map((item) => item.venueCountry).filter((value) => value !== "GLOBAL")).size
+    : ranked.filter((item) => item.venueCountry === country).length;
+  const poolMoney = hasDisclosedPrize ? prizeForMarket(disclosedPool, country) : null;
 
   return (
     <main className="site" data-country={country.toLowerCase()}>
       <nav className="nav" aria-label="Primary navigation">
         <a className="brand" href="#top" aria-label="HackRadar home"><span className="brand-glyph">H</span><span>hackradar</span><i /></a>
         <div className="nav-links"><a href="#rankings">Rankings</a><a href="#pipeline">How it heals</a><a href="https://github.com/mohantyabhijit/hackathon-scrapper" target="_blank" rel="noreferrer">GitHub ↗</a></div>
-        <span className="fresh-pill"><i /> {dataMode}</span>
+        <span className="fresh-pill" aria-live="polite"><i /> {dataMode}</span>
       </nav>
 
       <section className="hero" id="top">
         <div className="hero-copy">
           <span className="overline">A prize map for people who keep shipping</span>
           <h1>Your next build,<br /><em>properly ranked.</em></h1>
-          <p>Hackathons across four builder markets, sorted by disclosed prize and annotated with the effort the brief actually demands.</p>
+          <p>Worldwide hackathons plus four focused builder markets, ranked by disclosed prize and annotated with the effort the brief actually demands.</p>
           <div className="country-control">
-            <label htmlFor="country">I&apos;m participating from</label>
-            <select id="country" value={country} onChange={(event) => { setCountry(event.target.value as CountryCode); setCategory("All"); }}>
+            <label htmlFor="country">Browse market</label>
+            <select id="country" value={country} onChange={(event) => { setDataMode("checking live API"); setCountry(event.target.value as MarketCode); setCategory("All"); }}>
               {countries.map((item) => <option key={item.code} value={item.code}>{item.label}</option>)}
             </select>
             <span>{profile.note}</span>
@@ -78,38 +95,43 @@ export default function HackathonExplorer({ initialHackathons }: { initialHackat
       </section>
 
       <section className="metrics" aria-label={`${profile.label} ranking summary`}>
-        <div><span>View</span><strong>{profile.short}</strong><small>local + eligible online</small></div>
-        <div><span>Ranked pool</span><strong>${Math.round(disclosedPool / 1000)}k</strong><small>disclosed USD-equivalent</small></div>
-        <div><span>Local events</span><strong>{localCount}</strong><small>inside this top ten</small></div>
+        <div><span>View</span><strong>{profile.short}</strong><small>{country === "WORLD" ? "all indexed opportunities" : "local + eligible online"}</small></div>
+        <div><span>Ranked pool</span><strong>{poolMoney?.local ?? "Undisclosed"}</strong><small>{poolMoney ? (poolMoney.isUsdMarket ? "USD comparison total" : `${poolMoney.usd} USD · estimated FX`) : "no comparable cash value"}</small></div>
+        <div><span>{country === "WORLD" ? "Markets" : "Local events"}</span><strong>{localCount}</strong><small>{country === "WORLD" ? "represented in this top ten" : "inside this top ten"}</small></div>
         <div><span>Source model</span><strong>3×</strong><small>Studio collectors</small></div>
       </section>
 
       <section className="rankings" id="rankings">
-        <header className="section-head">
-          <div><span className="section-index">01</span><div><p>Country leaderboard</p><h2>Top hackathons for {profile.label}</h2></div></div>
-          <p>Prize ranking uses disclosed cash or prize-pool values. Unknown and non-cash prizes sort last. Always confirm eligibility at source.</p>
+        <header className="section-head" aria-live="polite">
+          <div><span className="section-index">01</span><div><p>{country === "WORLD" ? "Worldwide leaderboard" : "Country leaderboard"}</p><h2>{country === "WORLD" ? "Top hackathons worldwide" : `Top hackathons for ${profile.label}`}</h2></div></div>
+          <p>Prize ranking uses USD equivalents. Country views also show an estimated local-currency value; source claims remain authoritative.</p>
         </header>
         <div className="category-tabs" role="group" aria-label="Filter rankings by category">
-          {categories.map((item) => <button key={item} type="button" className={category === item ? "active" : ""} onClick={() => setCategory(item)}>{item}</button>)}
+          {categories.map((item) => <button key={item} type="button" aria-pressed={category === item} className={category === item ? "active" : ""} onClick={() => setCategory(item)}>{item}</button>)}
         </div>
+        <p className="fx-note">FX reference: 23 Aug 2026 normalization rates · display estimates only.</p>
         <div className="leaderboard">
-          {ranked.map((item, index) => (
+          {ranked.map((item, index) => {
+            const prize = prizeForMarket(item.prizeUsd, country);
+            return (
             <article className="hack-row" key={item.id}>
               <div className="rank"><span>#</span>{String(index + 1).padStart(2, "0")}</div>
               <div className="hack-main">
                 <div className="tags"><span>{item.mode}</span><span>{item.venueCountry === "GLOBAL" ? "Global / eligible" : `Local · ${item.venueCountry}`}</span>{item.categories.slice(0, 2).map((tag) => <span key={tag} className="category-tag">{tag}</span>)}</div>
                 <h3>{item.title}</h3>
                 <p>{item.summary}</p>
-                <details><summary>View build brief</summary><div className="detail-grid"><span><b>Organizer</b>{item.organizer}</span><span><b>Dates</b>{formatDate(item.startDate)} – {formatDate(item.endDate)}</span><span><b>Effort</b>{item.effortNote}</span><span><b>Verified</b>{item.verifiedAt} via {item.source}</span></div></details>
+                <details><summary>View build brief</summary><div className="detail-grid"><span><b>Organizer</b>{item.organizer}</span><span><b>Dates</b>{formatDate(item.startDate)} – {formatDate(item.endDate)}</span><span><b>Source prize claim</b>{item.prizeDisplay}</span><span><b>Effort</b>{item.effortNote}</span><span><b>Verified</b>{item.verifiedAt} via {item.source}</span></div></details>
               </div>
               <div className="hack-signal">
                 <span className={`effort effort-${item.effort.toLowerCase()}`}>{item.effort}</span>
-                <strong>{item.prizeDisplay}</strong>
+                <strong>{prize?.local ?? item.prizeDisplay}</strong>
+                <span className="prize-usd">{prize ? (prize.isUsdMarket ? `${prize.usd} USD` : `${prize.usd} USD · est. ${marketMoney[country].currency}`) : "No comparable USD value disclosed"}</span>
                 <small>{deadlineLabel(item.deadline)}</small>
                 <a href={item.sourceUrl} target="_blank" rel="noreferrer">Original page <span>↗</span></a>
               </div>
             </article>
-          ))}
+            );
+          })}
           {ranked.length === 0 && <div className="empty"><strong>No {category} entries in this country snapshot.</strong><button type="button" onClick={() => setCategory("All")}>Show all categories</button></div>}
         </div>
       </section>

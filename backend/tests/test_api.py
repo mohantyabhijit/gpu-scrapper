@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from hackradar.app import create_app, public_target
 from hackradar.config import Settings
+from hackradar.contracts import Hackathon
 from hackradar.database import Database
 
 
@@ -21,6 +22,30 @@ def test_country_feed_is_prize_ranked_and_seeded(tmp_path: Path) -> None:
     prizes = [item["prizeUsd"] if item["prizeUsd"] is not None else -1 for item in payload["hackathons"]]
     assert prizes == sorted(prizes, reverse=True)
     assert len({item["id"] for item in payload["hackathons"]}) == 10
+
+
+def test_world_feed_is_deduplicated_and_prize_ranked(tmp_path: Path) -> None:
+    settings = Settings(database_url=f"sqlite:///{tmp_path / 'world.db'}", operator_token="offline-operator-token")
+    database = Database(settings.database_url)
+    with TestClient(create_app(settings, database)) as app:
+        first = app.get("/hackathons", params={"country": "WORLD", "limit": 50}).json()["hackathons"][0]
+        mirror = {**first, "id": "mirror-provider-id", "source": "Mirror provider"}
+        database.upsert_hackathons([Hackathon.model_validate(mirror)])
+        response = app.get("/hackathons", params={"country": "WORLD", "limit": 50})
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["count"] >= 10
+    ids = [item["id"] for item in payload["hackathons"]]
+    prizes = [item["prizeUsd"] if item["prizeUsd"] is not None else -1 for item in payload["hackathons"]]
+    assert len(ids) == len(set(ids))
+    assert prizes == sorted(prizes, reverse=True)
+    assert sum(item["title"] == first["title"] for item in payload["hackathons"]) == 1
+
+
+def test_hackathon_feed_rejects_unknown_markets(tmp_path: Path) -> None:
+    with client(tmp_path) as app:
+        response = app.get("/hackathons", params={"country": "ZZ", "limit": 10})
+    assert response.status_code == 422
 
 
 def test_release_seed_path_is_packaging_safe() -> None:

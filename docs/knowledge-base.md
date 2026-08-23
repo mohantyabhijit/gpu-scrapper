@@ -134,7 +134,15 @@ Production release order:
 4. Sync the backend virtual environment and initialize the schema/seed through application startup.
 5. Atomically switch `current` symlinks.
 6. Validate and reload Nginx, then restart only HackRadar services.
-7. Verify `/scrapper/`, static assets, `/scrapper-api/healthz`, and ten ranked API rows for all four countries.
+7. Verify `/scrapper/`, static assets, `/scrapper-api/healthz`, ten ranked worldwide rows, and ten ranked API rows for all four countries.
+
+### Worldwide and currency presentation
+
+- `WORLD` is a read-only virtual market: it returns every indexed event once, prize-ranked by canonical `prizeUsd`, without rewriting eligibility.
+- `US`, `IN`, `UK`, and `SG` remain eligibility-aware views.
+- Country cards show estimated USD-to-local presentation values using the checked-in normalization reference rates: USD 1, INR 83.61, GBP 0.7407, and SGD 1.287 per USD.
+- FX is display-only. PostgreSQL stores canonical USD values and the original source prize claim; neither ranking nor provenance depends on the selected display currency.
+- Unknown and non-cash awards never receive fabricated currency equivalents.
 8. Verify the browser country selector, category filter, original links, and mobile layout.
 
 Do not call a successful push a deployment. The public routes and current service revisions must be checked separately.

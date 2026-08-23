@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 const title = "HackRadar — Your next build, ranked";
-const description = "Prize-ranked, effort-aware hackathons available from the USA, India, UK, and Singapore.";
+const description = "Worldwide prize-ranked hackathons with focused views for the USA, India, UK, and Singapore.";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://abhijitmohanty.com/scrapper/"),

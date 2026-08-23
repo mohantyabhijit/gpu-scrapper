@@ -92,7 +92,18 @@ class Database:
     def list_hackathons(self, country: str, category: str | None, limit: int) -> list[dict[str, Any]]:
         with Session(self.engine) as session:
             rows = session.scalars(select(HackathonRow).order_by(HackathonRow.prize_usd.desc().nullslast())).all()
-        values = [row.payload for row in rows if country in row.payload.get("eligibleCountries", [])]
+        values = [
+            row.payload for row in rows
+            if country == "WORLD" or country in row.payload.get("eligibleCountries", [])
+        ]
+        if country == "WORLD":
+            unique: dict[tuple[str, str, str, str], dict[str, Any]] = {}
+            for value in values:
+                title = " ".join(str(value.get("title", "")).lower().split())
+                organizer = " ".join(str(value.get("organizer", "")).lower().split())
+                key = (title, organizer, str(value.get("startDate", "")), str(value.get("endDate", "")))
+                unique.setdefault(key, value)
+            values = list(unique.values())
         if category:
             values = [value for value in values if category in value.get("categories", [])]
         return values[:limit]

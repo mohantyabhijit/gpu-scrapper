@@ -1,4 +1,6 @@
 export type CountryCode = "US" | "IN" | "UK" | "SG";
+export type MarketCode = CountryCode | "WORLD";
+export type CurrencyCode = "USD" | "INR" | "GBP" | "SGD";
 export type Category = "AI" | "Web3" | "Web" | "Mobile" | "Climate" | "Other";
 export type Effort = "Weekend" | "Focused" | "Marathon";
 
@@ -25,6 +27,39 @@ export type Hackathon = {
 
 const all: CountryCode[] = ["US", "IN", "UK", "SG"];
 
+export const marketMoney: Record<MarketCode, { currency: CurrencyCode; locale: string; fromUsd: number }> = {
+  WORLD: { currency: "USD", locale: "en-US", fromUsd: 1 },
+  US: { currency: "USD", locale: "en-US", fromUsd: 1 },
+  IN: { currency: "INR", locale: "en-IN", fromUsd: 83.61 },
+  UK: { currency: "GBP", locale: "en-GB", fromUsd: 0.7407 },
+  SG: { currency: "SGD", locale: "en-SG", fromUsd: 1.287 },
+};
+
+function formatMoney(value: number, currency: CurrencyCode, locale: string) {
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+export function prizeForMarket(prizeUsd: number | null, market: MarketCode) {
+  if (prizeUsd === null) return null;
+  const money = marketMoney[market];
+  return {
+    local: formatMoney(prizeUsd * money.fromUsd, money.currency, money.locale),
+    usd: formatMoney(prizeUsd, "USD", "en-US"),
+    currency: money.currency,
+    isUsdMarket: money.currency === "USD",
+  };
+}
+
+function eventKey(item: Hackathon) {
+  const title = item.title.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const organizer = item.organizer.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  return `${title}|${organizer}|${item.startDate}|${item.endDate}`;
+}
+
 export const hackathons: Hackathon[] = [
   { id:"revenuecat-shipaton-2026", title:"RevenueCat Shipaton 2026", organizer:"RevenueCat", source:"Devpost", sourceUrl:"https://revenuecat-shipaton-2026.devpost.com/", eligibleCountries:all, venueCountry:"GLOBAL", mode:"Online", startDate:"2026-07-31", endDate:"2026-09-30", deadline:"2026-09-30", prizeUsd:685000, prizeDisplay:"$685,000 cash", categories:["Mobile","Other"], effort:"Marathon", effortNote:"Ship and publish a new app over 8 weeks", summary:"Build, launch, and monetize a brand-new mobile app; store publication is part of the finish line.", verifiedAt:"2026-08-23" },
   { id:"all-things-agentic", title:"All Things Agentic Hackathon", organizer:"Google", source:"Devpost", sourceUrl:"https://allthingsagentichackathon.devpost.com/", eligibleCountries:all, venueCountry:"GLOBAL", mode:"Online", startDate:"2026-08-03", endDate:"2026-08-31", deadline:"2026-08-31", prizeUsd:180000, prizeDisplay:"$180,000 cash", categories:["AI","Web"], effort:"Focused", effortNote:"Four-week agent build with a working demo", summary:"Build a Gemini and Google Cloud agent that plans and completes useful multi-step work.", verifiedAt:"2026-08-23" },
@@ -50,9 +85,16 @@ export const hackathons: Hackathon[] = [
   { id:"origins-2026", title:"Origins Hackathon at TOKEN2049", organizer:"TOKEN2049", source:"TOKEN2049", sourceUrl:"https://www.token2049.com/singapore/2049-origins", eligibleCountries:["SG"], venueCountry:"SG", mode:"In person", startDate:"2026-09-30", endDate:"2026-10-01", deadline:"2026-09-14", prizeUsd:null, prizeDisplay:"Prize details at source", categories:["Web3"], effort:"Weekend", effortNote:"36-hour crypto build", summary:"A high-intensity Web3 sprint with demos in front of the TOKEN2049 audience.", verifiedAt:"2026-08-23" },
 ];
 
-export function rankedForCountry(items: readonly Hackathon[], country: CountryCode, limit = 10) {
+export function rankedForCountry(items: readonly Hackathon[], country: MarketCode, limit = 10) {
+  const seen = new Set<string>();
   return items
-    .filter((item) => item.eligibleCountries.includes(country))
+    .filter((item) => country === "WORLD" || item.eligibleCountries.includes(country))
     .sort((a, b) => (b.prizeUsd ?? -1) - (a.prizeUsd ?? -1) || a.deadline.localeCompare(b.deadline))
+    .filter((item) => {
+      const key = eventKey(item);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
     .slice(0, limit);
 }

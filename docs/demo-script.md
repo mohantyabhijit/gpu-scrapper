@@ -1,7 +1,7 @@
 # Two-minute demo
 
 1. Open <https://abhijitmohanty.com/scrapper/> and point out the `live API` indicator.
-2. Change Singapore to USA, India, and UK. Show that heading, market context, local count, prize pool, and top ten update.
+2. Open Worldwide, then change to USA, India, UK, and Singapore. Show that the heading, market context, local count, prize pool, top ten, local-currency estimate, and USD comparison update.
 3. Select AI and Web3. Open one build brief and use its original-page link to establish provenance.
 4. Explain the effort badge as a planning estimate, not an organizer claim.
 5. Show `/scrapper-api/sources` and identify stable Studio collector IDs and states.

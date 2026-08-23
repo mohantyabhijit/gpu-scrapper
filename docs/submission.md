@@ -2,7 +2,7 @@
 
 ## Project description
 
-HackRadar is a country-aware prize map for frequent hackathon builders. It ranks a top ten for the USA, India, UK, and Singapore, then annotates each opportunity with category, original source, schedule, deadline, mode, prize claim, and realistic effort band. A playful Next.js and Three.js interface makes exploration fast; a Python data service keeps the underlying model stable as public event sites change.
+HackRadar is a worldwide, country-aware prize map for frequent hackathon builders. It ranks one deduplicated global top ten plus eligibility-aware views for the USA, India, UK, and Singapore, then annotates each opportunity with category, original source, schedule, deadline, mode, prize claim, local-currency estimate, USD comparison, and realistic effort band. A playful Next.js and Three.js interface makes exploration fast; a Python data service keeps the underlying model stable as public event sites change.
 
 ## How Scraper Studio is used
 

@@ -1,6 +1,6 @@
 # HackRadar
 
-HackRadar is a prize-ranked hackathon discovery desk for people who build often. It turns fragmented public event listings into a country-specific top ten for the United States, India, the United Kingdom, and Singapore, with categories, original source links, prize values, deadlines, and a practical effort estimate.
+HackRadar is a prize-ranked hackathon discovery desk for people who build often. It turns fragmented public event listings into a deduplicated worldwide top ten plus focused views for the United States, India, the United Kingdom, and Singapore, with categories, original source links, prize values, deadlines, and a practical effort estimate.
 
 **Public app:** <https://abhijitmohanty.com/scrapper/>
 
@@ -8,8 +8,9 @@ HackRadar is a prize-ranked hackathon discovery desk for people who build often.
 
 ## What makes it useful
 
-- A country selector changes both the ranking and the visual market identity.
+- A market selector switches between worldwide discovery and country-aware eligibility views.
 - Each country gets a prize-ranked top ten rather than an endless directory.
+- Country views show an estimated local-currency value alongside canonical USD; the original source prize claim remains visible in the build brief.
 - AI, Web3, Web, Mobile, Climate, and Other filters make the list actionable.
 - Every card links to the original event and exposes dates, eligibility, prize, mode, and estimated build effort.
 - A playful Three.js radar makes exploration tactile without blocking the content or accessibility path.
@@ -60,7 +61,7 @@ uv sync --group dev
 uv run uvicorn hackradar.app:app --reload --port 8000
 ```
 
-The frontend reads `/scrapper-api/hackathons` in production and falls back to the checked-in verified snapshot if the API is unavailable.
+The frontend reads `/scrapper-api/hackathons?country=WORLD|US|IN|UK|SG` in production and falls back to the checked-in verified snapshot if the API is unavailable. FX values are presentation estimates derived from the canonical USD amount; they never change ranking or source evidence.
 
 ## Configuration
 

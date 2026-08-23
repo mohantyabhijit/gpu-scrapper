@@ -2,7 +2,7 @@
   "name": "HackRadar",
   "short_name": "HackRadar",
   "id": "/scrapper/",
-  "description": "Prize-ranked, effort-aware hackathons for builders in the USA, India, UK, and Singapore.",
+  "description": "Worldwide prize-ranked hackathons with focused views for the USA, India, UK, and Singapore.",
   "start_url": "/scrapper/",
   "scope": "/scrapper/",
   "display": "standalone",
