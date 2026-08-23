@@ -24,6 +24,7 @@ This demonstrates operator-initiated same-ID recovery. It does not claim that dr
 - [`unstop/`](unstop/) preserves the India collector creation receipt, its 18 sanitized linked results, and the later repair failure that left the last-known-good data intact.
 - [`uk/`](uk/) preserves the initial collector failure, failed same-ID heal, and failed replacement attempt. These IDs are evidence only and are not presented as ready collectors.
 - [`luma/attempts.json`](luma/attempts.json) records the two failed Studio attempts and the decision to use the bounded public JSON-LD fallback.
+- [`wemakedevs/01-listing-results.json`](wemakedevs/01-listing-results.json) publishes the four current/ongoing public cards accepted by the independent WeMakeDevs adapter on 2026-08-24.
 
 ## Production verification
 
@@ -34,4 +35,3 @@ This demonstrates operator-initiated same-ID recovery. It does not claim that dr
 ## Historical Raster/GPU evidence
 
 The earlier product direction is retained separately under [`raster-gpu/`](raster-gpu/). It is historical evidence, not the current HackRadar runtime.
-

@@ -121,14 +121,18 @@ def normalize_collector_row(
     duration = max((end - start).days + 1, 1)
     effort: Effort = "Weekend" if duration <= 4 else "Focused" if duration <= 35 else "Marathon"
     slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:120]
+    raw_country = text("country").upper()
+    globally_eligible = mode in {"Online", "Hybrid"} and (
+        source_name == "Devpost" or raw_country == "GLOBAL"
+    )
     return Hackathon.model_validate({
         "id": f"{source_name.lower().replace(' ', '-')}-{slug}",
         "title": title,
         "organizer": text("organizer") or source_name,
         "source": source_name,
         "sourceUrl": source_url,
-        "eligibleCountries": ["US", "IN", "UK", "SG"] if mode == "Online" and source_name == "Devpost" else [source_country],
-        "venueCountry": "GLOBAL" if mode == "Online" else source_country,
+        "eligibleCountries": ["US", "IN", "UK", "SG"] if globally_eligible else [source_country],
+        "venueCountry": "GLOBAL" if raw_country == "GLOBAL" or mode == "Online" else source_country,
         "mode": mode,
         "startDate": start.isoformat(),
         "endDate": end.isoformat(),

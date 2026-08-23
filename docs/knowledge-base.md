@@ -31,6 +31,7 @@ The organizer page remains authoritative. HackRadar does not organize events, ta
 public event pages
   -> Bright Data Scraper Studio collectors -> Bright Data API trigger/dataset polling
   -> allowlisted Luma pages -> bounded canonical JSON-LD adapter
+  -> allowlisted WeMakeDevs listing -> bounded Next.js card adapter
   -> contract inspection
   -> Pydantic normalization and category/effort enrichment
   -> PostgreSQL last-known-good records
@@ -54,6 +55,7 @@ The backend is FastAPI with SQLAlchemy. `hackathons` stores the normalized paylo
 | Luma | `luma-london` | United Kingdom | deterministic JSON-LD adapter | Exa-discovered public pages in London | Production refresh completed with 2 current rows; binding remains `degraded` |
 | Luma | `luma-bengaluru`, `luma-mumbai` | India | deterministic JSON-LD adapter | Exa-discovered public pages in Bengaluru and Mumbai | Production refresh completed with 5 current rows; both bindings remain `degraded` |
 | Luma | `luma-singapore` | Singapore | deterministic JSON-LD adapter | Exa-discovered public pages in Singapore | Production refresh completed with 1 current row; binding remains `degraded` |
+| WeMakeDevs | `wemakedevs-global` | Global online / US anchor | deterministic Next.js card adapter | `https://www.wemakedevs.org/#hackathons` | Local exact-target validation normalized 4 public current/ongoing cards on 2026-08-24; production refresh pending |
 
 The failed UK ID is retained as evidence. A replacement is allowed only because Studio did not create a runnable template to repair; document any replacement ID and validate it independently before changing the registry.
 
@@ -68,6 +70,12 @@ Luma therefore uses a bounded deterministic fallback rather than a false-ready S
 The six source bindings are `luma-san-francisco`, `luma-new-york`, `luma-london`, `luma-bengaluru`, `luma-mumbai`, and `luma-singapore`. On 2026-08-24, authenticated production refreshes normalized 11 current events across all six bindings: 3 US, 2 UK, 5 India, and 1 Singapore. A refresh with at least one valid event completes and preserves the usable rows, but its source remains `degraded` when fewer events normalize than the reviewed target count. Treat these counts as time-specific.
 
 Never reuse SecondSpin collector `c_mt2nbsqd1akac96fiz`; it belongs to a vacuum-parts project and target.
+
+### WeMakeDevs workflow
+
+WeMakeDevs uses its own `custom:wemakedevs:global` binding and does not share the Luma adapter or any Bright Data Collector ID. The Python adapter requests only the public listing, decodes the `cards` array embedded in the Next.js flight payload, and accepts only HTTPS detail links on WeMakeDevs or Luma. It requires a title and complete start/end dates, excludes expired or incomplete cards, normalizes the listing's doubled dollar-prefix display, and converts only explicitly disclosed USD amounts. It does not retain images, social links, email addresses, profiles, registration data, or unrelated page content.
+
+On 2026-08-24, local exact-target validation returned four current/ongoing rows: The Agent Harness Hackathon, The Rote Playoffs Hackathon, Graph Hacks: Building Next-Gen RAG, and Into the Scrape-Verse. Treat that count as time-specific. Online and hybrid cards carry explicit `GLOBAL` eligibility through normalization so they appear in US, India, UK, and Singapore views. Sanitized source evidence lives at `scrapper-run-results/wemakedevs/01-listing-results.json`.
 
 ## Normalized event contract
 

@@ -38,6 +38,7 @@ flowchart LR
     I --> B
     E --> F --> G
     J[Verified repository snapshot] -->|API unavailable or fewer than 10 rows| G
+    K[Public WeMakeDevs hackathon cards] --> L[Bounded Next.js payload adapter] --> C
 ```
 
 ### Frontend
@@ -84,6 +85,10 @@ Current collector health and evidence caveats are tracked in [the knowledge base
 
 Exa MCP supplies a reviewed discovery set for public Luma hackathons in San Francisco, New York, London, Bengaluru, Mumbai, and Singapore. Two generated Studio templates failed exact-target validation, so Luma uses a deterministic Python adapter instead of being presented as a healthy Studio collector. The adapter matches the requested canonical URL to the page's JSON-LD `Event`, rejects recommendations and expired or incomplete events, and excludes attendee identities, profiles, street addresses, hidden venues, and registration-form data.
 
+### WeMakeDevs public hackathons
+
+WeMakeDevs is an independent `wemakedevs-global` source backed by a bounded Python adapter. It reads only the public hackathon cards embedded in the site's Next.js response, preserves the original internal or Luma event link, normalizes dates and explicitly disclosed USD prizes, and drops expired or incomplete cards. Online and hybrid entries are available in all four supported country views. The sanitized listing result is published under [`scrapper-run-results/wemakedevs/`](scrapper-run-results/wemakedevs/).
+
 ### Deployment and automation
 
 - Nginx serves `/scrapper/` and reverse-proxies `/scrapper-api/`.
@@ -118,7 +123,7 @@ Production routes are prefixed with `/scrapper-api`; local FastAPI routes use th
 | API | Python 3.12, FastAPI, Uvicorn | Public reads and authenticated background operations |
 | Contracts and configuration | Pydantic, pydantic-settings | Validation, normalization, environment configuration |
 | Persistence | PostgreSQL, SQLAlchemy 2, psycopg 3 | Last-known-good events, sources, and jobs |
-| Web collection | Bright Data Scraper Studio, DCA API, `@brightdata/cli`, Luma JSON-LD adapter | Custom collectors, trigger/poll, create/heal/approve, bounded Luma fallback |
+| Web collection | Bright Data Scraper Studio, DCA API, `@brightdata/cli`, Luma JSON-LD adapter, WeMakeDevs Next.js adapter | Custom collectors, trigger/poll, create/heal/approve, bounded public-source fallbacks |
 | Source discovery | Exa MCP | Reviewed public Luma event URL discovery for six target cities |
 | AI repair planning | OpenAI Responses API | Bounded collector creation and schema-drift prompts |
 | HTTP | HTTPX | Async Bright Data API calls |

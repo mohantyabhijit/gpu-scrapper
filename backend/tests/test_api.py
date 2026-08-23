@@ -7,6 +7,7 @@ from hackradar.config import Settings
 from hackradar.contracts import Hackathon
 from hackradar.database import Database
 from hackradar.services.luma import LumaService
+from hackradar.services.wemakedevs import WeMakeDevsService
 
 
 def client(tmp_path: Path) -> TestClient:
@@ -97,6 +98,48 @@ def test_operator_can_refresh_a_custom_luma_source(tmp_path: Path, monkeypatch) 
     assert result.json()["result"]["rows"] == 1
 
 
+def test_operator_can_refresh_wemakedevs_for_all_markets(tmp_path: Path, monkeypatch) -> None:
+    async def rows(_service: WeMakeDevsService) -> list[dict[str, object]]:
+        return [{
+            "title": "Graph Hacks: Building Next-Gen RAG",
+            "detail_url": "https://www.wemakedevs.org/hackathons/falkordb",
+            "organizer": "WeMakeDevs",
+            "location": "Remote",
+            "country": "GLOBAL",
+            "start_date": "2026-08-31",
+            "end_date": "2026-09-30",
+            "registration_deadline": None,
+            "prize_text": "$10,000 across three tracks",
+            "prize_amount": 10000,
+            "prize_currency": "USD",
+            "themes": [],
+            "eligibility": None,
+            "participation_mode": "Online",
+            "description": "Online hackathon listed by WeMakeDevs.",
+        }]
+
+    monkeypatch.setattr(WeMakeDevsService, "run", rows)
+    with client(tmp_path) as app:
+        response = app.post(
+            "/operators/refresh",
+            json={"sourceSlug": "wemakedevs-global"},
+            headers={"X-HackRadar-Operator-Token": "offline-operator-token"},
+        )
+        job_id = response.json()["jobs"][0]["jobId"]
+        result = app.get(
+            f"/operators/jobs/{job_id}",
+            headers={"X-HackRadar-Operator-Token": "offline-operator-token"},
+        )
+        feeds = {
+            country: app.get("/hackathons", params={"country": country, "limit": 50}).json()["hackathons"]
+            for country in ("US", "IN", "UK", "SG")
+        }
+    assert response.status_code == 202
+    assert result.json()["status"] == "completed"
+    assert result.json()["result"]["rows"] == 1
+    assert all(any(item["source"] == "WeMakeDevs" for item in feed) for feed in feeds.values())
+
+
 def test_source_registry_discloses_live_health(tmp_path: Path) -> None:
     with client(tmp_path) as app:
         response = app.get("/sources")
@@ -111,6 +154,7 @@ def test_source_registry_discloses_live_health(tmp_path: Path) -> None:
         "luma-san-francisco": "unverified",
         "luma-singapore": "unverified",
         "unstop-india": "degraded",
+        "wemakedevs-global": "unverified",
     }
 
 

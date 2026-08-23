@@ -62,6 +62,11 @@ LUMA_REQUIRED_FIELDS = [
     "participation_mode", "description",
 ]
 
+WEMAKEDEVS_REQUIRED_FIELDS = [
+    "title", "detail_url", "organizer", "location", "country", "start_date", "end_date",
+    "prize_text", "prize_amount", "prize_currency", "participation_mode",
+]
+
 
 class Database:
     def __init__(self, url: str) -> None:
@@ -75,6 +80,7 @@ class Database:
             SourceRow(slug="devpost-global", name="Devpost", target_url="https://devpost.com/hackathons?challenge_type[]=online&open_to[]=public&status[]=upcoming", collector_id="c_mt5n8l0w1kcr7uzxre", country="US", state="ready", expected_schema=EXPECTED_FIELDS),
             SourceRow(slug="unstop-india", name="Unstop India", target_url="https://unstop.com/hackathons", collector_id="c_mt5n8mon1lgz9hhuoe", country="IN", state="degraded", expected_schema=EXPECTED_FIELDS),
             SourceRow(slug="hackathons-uk", name="Hackathons UK", target_url="https://www.hackathons.org.uk/events/", collector_id="c_mt5n8jd5y2gdnzt5p", country="UK", state="generation_failed", expected_schema=EXPECTED_FIELDS),
+            SourceRow(slug="wemakedevs-global", name="WeMakeDevs", target_url="https://www.wemakedevs.org/#hackathons", collector_id="custom:wemakedevs:global", country="US", state="unverified", expected_schema=WEMAKEDEVS_REQUIRED_FIELDS),
             SourceRow(slug="luma-san-francisco", name="Luma · San Francisco", target_url="https://luma.com/sf", collector_id="custom:luma:sf", country="US", state="unverified", expected_schema=LUMA_REQUIRED_FIELDS),
             SourceRow(slug="luma-new-york", name="Luma · New York", target_url="https://luma.com/nyc", collector_id="custom:luma:nyc", country="US", state="unverified", expected_schema=LUMA_REQUIRED_FIELDS),
             SourceRow(slug="luma-london", name="Luma · London", target_url="https://luma.com/london", collector_id="custom:luma:london", country="UK", state="unverified", expected_schema=LUMA_REQUIRED_FIELDS),

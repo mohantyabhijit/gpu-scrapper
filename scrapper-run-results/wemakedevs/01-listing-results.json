@@ -1,0 +1,46 @@
+{
+  "source": "WeMakeDevs",
+  "source_url": "https://www.wemakedevs.org/#hackathons",
+  "captured_on": "2026-08-24",
+  "adapter": "custom:wemakedevs:global",
+  "row_count": 4,
+  "results": [
+    {
+      "title": "The Agent Harness Hackathon",
+      "source_url": "https://www.wemakedevs.org/hackathons/trueforge",
+      "start_date": "2026-08-24",
+      "end_date": "2026-08-30",
+      "mode": "Hybrid",
+      "prize_display": "$10,000 in prizes, including an NVIDIA DGX Spark",
+      "prize_usd": 10000
+    },
+    {
+      "title": "The Rote Playoffs Hackathon",
+      "source_url": "https://luma.com/rotehack",
+      "start_date": "2026-09-01",
+      "end_date": "2026-09-06",
+      "mode": "Online",
+      "prize_display": "$5,000 in prizes, including a MacBook Pro",
+      "prize_usd": 5000
+    },
+    {
+      "title": "Graph Hacks: Building Next-Gen RAG",
+      "source_url": "https://www.wemakedevs.org/hackathons/falkordb",
+      "start_date": "2026-08-31",
+      "end_date": "2026-09-30",
+      "mode": "Online",
+      "prize_display": "$10,000 across three tracks",
+      "prize_usd": 10000
+    },
+    {
+      "title": "Into the Scrape-Verse",
+      "source_url": "https://www.wemakedevs.org/hackathons/scrape-verse",
+      "start_date": "2026-08-17",
+      "end_date": "2026-08-23",
+      "mode": "Online",
+      "prize_display": "$15,000 in prizes, including an NVIDIA DGX Spark",
+      "prize_usd": 15000
+    }
+  ],
+  "safety": "Signed-out public event-card fields only; no images, profiles, contact details, or registration data retained."
+}
