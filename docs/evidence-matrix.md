@@ -4,7 +4,7 @@
 | --- | --- | --- |
 | Public working product | `/scrapper/`, browser interaction pass | Verified live |
 | Four country top tens | Frontend tests + four public API queries | 10 unique rows each |
-| Real database | PostgreSQL count + API responses | 22 normalized rows |
+| Real database | PostgreSQL count + API responses | 25 normalized rows after live refresh |
 | Next.js + Three.js frontend | `app/`, `components/orbit-scene.tsx`, production build | Verified |
 | Python backend | `backend/src/hackradar`, Ruff and pytest | Verified |
 | Studio collector creation | three collector IDs, ignored raw envelopes | Verified with caveats |

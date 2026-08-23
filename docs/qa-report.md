@@ -8,7 +8,7 @@
 - Backend API/normalizer/prompt tests: 8 pass.
 - Public `/scrapper/` and static assets: HTTP 200.
 - Public backend health: `{"status":"ok"}`.
-- PostgreSQL: 22 event rows and 3 source bindings.
+- PostgreSQL: 25 event rows and 3 source bindings after the live Devpost refresh.
 - Public APIs: 10 unique prize-ranked rows for US, IN, UK, and SG.
 - Browser: country switching and AI filtering work, live API indicator visible, no console errors, accessible labels/headings present.
 - Authenticated GitHub refresh run `32636380433`: success; Devpost job completed with 3 normalized rows.

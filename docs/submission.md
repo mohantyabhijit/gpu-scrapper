@@ -23,6 +23,6 @@ Directories optimize for volume. A repeat builder needs a decision: what is open
 
 ## Honest completion notes
 
-The production API currently serves 22 normalized, source-linked records and a unique top ten for each market. Current Devpost live output only has three schedule-complete rows, so verified seed records remain part of the last-known-good dataset. Unstop's original collector remains runnable but degraded after a broader repair failed safely. Both UK Studio generation attempts failed before a runnable template existed. An authenticated GitHub dispatch successfully refreshed Devpost and wrote three rows; a daily cron is configured, but its first HackRadar schedule occurrence must be observed separately.
+The production database currently contains 25 normalized, source-linked records and serves a unique top ten for each market. Current Devpost live output only has three schedule-complete rows, so verified seed records remain part of the last-known-good dataset. Unstop's original collector remains runnable but degraded after a broader repair failed safely. Both UK Studio generation attempts failed before a runnable template existed. An authenticated GitHub dispatch successfully refreshed Devpost and wrote three rows; a daily cron is configured, but its first HackRadar schedule occurrence must be observed separately.
 
 Subjective CLI ratings and the final legal/submission attestations must be confirmed and submitted by the participant.
