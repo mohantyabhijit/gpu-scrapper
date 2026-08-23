@@ -29,9 +29,9 @@ The organizer page remains authoritative. HackRadar does not organize events, ta
 
 ```text
 public event pages
-  -> Bright Data Scraper Studio collectors
-  -> Bright Data API trigger/dataset polling
-  -> schema drift inspection
+  -> Bright Data Scraper Studio collectors -> Bright Data API trigger/dataset polling
+  -> allowlisted Luma pages -> bounded canonical JSON-LD adapter
+  -> contract inspection
   -> Pydantic normalization and category/effort enrichment
   -> PostgreSQL last-known-good records
   -> FastAPI country/category query
@@ -50,10 +50,22 @@ The backend is FastAPI with SQLAlchemy. `hackathons` stores the normalized paylo
 | Devpost | `devpost-global` | Global online / US anchor | `c_mt5n8l0w1kcr7uzxre` | public upcoming online listing | Same-ID healed twice; 9 flat rows, complete keys, 8 disclosed prizes, 3 rows with usable schedules |
 | Unstop | `unstop-india` | India | `c_mt5n8mon1lgz9hhuoe` | public hackathon listing | Original remains runnable with 18 linked rows; broader same-ID repair failed after Studio validation, so prize/schedule fields remain degraded |
 | Hackathons UK | `hackathons-uk` | United Kingdom | `c_mt5n8jd5y2gdnzt5p` | public events listing | Initial Studio generation failed before a runnable template existed; do not claim it as healed or ready |
+| Luma | `luma-san-francisco`, `luma-new-york` | United States | deterministic JSON-LD adapter | Exa-discovered public pages in San Francisco and New York | Locally validated; production refresh pending |
+| Luma | `luma-london` | United Kingdom | deterministic JSON-LD adapter | Exa-discovered public pages in London | Locally validated; production refresh pending |
+| Luma | `luma-bengaluru`, `luma-mumbai` | India | deterministic JSON-LD adapter | Exa-discovered public pages in Bengaluru and Mumbai | Locally validated; production refresh pending |
+| Luma | `luma-singapore` | Singapore | deterministic JSON-LD adapter | Exa-discovered public pages in Singapore | Locally validated; production refresh pending |
 
 The failed UK ID is retained as evidence. A replacement is allowed only because Studio did not create a runnable template to repair; document any replacement ID and validate it independently before changing the registry.
 
 The GPT-authored replacement attempt created half-built collector `c_mt5pvcq9238pirddsq`, then failed during Studio intent analysis before a runnable template existed. It is evidence that the secured prompt-to-create path reached Studio, not a production source. Do not create a third UK collector until the two provider failures are inspected.
+
+### Luma fallback workflow
+
+Exa MCP discovered public Luma event URLs for San Francisco, New York, London, Bengaluru, Mumbai, and Singapore. Two Studio attempts were validated honestly: city collector `c_mt5ylasf26gxfk0wx6` never produced a template, while detail collector `c_mt5z2whq2q1we2xpeh` returned an empty exact-target run. Its heal selected an unrelated recommended event, so the proposed repair was rejected.
+
+Luma therefore uses a bounded deterministic fallback rather than a false-ready Studio binding. The Python adapter accepts only allowlisted `https://luma.com/` URLs, selects the JSON-LD `Event` whose canonical path matches the requested URL, ignores recommendations, drops past or incomplete events, retains city-level location only, and excludes people, attendee lists, profiles, emails, street addresses, hidden venues, wallet data, and registration forms. Optional prizes are parsed only when an explicit currency marker is present. Missing values stay unknown.
+
+The six source bindings are `luma-san-francisco`, `luma-new-york`, `luma-london`, `luma-bengaluru`, `luma-mumbai`, and `luma-singapore`. On 2026-08-24, live signed-out validation normalized 11 current events across all six bindings. A refresh with at least one valid event completes and preserves the usable rows, but its source remains `degraded` when fewer events normalize than the reviewed target count. Treat the validation count as time-specific; production remains unverified until an authenticated refresh completes.
 
 Never reuse SecondSpin collector `c_mt2nbsqd1akac96fiz`; it belongs to a vacuum-parts project and target.
 

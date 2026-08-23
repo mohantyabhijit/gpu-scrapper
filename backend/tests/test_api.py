@@ -6,6 +6,7 @@ from hackradar.app import create_app, public_target
 from hackradar.config import Settings
 from hackradar.contracts import Hackathon
 from hackradar.database import Database
+from hackradar.services.luma import LumaService
 
 
 def client(tmp_path: Path) -> TestClient:
@@ -59,6 +60,43 @@ def test_operator_routes_fail_closed_without_a_token(tmp_path: Path) -> None:
     assert response.status_code == 401
 
 
+def test_operator_can_refresh_a_custom_luma_source(tmp_path: Path, monkeypatch) -> None:
+    async def rows(_service: LumaService, _slug: str, _country: str) -> list[dict[str, object]]:
+        return [{
+            "title": "Luma Agent Hack",
+            "detail_url": "https://luma.com/test-hack",
+            "organizer": "Luma event host",
+            "location": "Singapore",
+            "country": "SG",
+            "start_date": "2026-10-01",
+            "end_date": "2026-10-02",
+            "registration_deadline": None,
+            "prize_text": None,
+            "prize_amount": None,
+            "prize_currency": None,
+            "themes": ["AI"],
+            "eligibility": None,
+            "participation_mode": "In person",
+            "description": "A public AI hackathon.",
+        }]
+
+    monkeypatch.setattr(LumaService, "run", rows)
+    with client(tmp_path) as app:
+        response = app.post(
+            "/operators/refresh",
+            json={"sourceSlug": "luma-singapore"},
+            headers={"X-HackRadar-Operator-Token": "offline-operator-token"},
+        )
+        job_id = response.json()["jobs"][0]["jobId"]
+        result = app.get(
+            f"/operators/jobs/{job_id}",
+            headers={"X-HackRadar-Operator-Token": "offline-operator-token"},
+        )
+    assert response.status_code == 202
+    assert result.json()["status"] == "completed"
+    assert result.json()["result"]["rows"] == 1
+
+
 def test_source_registry_discloses_live_health(tmp_path: Path) -> None:
     with client(tmp_path) as app:
         response = app.get("/sources")
@@ -66,6 +104,12 @@ def test_source_registry_discloses_live_health(tmp_path: Path) -> None:
     assert states == {
         "devpost-global": "ready",
         "hackathons-uk": "generation_failed",
+        "luma-bengaluru": "unverified",
+        "luma-london": "unverified",
+        "luma-mumbai": "unverified",
+        "luma-new-york": "unverified",
+        "luma-san-francisco": "unverified",
+        "luma-singapore": "unverified",
         "unstop-india": "degraded",
     }
 

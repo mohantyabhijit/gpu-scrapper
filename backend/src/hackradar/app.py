@@ -24,6 +24,7 @@ from hackradar.contracts import (
 )
 from hackradar.database import EXPECTED_FIELDS, Database, SourceRow, StudioJobRow
 from hackradar.services.collector_cli import CollectorCLI, CollectorCLIError
+from hackradar.services.luma import LumaService
 from hackradar.services.prompts import PromptBuilder
 from hackradar.services.refresh import RefreshService, inspect_rows
 
@@ -133,25 +134,47 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
 
     async def refresh_task(value: StudioJobRow, source: SourceRow) -> None:
         try:
-            if not settings.brightdata_api_key:
-                raise RuntimeError("Bright Data is not configured.")
             update_job(value, "running")
-            client = BrightDataClient(settings.brightdata_api_key, app.state.http_client)
-            report = await RefreshService(client).run(source.collector_id, source.target_url)
-            report = inspect_rows(report.rows, source.expected_schema)
+            if source.collector_id.startswith("custom:luma:"):
+                rows = await LumaService(app.state.http_client).run(source.slug, source.country)
+            else:
+                if not settings.brightdata_api_key:
+                    raise RuntimeError("Bright Data is not configured.")
+                client = BrightDataClient(settings.brightdata_api_key, app.state.http_client)
+                report = await RefreshService(client).run(source.collector_id, source.target_url)
+                rows = report.rows
+            report = inspect_rows(rows, source.expected_schema)
             normalized = [
                 item for raw in report.rows
-                if (item := normalize_collector_row(raw, source_name=source.name, source_country=source.country))
+                if (item := normalize_collector_row(
+                    raw,
+                    source_name="Luma" if source.collector_id.startswith("custom:luma:") else source.name,
+                    source_country=source.country,
+                ))
             ]
             if not report.valid or not normalized:
                 update_job(value, "drift_detected", {"collectorId": source.collector_id, "missingFields": report.missing_fields, "rowCount": len(report.rows)})
-                if settings.auto_heal_enabled and settings.openai_api_key:
+                if (
+                    settings.auto_heal_enabled
+                    and settings.openai_api_key
+                    and not source.collector_id.startswith("custom:luma:")
+                ):
                     await heal_task(value, source, f"Missing fields: {', '.join(report.missing_fields) or 'rows do not normalize'}")
                 return
             database.upsert_hackathons(normalized)
-            source.last_good_schema, source.last_good_at, source.state = report.schema, datetime.now(UTC), "ready"
+            target_count = LumaService.target_count(source.slug)
+            source_state = (
+                "degraded"
+                if source.collector_id.startswith("custom:luma:") and len(normalized) < target_count
+                else "ready"
+            )
+            source.last_good_schema, source.last_good_at, source.state = report.schema, datetime.now(UTC), source_state
             database.upsert_source(source)
-            update_job(value, "completed", {"collectorId": source.collector_id, "rows": len(normalized)})
+            result = {"collectorId": source.collector_id, "rows": len(normalized)}
+            if source.collector_id.startswith("custom:luma:"):
+                result["targets"] = target_count
+                result["sourceState"] = source_state
+            update_job(value, "completed", result)
         except (BrightDataError, CollectorCLIError, APIError, RuntimeError, SQLAlchemyError, ValueError):
             update_job(value, "failed", error="Refresh failed; last-known-good data was preserved.")
 
