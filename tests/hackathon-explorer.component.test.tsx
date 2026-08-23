@@ -79,5 +79,12 @@ describe("HackathonExplorer worldwide and currency workflow", () => {
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(document.activeElement).toBe(openButton);
+
+    fireEvent.click(openButton);
+    const reopenedDialog = screen.getByRole("dialog", { name: "RevenueCat Shipaton 2026" });
+    fireEvent.click(reopenedDialog.parentElement!);
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(openButton);
   });
 });

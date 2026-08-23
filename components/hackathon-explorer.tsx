@@ -198,7 +198,7 @@ export default function HackathonExplorer({ initialHackathons }: { initialHackat
 
       {selectedHackathon && (() => {
         const modalPrize = prizeForMarket(selectedHackathon.prizeUsd, country);
-        return <div className="hack-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) closeDetails(); }}>
+        return <div className="hack-modal-backdrop" role="presentation" onClick={(event) => { if (event.target === event.currentTarget) closeDetails(); }}>
           <div ref={dialogRef} className="hack-modal" role="dialog" aria-modal="true" aria-labelledby="hack-modal-title" aria-describedby="hack-modal-summary">
             <button ref={closeButtonRef} className="hack-modal-close" type="button" onClick={closeDetails} aria-label="Close hackathon details">×</button>
             <div className="hack-modal-kicker"><span>{selectedHackathon.source}</span><span>{selectedHackathon.mode}</span><span>{selectedHackathon.venueCountry === "GLOBAL" ? "Global" : countryNames[selectedHackathon.venueCountry]}</span></div>
