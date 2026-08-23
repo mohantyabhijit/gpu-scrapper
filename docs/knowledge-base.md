@@ -6,7 +6,7 @@ Durable product, architecture, scraper, and deployment notes for the repository.
 
 **Repository:** <https://github.com/mohantyabhijit/hackathon-scrapper>
 
-**Public product:** <https://abhijitmohanty.com/scrapper/>
+**Public product:** <https://abhijitmohanty.com/hackathons/>
 
 ## Product contract
 
@@ -143,7 +143,7 @@ On 2026-08-23, a requested rotation to the local `scrapper-ai-key` entry was dep
 
 ## Deployment target
 
-- Frontend: exported files under `/srv/hackradar/frontend/current`, served by Nginx at `/scrapper/`.
+- Frontend: exported files under `/srv/hackradar/frontend/current`, served by Nginx at the judge-facing `/hackathons/` route; `/scrapper/` remains a compatibility route for existing assets and evidence links.
 - Backend: Python virtual environment and application under `/srv/hackradar/backend`, bound to `127.0.0.1:8095` and proxied at `/scrapper-api/`.
 - Database: dedicated PostgreSQL database/user on the existing VPS.
 - Nginx: `abhijitmohanty.com` includes an isolated HackRadar snippet; validate with `nginx -t` before reload.
@@ -156,7 +156,7 @@ Production release order:
 4. Sync the backend virtual environment and initialize the schema/seed through application startup.
 5. Atomically switch `current` symlinks.
 6. Validate and reload Nginx, then restart only HackRadar services.
-7. Verify `/scrapper/`, static assets, `/scrapper-api/healthz`, ten ranked worldwide rows, and ten ranked API rows for all four countries.
+7. Verify `/hackathons/`, compatibility route `/scrapper/`, static assets, `/scrapper-api/healthz`, ten ranked worldwide rows, and ten ranked API rows for all four countries.
 8. Verify the browser market selector, category filter, detail modal (including Escape, backdrop, and close-button dismissal), focus restoration, original links, dual-currency display, and mobile layout.
 
 ### Worldwide and currency presentation

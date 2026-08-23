@@ -2,7 +2,7 @@
 
 HackRadar is a prize-ranked discovery desk for frequent hackathon builders. It turns fragmented public event listings into a deduplicated worldwide leaderboard and eligibility-aware views for the United States, India, the United Kingdom, and Singapore.
 
-- **Live application:** <https://abhijitmohanty.com/scrapper/>
+- **Live application:** <https://abhijitmohanty.com/hackathons/>
 - **Public API:** <https://abhijitmohanty.com/scrapper-api/healthz>
 - **Repository:** <https://github.com/mohantyabhijit/hackathon-scrapper>
 - **Self-healing evidence deck:** <https://docs.google.com/presentation/d/1oHZxqam62OdWZeXtLP-oMonpgfl0R9OZBLsOiA9wIDA/edit?usp=sharing>
@@ -76,7 +76,7 @@ The Devpost collector completed its first run but returned nine unusable rows, e
 - **Bright Data Studio — healed collector:** <https://brightdata.com/cp/scrapers/c_mt5n8l0w1kcr7uzxre>
 - **GitHub Actions — successful production refresh:** <https://github.com/mohantyabhijit/hackathon-scrapper/actions/runs/32636380433>
 - **Public API — source health and collector ID:** <https://abhijitmohanty.com/scrapper-api/sources>
-- **HackRadar — live product:** <https://abhijitmohanty.com/scrapper/>
+- **HackRadar — live product:** <https://abhijitmohanty.com/hackathons/>
 - **Published before/after run results:** [`scrapper-run-results/`](scrapper-run-results/)
 
 Current collector health and evidence caveats are tracked in [the knowledge base](docs/knowledge-base.md) and [evidence matrix](docs/evidence-matrix.md).
@@ -91,7 +91,7 @@ WeMakeDevs is an independent `wemakedevs-global` source backed by a bounded Pyth
 
 ### Deployment and automation
 
-- Nginx serves `/scrapper/` and reverse-proxies `/scrapper-api/`.
+- Nginx serves the judge-facing `/hackathons/` route, retains `/scrapper/` for compatibility, and reverse-proxies `/scrapper-api/`.
 - Frontend and backend releases use versioned directories plus atomic `current` symlinks.
 - `hackradar-api.service` runs Uvicorn with a root-readable environment file outside the repository.
 - GitHub Actions runs the frontend/backend quality suite on pushes and pull requests.
