@@ -1,0 +1,586 @@
+[
+  {
+    "id": "revenuecat-shipaton-2026",
+    "title": "RevenueCat Shipaton 2026",
+    "organizer": "RevenueCat",
+    "source": "Devpost",
+    "sourceUrl": "https://revenuecat-shipaton-2026.devpost.com/",
+    "eligibleCountries": [
+      "US",
+      "IN",
+      "UK",
+      "SG"
+    ],
+    "venueCountry": "GLOBAL",
+    "mode": "Online",
+    "startDate": "2026-07-31",
+    "endDate": "2026-09-30",
+    "deadline": "2026-09-30",
+    "prizeUsd": 685000,
+    "prizeDisplay": "$685,000 cash",
+    "categories": [
+      "Mobile",
+      "Other"
+    ],
+    "effort": "Marathon",
+    "effortNote": "Ship and publish a new app over 8 weeks",
+    "summary": "Build, launch, and monetize a brand-new mobile app; store publication is part of the finish line.",
+    "verifiedAt": "2026-08-23"
+  },
+  {
+    "id": "all-things-agentic",
+    "title": "All Things Agentic Hackathon",
+    "organizer": "Google",
+    "source": "Devpost",
+    "sourceUrl": "https://allthingsagentichackathon.devpost.com/",
+    "eligibleCountries": [
+      "US",
+      "IN",
+      "UK",
+      "SG"
+    ],
+    "venueCountry": "GLOBAL",
+    "mode": "Online",
+    "startDate": "2026-08-03",
+    "endDate": "2026-08-31",
+    "deadline": "2026-08-31",
+    "prizeUsd": 180000,
+    "prizeDisplay": "$180,000 cash",
+    "categories": [
+      "AI",
+      "Web"
+    ],
+    "effort": "Focused",
+    "effortNote": "Four-week agent build with a working demo",
+    "summary": "Build a Gemini and Google Cloud agent that plans and completes useful multi-step work.",
+    "verifiedAt": "2026-08-23"
+  },
+  {
+    "id": "agentic-cinema",
+    "title": "Agentic Cinema: The Blockbuster Hackathon",
+    "organizer": "Google Cloud",
+    "source": "Devpost",
+    "sourceUrl": "https://agentic-cinema.devpost.com/",
+    "eligibleCountries": [
+      "US",
+      "IN",
+      "UK",
+      "SG"
+    ],
+    "venueCountry": "GLOBAL",
+    "mode": "Online",
+    "startDate": "2026-08-10",
+    "endDate": "2026-09-09",
+    "deadline": "2026-09-09",
+    "prizeUsd": 75000,
+    "prizeDisplay": "$75,000 cash",
+    "categories": [
+      "AI",
+      "Web"
+    ],
+    "effort": "Focused",
+    "effortNote": "One-month enterprise agent sprint",
+    "summary": "Orchestrate production-style agent systems with Gemini Enterprise and partner technology.",
+    "verifiedAt": "2026-08-23"
+  },
+  {
+    "id": "agents-for-humans",
+    "title": "Agents for Humans Hackathon",
+    "organizer": "AWS",
+    "source": "Devpost",
+    "sourceUrl": "https://agentsforhumans.devpost.com/",
+    "eligibleCountries": [
+      "US",
+      "IN",
+      "UK",
+      "SG"
+    ],
+    "venueCountry": "GLOBAL",
+    "mode": "Online",
+    "startDate": "2026-08-10",
+    "endDate": "2026-09-14",
+    "deadline": "2026-09-14",
+    "prizeUsd": 40000,
+    "prizeDisplay": "$40,000 prizes",
+    "categories": [
+      "AI",
+      "Web"
+    ],
+    "effort": "Focused",
+    "effortNote": "Five weeks for a production-minded agent",
+    "summary": "Use Strands Agents SDK to remove repetitive work for real people and demonstrate it live.",
+    "verifiedAt": "2026-08-23"
+  },
+  {
+    "id": "launchhacks-v",
+    "title": "LaunchHacks V",
+    "organizer": "LaunchHacks",
+    "source": "Devpost",
+    "sourceUrl": "https://launchhacks-v.devpost.com/",
+    "eligibleCountries": [
+      "US",
+      "IN",
+      "UK",
+      "SG"
+    ],
+    "venueCountry": "GLOBAL",
+    "mode": "Online",
+    "startDate": "2026-12-11",
+    "endDate": "2026-12-15",
+    "deadline": "2026-12-15",
+    "prizeUsd": 17575,
+    "prizeDisplay": "$17,575 prizes",
+    "categories": [
+      "AI",
+      "Web",
+      "Other"
+    ],
+    "effort": "Weekend",
+    "effortNote": "Four-day student-friendly sprint",
+    "summary": "A broad innovation build for young makers, with multiple sponsor challenges and tracks.",
+    "verifiedAt": "2026-08-23"
+  },
+  {
+    "id": "opencv-2026",
+    "title": "OpenCV AI Competition 2026",
+    "organizer": "OpenCV",
+    "source": "Devpost",
+    "sourceUrl": "https://opencv26.devpost.com/",
+    "eligibleCountries": [
+      "US",
+      "IN",
+      "UK",
+      "SG"
+    ],
+    "venueCountry": "GLOBAL",
+    "mode": "Online",
+    "startDate": "2026-08-26",
+    "endDate": "2026-10-27",
+    "deadline": "2026-10-27",
+    "prizeUsd": 12000,
+    "prizeDisplay": "$12,000 prizes",
+    "categories": [
+      "AI",
+      "Other"
+    ],
+    "effort": "Marathon",
+    "effortNote": "Two months for a computer-vision prototype",
+    "summary": "Build a computer-vision project with OpenCV and document a reproducible working system.",
+    "verifiedAt": "2026-08-23"
+  },
+  {
+    "id": "impact-forge-2026",
+    "title": "Impact Forge: Summer 2026",
+    "organizer": "ImpactForge",
+    "source": "Devpost",
+    "sourceUrl": "https://impactforge26.devpost.com/",
+    "eligibleCountries": [
+      "US",
+      "IN",
+      "UK",
+      "SG"
+    ],
+    "venueCountry": "GLOBAL",
+    "mode": "Online",
+    "startDate": "2026-08-14",
+    "endDate": "2026-08-16",
+    "deadline": "2026-08-16",
+    "prizeUsd": 6600,
+    "prizeDisplay": "$6,600 prizes",
+    "categories": [
+      "AI",
+      "Web",
+      "Other"
+    ],
+    "effort": "Weekend",
+    "effortNote": "48 hours, public repo and 3-minute demo",
+    "summary": "A compact student code sprint for practical software or computational research projects.",
+    "verifiedAt": "2026-08-23"
+  },
+  {
+    "id": "ieee-climatechain",
+    "title": "IEEE ClimateChain Global Hackathon",
+    "organizer": "IEEE Turkey",
+    "source": "Devpost",
+    "sourceUrl": "https://ieee-climatechain-hack.devpost.com/",
+    "eligibleCountries": [
+      "US",
+      "IN",
+      "UK",
+      "SG"
+    ],
+    "venueCountry": "GLOBAL",
+    "mode": "Online",
+    "startDate": "2026-10-05",
+    "endDate": "2026-10-25",
+    "deadline": "2026-10-25",
+    "prizeUsd": 3000,
+    "prizeDisplay": "$3,000 cash",
+    "categories": [
+      "AI",
+      "Web3",
+      "Climate"
+    ],
+    "effort": "Focused",
+    "effortNote": "Three-week climate prototype",
+    "summary": "Combine AI, blockchain, and data to improve climate transparency or sustainable systems.",
+    "verifiedAt": "2026-08-23"
+  },
+  {
+    "id": "three-d-websites",
+    "title": "3D Websites Hackathon",
+    "organizer": "Devpost community",
+    "source": "Devpost",
+    "sourceUrl": "https://3d-websites-hackathon.devpost.com/",
+    "eligibleCountries": [
+      "US",
+      "IN",
+      "UK",
+      "SG"
+    ],
+    "venueCountry": "GLOBAL",
+    "mode": "Online",
+    "startDate": "2026-08-01",
+    "endDate": "2026-08-31",
+    "deadline": "2026-08-31",
+    "prizeUsd": 55,
+    "prizeDisplay": "$55 prizes",
+    "categories": [
+      "Web",
+      "Other"
+    ],
+    "effort": "Focused",
+    "effortNote": "One month for a polished interactive site",
+    "summary": "Build a creative 3D web experience with a strong visual idea and working interaction.",
+    "verifiedAt": "2026-08-23"
+  },
+  {
+    "id": "united-hackathons-v1",
+    "title": "United Hackathons V1",
+    "organizer": "United Hackathons",
+    "source": "Devpost",
+    "sourceUrl": "https://devonomicsv1.devpost.com/",
+    "eligibleCountries": [
+      "US",
+      "IN",
+      "UK",
+      "SG"
+    ],
+    "venueCountry": "GLOBAL",
+    "mode": "Online",
+    "startDate": "2026-10-05",
+    "endDate": "2026-10-11",
+    "deadline": "2026-10-11",
+    "prizeUsd": null,
+    "prizeDisplay": "6 non-cash prizes",
+    "categories": [
+      "AI",
+      "Other"
+    ],
+    "effort": "Weekend",
+    "effortNote": "One week, up to four builders",
+    "summary": "A student-led social-good challenge designed to connect new builders and organizers.",
+    "verifiedAt": "2026-08-23"
+  },
+  {
+    "id": "mit-india-2026",
+    "title": "National Level MIT India Hackathon 2026",
+    "organizer": "MIT Academy of Engineering",
+    "source": "Unstop",
+    "sourceUrl": "https://unstop.com/hackathons/national-level-mit-india-hackathon-2026-mit-academy-of-engineering-mitaoe-pune-maharashtra-1727144",
+    "eligibleCountries": [
+      "IN"
+    ],
+    "venueCountry": "IN",
+    "mode": "In person",
+    "startDate": "2026-09-01",
+    "endDate": "2026-10-01",
+    "deadline": "2026-09-01",
+    "prizeUsd": 29900,
+    "prizeDisplay": "₹25 lakh prize pool",
+    "categories": [
+      "AI",
+      "Web",
+      "Other"
+    ],
+    "effort": "Focused",
+    "effortNote": "Multi-round national competition",
+    "summary": "Teams receive an on-the-spot problem and the top 30 advance to the grand finale.",
+    "verifiedAt": "2026-08-23"
+  },
+  {
+    "id": "precision-care-2026",
+    "title": "Precision Care Challenge 2026",
+    "organizer": "GE HealthCare",
+    "source": "Unstop",
+    "sourceUrl": "https://unstop.com/hackathons/crp-precision-care-challenge-2026-ge-healthcare-1731208",
+    "eligibleCountries": [
+      "IN"
+    ],
+    "venueCountry": "IN",
+    "mode": "Hybrid",
+    "startDate": "2026-08-07",
+    "endDate": "2026-10-01",
+    "deadline": "2026-09-01",
+    "prizeUsd": 3890,
+    "prizeDisplay": "₹3,25,000 prizes",
+    "categories": [
+      "AI",
+      "Other"
+    ],
+    "effort": "Marathon",
+    "effortNote": "Healthcare challenge with staged evaluation",
+    "summary": "A team challenge focused on practical precision-care ideas and deployable health technology.",
+    "verifiedAt": "2026-08-23"
+  },
+  {
+    "id": "codearambh-2",
+    "title": "CODEARAMBH 2.0",
+    "organizer": "Hi-Tech Institute of Engineering & Technology",
+    "source": "Unstop",
+    "sourceUrl": "https://unstop.com/hackathons/codearambh-20-24-hour-national-level-hackathon-dare-to-code-dare-to-create-hi-tech-institute-of-engineering-a-1742494/amp",
+    "eligibleCountries": [
+      "IN"
+    ],
+    "venueCountry": "IN",
+    "mode": "In person",
+    "startDate": "2026-10-23",
+    "endDate": "2026-10-24",
+    "deadline": "2026-10-15",
+    "prizeUsd": null,
+    "prizeDisplay": "Prize details at source",
+    "categories": [
+      "Web",
+      "Other"
+    ],
+    "effort": "Weekend",
+    "effortNote": "24-hour national build",
+    "summary": "A one-day coding and product sprint in Ghaziabad for student teams.",
+    "verifiedAt": "2026-08-23"
+  },
+  {
+    "id": "prompt-wars-2026",
+    "title": "Prompt Wars 2026",
+    "organizer": "Prompt Wars",
+    "source": "Devpost",
+    "sourceUrl": "https://devpost.com/c/artificial-intelligence",
+    "eligibleCountries": [
+      "IN"
+    ],
+    "venueCountry": "IN",
+    "mode": "Online",
+    "startDate": "2026-08-20",
+    "endDate": "2026-08-29",
+    "deadline": "2026-08-29",
+    "prizeUsd": 359,
+    "prizeDisplay": "₹30,000 prizes",
+    "categories": [
+      "AI"
+    ],
+    "effort": "Weekend",
+    "effortNote": "Nine-day prompt and product challenge",
+    "summary": "Architect an AI experience where prompt quality and working execution both matter.",
+    "verifiedAt": "2026-08-23"
+  },
+  {
+    "id": "google-uk-ai-2026",
+    "title": "Google UK Student AI Hackathon 2026",
+    "organizer": "Google UK",
+    "source": "Bright Network",
+    "sourceUrl": "https://www.brightnetwork.co.uk/graduate-events/google/student-ai-hackathon-2026",
+    "eligibleCountries": [
+      "UK"
+    ],
+    "venueCountry": "UK",
+    "mode": "In person",
+    "startDate": "2026-07-24",
+    "endDate": "2026-07-24",
+    "deadline": "2026-07-20",
+    "prizeUsd": 100000,
+    "prizeDisplay": "$100,000 prize fund",
+    "categories": [
+      "AI"
+    ],
+    "effort": "Weekend",
+    "effortNote": "One-day London sprint",
+    "summary": "An in-person student AI build hosted by Google UK, with rapid team formation and demos.",
+    "verifiedAt": "2026-08-23"
+  },
+  {
+    "id": "adahack-2026",
+    "title": "AdaHack 2026",
+    "organizer": "University of Edinburgh",
+    "source": "Hackathons UK",
+    "sourceUrl": "https://www.hackathons.org.uk/events/",
+    "eligibleCountries": [
+      "UK"
+    ],
+    "venueCountry": "UK",
+    "mode": "In person",
+    "startDate": "2026-10-03",
+    "endDate": "2026-10-03",
+    "deadline": "2026-09-30",
+    "prizeUsd": null,
+    "prizeDisplay": "Prize details at source",
+    "categories": [
+      "Web",
+      "Other"
+    ],
+    "effort": "Weekend",
+    "effortNote": "One-day student hackathon",
+    "summary": "A welcoming Edinburgh student hackathon with a compact one-day build window.",
+    "verifiedAt": "2026-08-23"
+  },
+  {
+    "id": "hacknotts-26",
+    "title": "HackNotts ’26",
+    "organizer": "University of Nottingham",
+    "source": "Hackathons UK",
+    "sourceUrl": "https://www.hackathons.org.uk/events/",
+    "eligibleCountries": [
+      "UK"
+    ],
+    "venueCountry": "UK",
+    "mode": "In person",
+    "startDate": "2026-10-24",
+    "endDate": "2026-10-25",
+    "deadline": "2026-10-20",
+    "prizeUsd": null,
+    "prizeDisplay": "Prize details at source",
+    "categories": [
+      "Web",
+      "Other"
+    ],
+    "effort": "Weekend",
+    "effortNote": "Classic overnight student build",
+    "summary": "A two-day Nottingham hackathon for student teams across open-ended sponsor tracks.",
+    "verifiedAt": "2026-08-23"
+  },
+  {
+    "id": "rect-solutions-2026",
+    "title": "RecT Solutions Hackathon: Beyond the CV",
+    "organizer": "RecT Solutions",
+    "source": "Devpost",
+    "sourceUrl": "https://devpost.com/hackathons?themes%5B%5D=Databases",
+    "eligibleCountries": [
+      "UK"
+    ],
+    "venueCountry": "UK",
+    "mode": "Hybrid",
+    "startDate": "2026-10-10",
+    "endDate": "2026-10-11",
+    "deadline": "2026-10-05",
+    "prizeUsd": 2350,
+    "prizeDisplay": "€2,000 prizes",
+    "categories": [
+      "AI",
+      "Web"
+    ],
+    "effort": "Weekend",
+    "effortNote": "Two-day hiring-tech build",
+    "summary": "Build a better signal than the conventional CV using data, AI, or developer tooling.",
+    "verifiedAt": "2026-08-23"
+  },
+  {
+    "id": "sff-hackcelerator-2026",
+    "title": "SFF Global FinTech Hackcelerator",
+    "organizer": "Monetary Authority of Singapore",
+    "source": "SFF",
+    "sourceUrl": "https://www.fintechfestival.sg/global-fintech-hackcelerator",
+    "eligibleCountries": [
+      "SG"
+    ],
+    "venueCountry": "SG",
+    "mode": "Hybrid",
+    "startDate": "2026-08-01",
+    "endDate": "2026-11-13",
+    "deadline": "2026-08-31",
+    "prizeUsd": 62200,
+    "prizeDisplay": "S$80,000 per winner",
+    "categories": [
+      "AI",
+      "Web3",
+      "Other"
+    ],
+    "effort": "Marathon",
+    "effortNote": "Multi-month fintech accelerator",
+    "summary": "Solve an industry problem statement, build with mentors, and pitch at Singapore FinTech Festival.",
+    "verifiedAt": "2026-08-23"
+  },
+  {
+    "id": "sdth-2026",
+    "title": "Singapore Defence Tech Hackathon",
+    "organizer": "NUS Enterprise",
+    "source": "NUS Enterprise",
+    "sourceUrl": "https://enterprise.nus.edu.sg/event/sdth2026/",
+    "eligibleCountries": [
+      "SG"
+    ],
+    "venueCountry": "SG",
+    "mode": "In person",
+    "startDate": "2026-09-25",
+    "endDate": "2026-09-27",
+    "deadline": "2026-09-10",
+    "prizeUsd": 23300,
+    "prizeDisplay": "S$30,000 prizes",
+    "categories": [
+      "AI",
+      "Web",
+      "Other"
+    ],
+    "effort": "Weekend",
+    "effortNote": "Three-day defence-tech sprint",
+    "summary": "Build practical defence and security technology with a S$12,000 top prize.",
+    "verifiedAt": "2026-08-23"
+  },
+  {
+    "id": "sg-india-2026",
+    "title": "Singapore–India Hackathon 2026",
+    "organizer": "Singapore Management University",
+    "source": "SMU",
+    "sourceUrl": "https://iie.smu.edu.sg/singapore-india-hackathon-2026",
+    "eligibleCountries": [
+      "SG",
+      "IN"
+    ],
+    "venueCountry": "SG",
+    "mode": "In person",
+    "startDate": "2026-11-15",
+    "endDate": "2026-11-17",
+    "deadline": "2026-09-15",
+    "prizeUsd": null,
+    "prizeDisplay": "Prize details at source",
+    "categories": [
+      "AI",
+      "Other"
+    ],
+    "effort": "Weekend",
+    "effortNote": "Three-day cross-border sprint",
+    "summary": "Singapore and India student teams collaborate on challenge statements at SMU.",
+    "verifiedAt": "2026-08-23"
+  },
+  {
+    "id": "origins-2026",
+    "title": "Origins Hackathon at TOKEN2049",
+    "organizer": "TOKEN2049",
+    "source": "TOKEN2049",
+    "sourceUrl": "https://www.token2049.com/singapore/2049-origins",
+    "eligibleCountries": [
+      "SG"
+    ],
+    "venueCountry": "SG",
+    "mode": "In person",
+    "startDate": "2026-09-30",
+    "endDate": "2026-10-01",
+    "deadline": "2026-09-14",
+    "prizeUsd": null,
+    "prizeDisplay": "Prize details at source",
+    "categories": [
+      "Web3"
+    ],
+    "effort": "Weekend",
+    "effortNote": "36-hour crypto build",
+    "summary": "A high-intensity Web3 sprint with demos in front of the TOKEN2049 audience.",
+    "verifiedAt": "2026-08-23"
+  }
+]
